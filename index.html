@@ -53,6 +53,16 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .mockphoto svg{display:block;width:100%;height:auto;background:#dfe9e1}
 .photometa{font-size:12px;color:var(--muted);padding:10px 2px 2px}
 
+
+.layerbar{display:flex;gap:6px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--line);background:#fafbfa}
+.layercheck{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;user-select:none}
+.layercheck input{margin:0}
+.layercheck:has(input:checked){background:#edf5ef;border-color:#9bb9a2}
+.mapaction{padding:12px 14px;border-top:1px solid var(--line)}
+.primarybtn{border:1px solid #2f6b45;background:#2f6b45;color:#fff;border-radius:7px;padding:9px 12px;font-size:13px;font-weight:650;cursor:pointer;width:100%}
+.primarybtn:hover{opacity:.88}
+.map-summary-note{font-size:11px;color:var(--muted);padding:0 14px 10px}
+
 .maplayout{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);gap:12px;margin-bottom:14px}
 .mapsection{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
 .maphead{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}
@@ -386,15 +396,21 @@ async function forestView(){
 }
 
 
+
 let townBlocks=[],townDetails=[];
+let townMapLayers={
+ base:true,
+ details:true,
+ credit:false,
+ candidate:false,
+ program:false,
+ operations:false,
+ disaster:false,
+ rights:false
+};
 const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
+
 function blockColor(x){
- if(x.disaster_status==='対応中')return '#eaa79d';
- if(x.existing_project_candidate)return '#e9bd72';
- if(String(x.jcredit_status).includes('プログラム'))return '#b9a4d8';
- if(String(x.jcredit_status).includes('認証前'))return '#d8c36c';
- if(String(x.work_status).includes('施業中'))return '#8fb9df';
- if(String(x.jcredit_status).includes('対象あり'))return '#9cbd98';
  return '#c7d1c3';
 }
 function detailColor(x){
@@ -403,7 +419,30 @@ function detailColor(x){
  if(String(x.jcredit_status).includes('プログラム'))return '#7553a5';
  if(String(x.jcredit_status).includes('認証前'))return '#aa8e20';
  if(String(x.jcredit_status).includes('対象'))return '#2f6b45';
- return '#49779d';
+ if(String(x.work_status).includes('施業'))return '#49779d';
+ return '#65736b';
+}
+function detailMatchesLayer(d,layer){
+ if(layer==='credit')return d.jcredit_status==='対象';
+ if(layer==='candidate')return String(d.jcredit_status||'').includes('追加候補');
+ if(layer==='program')return String(d.jcredit_status||'').includes('プログラム') || String(d.jcredit_status||'').includes('認証前');
+ if(layer==='operations')return String(d.work_status||'').includes('施業');
+ if(layer==='disaster')return d.disaster_status==='対応中';
+ if(layer==='rights')return !['confirmed','確認済'].includes(String(d.boundary_status||'')) || String(d.rights_status||'').includes('相続') || String(d.rights_status||'').includes('未');
+ return false;
+}
+function thematicColor(layer){
+ return ({
+  credit:'#2f6b45',
+  candidate:'#d88622',
+  program:'#7553a5',
+  operations:'#49779d',
+  disaster:'#c84f45',
+  rights:'#8b6f47'
+ })[layer]||'#65736b';
+}
+function activeThematicLayers(){
+ return ['credit','candidate','program','operations','disaster','rights'].filter(k=>townMapLayers[k]);
 }
 function terrainSvg(){
  const contours=[
@@ -422,35 +461,75 @@ function terrainSvg(){
  <circle cx="505" cy="310" r="6" fill="#fff" stroke="#444" stroke-width="2"/><text x="518" y="314" class="maplabel">青嶺町役場</text>`;
 }
 function renderTownMapSvg(){
- const blockSvg=townBlocks.map(b=>parseParts(b.map_parts).map(p=>`<polygon class="maparea" data-block="${esc(b.block_code)}" points="${esc(p.points)}" fill="${blockColor(b)}" fill-opacity=".67" stroke="#708071" stroke-width="1.6"/>`).join('')).join('');
- const blockLabels=townBlocks.map(b=>`<text class="maplabel" x="${b.label_x}" y="${b.label_y}" text-anchor="middle">${esc(b.block_name)} ${num(b.area_ha)}ha</text>`).join('');
- const detailSvg=townDetails.map(d=>parseParts(d.map_parts).map((p,i)=>`<polygon class="detailarea" data-detail="${esc(d.forest_name)}" points="${esc(p.points)}" fill="${detailColor(d)}" fill-opacity=".88" stroke="#fff"/>`).join('')).join('');
- const detailMarkers=townDetails.map(d=>`<g data-detail="${esc(d.forest_name)}" style="cursor:pointer"><circle cx="${d.label_x}" cy="${d.label_y}" r="7" fill="${detailColor(d)}" stroke="#fff" stroke-width="2"/><text x="${Number(d.label_x)+10}" y="${Number(d.label_y)+4}" class="maplabel">${esc(String(d.forest_name).replace(/（.*?）/g,''))}</text></g>`).join('');
- return `<svg viewBox="0 0 1000 680" role="img" aria-label="青嶺町森林全体マップ">${terrainSvg()}${blockSvg}${blockLabels}${detailSvg}${detailMarkers}</svg>`;
+ const themes=activeThematicLayers();
+
+ const blockSvg=townMapLayers.base
+  ? townBlocks.map(b=>parseParts(b.map_parts).map(p=>`<polygon class="maparea" data-block="${esc(b.block_code)}" points="${esc(p.points)}" fill="${blockColor(b)}" fill-opacity=".50" stroke="#7b887e" stroke-width="1.5"/>`).join('')).join('')
+  : '';
+
+ const blockLabels=townMapLayers.base
+  ? townBlocks.map(b=>`<text class="maplabel" x="${b.label_x}" y="${b.label_y}" text-anchor="middle">${esc(b.block_name)} ${num(b.area_ha)}ha</text>`).join('')
+  : '';
+
+ // Detail forest base: neutral outline so "existing/detail forests" are visible without status clutter.
+ const detailBase=townMapLayers.details
+  ? townDetails.map(d=>parseParts(d.map_parts).map(p=>`<polygon class="detailarea" data-detail="${esc(d.forest_name)}" points="${esc(p.points)}" fill="#ffffff" fill-opacity=".45" stroke="#3f4c44" stroke-width="2.5"/>`).join('')).join('')
+  : '';
+
+ // Thematic overlays are only drawn when the user explicitly turns them on.
+ const thematicSvg=themes.map(layer=>
+   townDetails.filter(d=>detailMatchesLayer(d,layer)).map(d=>
+     parseParts(d.map_parts).map(p=>`<polygon class="detailarea" data-detail="${esc(d.forest_name)}" points="${esc(p.points)}" fill="${thematicColor(layer)}" fill-opacity=".68" stroke="#fff" stroke-width="2.2"/>`).join('')
+   ).join('')
+ ).join('');
+
+ const visibleDetails=townDetails.filter(d=>townMapLayers.details || themes.some(layer=>detailMatchesLayer(d,layer)));
+ const detailMarkers=visibleDetails.map(d=>{
+   const matched=themes.find(layer=>detailMatchesLayer(d,layer));
+   const c=matched?thematicColor(matched):'#3f4c44';
+   return `<g data-detail="${esc(d.forest_name)}" style="cursor:pointer"><circle cx="${d.label_x}" cy="${d.label_y}" r="6" fill="${c}" stroke="#fff" stroke-width="2"/><text x="${Number(d.label_x)+9}" y="${Number(d.label_y)+4}" class="maplabel">${esc(String(d.forest_name).replace(/（.*?）/g,''))}</text></g>`;
+ }).join('');
+
+ return `<svg viewBox="0 0 1000 680" role="img" aria-label="青嶺町森林全体マップ">${terrainSvg()}${blockSvg}${blockLabels}${detailBase}${thematicSvg}${detailMarkers}</svg>`;
+}
+function refreshTownMapSvg(){
+ const el=document.getElementById('townMapSvg');
+ if(el)el.innerHTML=renderTownMapSvg();
+}
+function setTownLayer(layer,checked){
+ townMapLayers[layer]=checked;
+ refreshTownMapSvg();
+}
+async function openForestFromMap(name){
+ await load('forest');
+ const x=forestRows.find(v=>v.name===name || String(v.name).replace(/（.*?）/g,'')===String(name).replace(/（.*?）/g,''));
+ if(x)renderForestDetail(x.forest_unit_id);
 }
 function renderTownDetail(name){
  const x=townDetails.find(v=>v.forest_name===name) || townDetails.find(v=>v.credit_review_status==='要条件整理') || townDetails[0];
  if(!x)return;
- document.getElementById('mapDetail').innerHTML=`<h2>${esc(x.forest_name)}</h2>`+
- `<div class="detailgrid">
-   <div class="detailitem"><div class="k">所属ブロック / 面積</div><div class="v">${esc(x.block_code)} / ${ha(x.area_ha)}</div></div>
-   <div class="detailitem"><div class="k">J-クレジット</div><div class="v">${esc(x.jcredit_status)}<div class="statusline"><span class="statuspill">${esc(x.credit_review_status)}</span></div></div></div>
-   <div class="detailitem"><div class="k">対象PJ</div><div class="v">${esc(x.jcredit_project_name||'—')}</div></div>
-   <div class="detailitem"><div class="k">候補判断</div><div class="v">${esc(x.credit_review_reason||'—')}</div></div>
-   <div class="detailitem"><div class="k">前提・阻害要因</div><div class="v">${esc(x.blockers||'—')}</div></div>
-   <div class="detailitem"><div class="k">権利 / 境界</div><div class="v">${esc(x.rights_status)} / ${esc(x.boundary_status)}</div></div>
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(x.forest_name)}</h2>
+ <div class="map-summary-note">町MAPでは判断に必要な概要だけを表示。詳細履歴・契約・証憑は森林詳細へ。</div>
+ <div class="detailgrid">
+   <div class="detailitem"><div class="k">面積 / 所属ブロック</div><div class="v">${ha(x.area_ha)} / ${esc(x.block_code)}</div></div>
+   <div class="detailitem"><div class="k">所有・権利</div><div class="v">${esc(x.rights_status||'—')}</div></div>
+   <div class="detailitem"><div class="k">境界</div><div class="v">${esc(x.boundary_status||'—')}${x.is_flying_lot?' / 飛地あり':''}</div></div>
+   <div class="detailitem"><div class="k">J-クレジット</div><div class="v">${esc(x.jcredit_status||'—')}<div class="statusline"><span class="statuspill">${esc(x.credit_review_status||'—')}</span></div></div></div>
+   <div class="detailitem"><div class="k">関係PJ</div><div class="v">${esc(x.jcredit_project_name||'—')}</div></div>
    <div class="detailitem"><div class="k">施業</div><div class="v">${esc(x.work_status||'—')}</div></div>
    <div class="detailitem"><div class="k">災害</div><div class="v">${esc(x.disaster_status||'—')}${x.disaster_date?`（${date(x.disaster_date)}）`:''}<br>${esc(x.disaster_summary||'—')}</div></div>
-   <div class="detailitem"><div class="k">作業道 / 保険</div><div class="v">${esc(x.road_status||'—')} / ${esc(x.insurance_status||'—')}</div></div>
+   <div class="detailitem"><div class="k">保険 / 作業道</div><div class="v">${esc(x.insurance_status||'—')} / ${esc(x.road_status||'—')}</div></div>
+   <div class="detailitem"><div class="k">候補判断・前提</div><div class="v">${esc(x.credit_review_reason||'—')}<br>${esc(x.blockers||'')}</div></div>
    <div class="detailitem"><div class="k">関連資料</div><div class="v">文書 ${num(x.related_document_count)}件 / 写真 ${num(x.related_photo_count)}件</div></div>
    <div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(x.next_action||'—')}</div></div>
-   <div class="detailitem"><div class="k">形状</div><div class="v">${x.is_flying_lot?'飛地を含む MultiPolygon':'単一区画'}</div></div>
- </div>`;
+ </div>
+ <div class="mapaction"><button type="button" class="primarybtn" onclick='openForestFromMap(${JSON.stringify(x.forest_name)})'>森林詳細を見る</button></div>`;
 }
 function renderBlockDetail(code){
  const b=townBlocks.find(v=>v.block_code===code);if(!b)return;
- document.getElementById('mapDetail').innerHTML=`<h2>${esc(b.block_name)}</h2>`+
- `<div class="detailgrid">
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(b.block_name)}</h2>
+ <div class="map-summary-note">森林ブロックは町全体を俯瞰する集約レイヤーです。</div>
+ <div class="detailgrid">
   <div class="detailitem"><div class="k">ブロック面積</div><div class="v">${ha(b.area_ha)}</div></div>
   <div class="detailitem"><div class="k">所有概況</div><div class="v">${esc(b.ownership_summary||'—')}</div></div>
   <div class="detailitem"><div class="k">主な樹種</div><div class="v">${esc(b.dominant_species||'—')}</div></div>
@@ -468,6 +547,10 @@ async function townMap(){
   q('demo_town_profile','select=*'),q('demo_town_forest_block','select=*&order=sort_order'),q('demo_forest_decision_context','select=*')
  ]);
  townBlocks=blocks;townDetails=details;
+
+ // Initial display: town-wide forest + detail forest locations only.
+ townMapLayers={base:true,details:true,credit:false,candidate:false,program:false,operations:false,disaster:false,rights:false};
+
  const p=profile[0]||{};
  const forestRate=Number(p.town_area_ha)?Number(p.forest_area_ha)/Number(p.town_area_ha)*100:0;
  const credit=details.filter(x=>x.jcredit_status==='対象');
@@ -476,39 +559,59 @@ async function townMap(){
  const prog=details.filter(x=>String(x.jcredit_status).includes('プログラム'));
  const disaster=details.filter(x=>x.disaster_status==='対応中');
  const activeBlocks=blocks.filter(x=>String(x.work_status).includes('施業中'));
+
  cards([
   ['町面積',ha(p.town_area_ha)],['森林面積',`${ha(p.forest_area_ha)} / ${forestRate.toFixed(1)}%`],
   ['詳細管理',`${num(p.detailed_forest_count)}件 / ${ha(p.detailed_management_area_ha)}`],['J-クレジット対象',`${credit.length}件 / ${ha(creditHa)}`],
   ['既存PJ追加候補',`${cand.length}件 / ${ha(cand.reduce((s,x)=>s+Number(x.area_ha||0),0))}`],['プログラム活動',`${prog.length}件`],
   ['施業中',`${activeBlocks.length}ブロック`],['災害対応',`${disaster.length}件`]
  ]);
+
+ const layerControls=[
+  ['base','町全体森林',true],
+  ['details','詳細管理森林',true],
+  ['credit','J-クレジット対象',false],
+  ['candidate','既存PJ追加候補',false],
+  ['program','プログラム/認証前',false],
+  ['operations','施業',false],
+  ['disaster','災害',false],
+  ['rights','権利・境界要確認',false]
+ ].map(([k,label,checked])=>`<label class="layercheck"><input type="checkbox" ${checked?'checked':''} onchange="setTownLayer('${k}',this.checked)"> ${label}</label>`).join('');
+
  document.getElementById('content').innerHTML=`<div class="maplayout">
-  <div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span>町全体森林 9,600ha ／ 強調区画＝詳細管理79.0ha</span></div>
+  <div class="mapsection">
+   <div class="maphead"><strong>青嶺町 森林全体マップ</strong><span>町全体森林 9,600ha ／ 詳細管理79.0ha</span></div>
+   <div class="layerbar"><span style="font-size:11px;font-weight:650;padding:5px 3px">表示レイヤー</span>${layerControls}</div>
    <div class="mapcanvas" id="townMapCanvas">
-    <div class="maplegend"><b>凡例</b>
-     <div class="legendrow"><span class="swatch" style="background:#2f6b45"></span>詳細：J-クレジット対象</div>
-     <div class="legendrow"><span class="swatch" style="background:#d88622"></span>詳細：既存PJ追加候補</div>
-     <div class="legendrow"><span class="swatch" style="background:#7553a5"></span>詳細：プログラム型</div>
-     <div class="legendrow"><span class="swatch" style="background:#aa8e20"></span>詳細：認証前PJ</div>
-     <div class="legendrow"><span class="swatch" style="background:#c84f45"></span>詳細：災害対応</div>
-     <div class="legendrow"><span class="swatch" style="background:#c7d1c3"></span>町全体森林ブロック</div>
-     <div style="margin-top:6px;color:#66736a">クリックでブロック／森林の判断情報を表示</div>
-    </div>${renderTownMapSvg()}
-   </div><div class="map-note">町全体レイヤーは集約情報。詳細管理森林は権利・契約・施業・証憑・J-クレジットまで個別管理。西谷共有林は本体19.6ha＋飛地3.1ha＋2.1ha＝24.8ha。</div>
+    <div class="maplegend"><b>テーマ色</b>
+     <div class="legendrow"><span class="swatch" style="background:#2f6b45"></span>J-クレジット対象</div>
+     <div class="legendrow"><span class="swatch" style="background:#d88622"></span>既存PJ追加候補</div>
+     <div class="legendrow"><span class="swatch" style="background:#7553a5"></span>プログラム/認証前</div>
+     <div class="legendrow"><span class="swatch" style="background:#49779d"></span>施業</div>
+     <div class="legendrow"><span class="swatch" style="background:#c84f45"></span>災害</div>
+     <div class="legendrow"><span class="swatch" style="background:#8b6f47"></span>権利・境界要確認</div>
+     <div style="margin-top:6px;color:#66736a">必要なレイヤーだけON。森林クリックで概要。</div>
+    </div>
+    <div id="townMapSvg">${renderTownMapSvg()}</div>
+   </div>
+   <div class="map-note">初期表示は町全体森林と詳細管理森林の位置だけ。テーマレイヤーをONにすると該当森林だけ強調します。西谷共有林24.8haは本体19.6ha＋飛地3.1ha＋2.1ha。</div>
   </div>
   <div id="mapDetail" class="mapdetail"></div>
  </div>`+
- table('町全体森林ブロック',['ブロック','面積','所有','J-クレジット','施業','災害','詳細管理','候補判断・次アクション'],blocks.map(b=>[
-  b.block_name,ha(b.area_ha),txt(b.ownership_summary),txt(b.jcredit_summary),txt(b.work_summary),txt(b.disaster_summary),`${num(b.detail_forest_count)}件 / ${ha(b.detail_area_ha)}`,`${txt(b.candidate_reason)}<br>${txt(b.next_action)}`
+ table('町全体森林ブロック',['ブロック','面積','所有','J-クレジット','施業','災害','詳細管理'],blocks.map(b=>[
+  b.block_name,ha(b.area_ha),txt(b.ownership_summary),txt(b.jcredit_summary),txt(b.work_summary),txt(b.disaster_summary),`${num(b.detail_forest_count)}件 / ${ha(b.detail_area_ha)}`
  ]))+
  table('重点管理6森林',['森林','ブロック','面積','J-クレジット','施業','災害','権利・境界','次アクション'],details.map(x=>[
   x.forest_name,x.block_code,ha(x.area_ha),txt(x.jcredit_status),txt(x.work_status),`${txt(x.disaster_status)} ${x.disaster_date?date(x.disaster_date):''}`,`${txt(x.rights_status)} / ${txt(x.boundary_status)}`,txt(x.next_action)
  ]));
+
  document.getElementById('townMapCanvas').addEventListener('click',ev=>{
   const d=ev.target.closest('[data-detail]'); if(d){renderTownDetail(d.getAttribute('data-detail'));return;}
   const b=ev.target.closest('[data-block]'); if(b)renderBlockDetail(b.getAttribute('data-block'));
  });
- renderTownDetail(details.find(x=>x.credit_review_status==='要条件整理')?.forest_name || details[0]?.forest_name);
+
+ // Right panel starts with a short instruction, not a pre-selected forest.
+ document.getElementById('mapDetail').innerHTML=`<h2>森林を選択</h2><div class="empty">地図上の詳細管理森林をクリックすると概要を表示します。必要なら「森林詳細を見る」から既存の森林画面へ進めます。</div>`;
 }
 
 const contractMocks={
