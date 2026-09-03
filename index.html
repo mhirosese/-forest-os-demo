@@ -26,6 +26,12 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .tag{display:inline-block;padding:3px 7px;border-radius:999px;background:var(--soft);font-size:11px}
 .warn{color:var(--warn);font-weight:600} .empty{padding:14px;color:var(--muted);font-size:13px}
 .footer{color:var(--muted);font-size:11px;padding:4px 2px 24px}
+.selector{width:100%;max-width:520px;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:15px;margin-bottom:14px}
+.detailgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0}
+.detailitem{padding:11px 14px;border-bottom:1px solid #edf0ed}
+.detailitem .k{font-size:11px;color:var(--muted);margin-bottom:4px}
+.detailitem .v{font-size:14px;line-height:1.45}
+
 @media(max-width:600px){header{padding:14px 12px 10px}main{padding:10px}.cards{grid-template-columns:repeat(2,1fr)}.card .value{font-size:18px}}
 </style>
 </head>
@@ -38,6 +44,10 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <button data-role="forest_coop">森林組合</button>
 <button data-role="forestry_company">林業会社</button>
 <button data-role="owner">山主</button>
+<button data-role="accounting">会計</button>
+<button data-role="jcredit">J-クレジットPJ</button>
+<button data-role="pm">PM</button>
+<button data-role="forest">森林</button>
 </nav>
 </header>
 <main>
@@ -96,7 +106,133 @@ async function owner(){
  table('自分の森林',['森林','面積','権利','持分','施業状態','次回作業','分配予定','支払予定','状態'],f.map(x=>[x.name,ha(x.area_ha),x.right_name,txt(x.quantity_text||x.percentage),txt(x.work_status),date(x.next_work_on),yen(x.planned_distribution_amount),date(x.planned_payment_on),txt(x.distribution_status)]))+
  `<section><h2>この立場では表示しない情報</h2><div class="empty">他山主の情報、他森林の分配、林業会社の原価、自治体内部予算、基金口座等は表示しません。</div></section>`;
 }
-const loaders={municipality,forest_coop:forestCoop,forestry_company:forestryCompany,owner};
+
+function metricMap(rows){
+ const m={}; rows.forEach(x=>m[x.metric_code]=Number(x.amount||0)); return m;
+}
+function speciesLabel(s){
+ if(!s)return '—';
+ try{
+   const a=JSON.parse(s);
+   return a.map(x=>`${x.species}${x.ratio!=null?` ${Math.round(Number(x.ratio)*100)}%`:''}`).join(' / ');
+ }catch(e){return s;}
+}
+function detailSection(title,rows){
+ return `<section><h2>${title}</h2><div class="detailgrid">${rows.map(r=>`<div class="detailitem"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('')}</div></section>`;
+}
+async function accounting(){
+ const [s,e]=await Promise.all([
+   q('demo_accounting_summary','select=*'),
+   q('demo_accounting_entry','select=*&order=entry_date')
+ ]);
+ const m=metricMap(s);
+ cards([
+   ['承認予算',yen(m.budget)],['補助金決定',yen(m.subsidy_decided)],
+   ['支出',yen(m.payments)],['J-クレジット売上',yen(m.jcredit_sales)],
+   ['分配予定',yen(m.distribution)],['基金残高',yen(m.fund_balance)]
+ ]);
+ document.getElementById('content').innerHTML=
+ table('会計・資金の流れ',
+ ['日付','区分','内容','相手先','税抜','税額','税込','状態'],
+ e.map(x=>[
+   date(x.entry_date),txt(x.category),txt(x.description),txt(x.counterparty),
+   yen(x.amount_ex_tax),yen(x.tax_amount),yen(x.amount_in_tax),txt(x.status)
+ ]))+
+ detailSection('会計チェック',[
+   ['記録済税額',yen(m.tax)],
+   ['税率の扱い','取引時点の適用税率・区分を保存。将来の税率変更を上書きしない'],
+   ['分配','山主・地域への予定額と実際の支払を分離'],
+   ['基金','J-クレジット在庫のリスク留保とは別管理']
+ ]);
+}
+async function jcreditProject(){
+ const [j,l,e]=await Promise.all([
+   q('demo_jcredit_project'),
+   q('demo_jcredit_lot','select=*'),
+   q('demo_jcredit_event','select=*&order=event_date')
+ ]);
+ const x=j[0]||{};
+ cards([
+   ['対象森林',`${num(x.target_forest_count||0)}件`],['対象面積',ha(x.target_area_ha)],
+   ['発行',`${num(x.issued_quantity_t||0)} t`],['販売可能',`${num(x.available_quantity_t||0)} t`],
+   ['リスク留保',`${num(x.risk_reserved_quantity_t||0)} t`],['基金',yen(x.linked_fund_balance||0)]
+ ]);
+ document.getElementById('content').innerHTML=
+ detailSection('プロジェクト基本情報',[
+   ['PJ名',txt(x.name)],['登録番号',txt(x.registry_project_no)],['方法論',txt(x.methodology_code)],
+   ['状態',txt(x.status)],['売却済',`${num(x.sold_quantity_t||0)} t`],['売上',yen(x.sales_amount_in_tax)]
+ ])+
+ table('クレジット在庫・シリアル',
+ ['ロット','シリアル開始','シリアル終了','数量','区分','状態'],
+ l.map(x=>[x.lot_code,x.registry_serial_from,x.registry_serial_to,`${num(x.quantity_t)} t`,x.current_bucket,x.status]))+
+ table('PJ履歴',
+ ['日付','イベント','内容','数量','金額','状態','備考'],
+ e.map(x=>[date(x.event_date),x.event_type,x.title,x.quantity_t==null?'—':`${num(x.quantity_t)} t`,
+            yen(x.amount_jpy),x.status,txt(x.note)]));
+}
+async function pm(){
+ const items=await q('demo_pm_item','select=*');
+ items.sort((a,b)=>(a.due_on||'9999-12-31').localeCompare(b.due_on||'9999-12-31'));
+ const open=items.filter(x=>!['completed','closed','resolved','accepted'].includes(x.status));
+ const high=open.filter(x=>x.priority==='high');
+ cards([
+   ['管理項目',`${items.length}件`],['未完了',`${open.length}件`],
+   ['高優先度',`${high.length}件`],['タスク',`${items.filter(x=>x.item_type==='task').length}件`],
+   ['施業案件',`${items.filter(x=>x.item_type==='work').length}件`],
+   ['要整理',`${items.filter(x=>['succession','data_conflict','incident'].includes(x.item_type)).length}件`]
+ ]);
+ document.getElementById('content').innerHTML=
+ table('PM・事務局 管理一覧',
+ ['期限','種別','森林','内容','担当','優先度','状態','メモ'],
+ items.map(x=>[
+   date(x.due_on),x.item_type,txt(x.forest_name),x.title,txt(x.responsible),
+   x.priority==='high'?`<span class="warn">high</span>`:txt(x.priority),x.status,txt(x.note)
+ ]));
+}
+let forestRows=[];
+function renderForestDetail(id){
+ const x=forestRows.find(r=>r.forest_unit_id===id) || forestRows[0];
+ if(!x)return;
+ cards([
+   ['面積',ha(x.area_ha)],['林齢',x.stand_age_years==null?'—':`${num(x.stand_age_years)}年`],
+   ['蓄積',x.volume_m3==null?'—':`${num(x.volume_m3)} m³`],
+   ['権利不一致',`${num(x.unresolved_conflicts||0)}件`],
+   ['災害',`${num(x.active_incident_count||0)}件`],
+   ['分配予定',yen(x.planned_distribution_amount)]
+ ]);
+ const selector=`<select class="selector" onchange="renderForestDetail(this.value)">${forestRows.map(r=>`<option value="${r.forest_unit_id}" ${r.forest_unit_id===x.forest_unit_id?'selected':''}>${r.name}</option>`).join('')}</select>`;
+ document.getElementById('content').innerHTML=selector+
+ detailSection('森林基本・資源',[
+   ['森林',x.name],['地域',txt(x.region_name)],['面積',ha(x.area_ha)],['状態',txt(x.forest_status)],
+   ['樹種',speciesLabel(x.species)],['森林区分',txt(x.forest_type)],['林齢 / 齢級',`${txt(x.stand_age_years)}年 / ${txt(x.age_class)}`],
+   ['平均樹高',x.mean_height_m==null?'—':`${num(x.mean_height_m)} m`],['蓄積',x.volume_m3==null?'—':`${num(x.volume_m3)} m³`],
+   ['年間成長',x.annual_growth_m3==null?'—':`${num(x.annual_growth_m3)} m³`],['データ品質',txt(x.data_quality)]
+ ])+
+ detailSection('権利・相続',[
+   ['権利関係',txt(x.rights_summary)],['未解決データ不一致',`${num(x.unresolved_conflicts||0)}件`],
+   ['相続状態',txt(x.succession_status)],['相続メモ',txt(x.succession_note)]
+ ])+
+ detailSection('施業・補助金',[
+   ['直近/予定作業',txt(x.latest_work_title)],['作業状態',txt(x.latest_work_status)],
+   ['実績面積',ha(x.latest_actual_area_ha)],['次回予定',date(x.next_work_on)],
+   ['補助金状態',txt(x.subsidy_status)],['補助金決定額',yen(x.subsidy_decided_amount)]
+ ])+
+ detailSection('保険・災害',[
+   ['保険',txt(x.insurance_status)],['保険金額',yen(x.insured_amount)],
+   ['対応中災害',`${num(x.active_incident_count||0)}件`],['災害内容',txt(x.incident_title)]
+ ])+
+ detailSection('J-クレジット・分配',[
+   ['J-クレジットPJ',txt(x.jcredit_project_name)],['対象状態',txt(x.jcredit_target_status)],
+   ['対象面積',ha(x.jcredit_eligible_area_ha)],['分配予定',yen(x.planned_distribution_amount)],
+   ['支払予定',date(x.planned_payment_on)],['分配状態',txt(x.distribution_status)]
+ ]);
+}
+async function forestView(){
+ forestRows=await q('demo_forest_detail','select=*&order=name');
+ renderForestDetail(forestRows[0]?.forest_unit_id);
+}
+
+const loaders={municipality,forest_coop:forestCoop,forestry_company:forestryCompany,owner,accounting,jcredit:jcreditProject,pm,forest:forestView};
 async function load(role){
  document.querySelectorAll('button[data-role]').forEach(b=>b.classList.toggle('active',b.dataset.role===role));
  document.getElementById('cards').innerHTML='';
