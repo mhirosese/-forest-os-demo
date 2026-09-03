@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest OS デモ｜青嶺町</title>
+<style>
+:root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text)}
+header{padding:18px 20px 12px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+h1{margin:0;font-size:20px} .sub{margin-top:4px;color:var(--muted);font-size:12px}
+nav{display:flex;gap:8px;overflow:auto;padding-top:12px}
+button{border:1px solid var(--line);background:#fff;padding:9px 13px;border-radius:8px;white-space:nowrap;font-size:14px}
+button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{padding:16px;max-width:1180px;margin:auto}
+.notice{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px}
+.card .label{font-size:12px;color:var(--muted)} .card .value{margin-top:5px;font-size:22px;font-weight:650}
+section{background:var(--panel);border:1px solid var(--line);border-radius:9px;margin-bottom:14px;overflow:hidden}
+section h2{font-size:15px;margin:0;padding:12px 14px;border-bottom:1px solid var(--line)}
+.tablewrap{overflow:auto} table{width:100%;border-collapse:collapse;font-size:13px;min-width:680px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #edf0ed;vertical-align:top}
+th{color:var(--muted);font-weight:600;background:#fafbfa}
+.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:var(--soft);font-size:11px}
+.warn{color:var(--warn);font-weight:600} .empty{padding:14px;color:var(--muted);font-size:13px}
+.footer{color:var(--muted);font-size:11px;padding:4px 2px 24px}
+@media(max-width:600px){header{padding:14px 12px 10px}main{padding:10px}.cards{grid-template-columns:repeat(2,1fr)}.card .value{font-size:18px}}
+</style>
+</head>
+<body>
+<header>
+<h1>Forest OS <span style="font-weight:400">｜【デモ】青嶺町</span></h1>
+<div class="sub">同じ森林データを、立場ごとに必要な範囲だけ表示</div>
+<nav>
+<button data-role="municipality" class="active">自治体</button>
+<button data-role="forest_coop">森林組合</button>
+<button data-role="forestry_company">林業会社</button>
+<button data-role="owner">山主</button>
+</nav>
+</header>
+<main>
+<div id="notice" class="notice">ダミーデータ専用Viewのみを読み込みます。</div>
+<div id="cards" class="cards"></div>
+<div id="content"></div>
+<div class="footer">デモ専用。実在する自治体・企業・個人のデータではありません。</div>
+</main>
+<script>
+const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
+const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
+async function q(view,params='select=*'){
+ const r=await fetch(`${SB_URL}/rest/v1/${view}?${params}`,{headers:{apikey:SB_KEY}});
+ if(!r.ok)throw new Error(`${view}: ${r.status}`);
+ return r.json();
+}
+const yen=n=>n==null?'—':new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(n));
+const num=n=>n==null?'—':new Intl.NumberFormat('ja-JP').format(Number(n));
+const ha=n=>n==null?'—':`${Number(n).toFixed(1)} ha`;
+const date=s=>s?s.replaceAll('-','/'):'—';
+const txt=v=>(v===null||v===undefined||v==='')?'—':String(v);
+function cards(items){document.getElementById('cards').innerHTML=items.map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('')}
+function table(title,headers,rows){
+ if(!rows.length)return `<section><h2>${title}</h2><div class="empty">該当データなし</div></section>`;
+ return `<section><h2>${title}</h2><div class="tablewrap"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;
+}
+async function municipality(){
+ const [f,j,t]=await Promise.all([q('demo_municipality_forest','select=*&order=name'),q('demo_jcredit_project'),q('demo_role_task',"select=*&role_code=eq.municipality&order=due_on")]);
+ const area=f.reduce((s,x)=>s+Number(x.area_ha||0),0), unresolved=f.reduce((s,x)=>s+Number(x.unresolved_right_count||0),0);
+ cards([['管理森林',`${f.length}件`],['管理面積',ha(area)],['権利未整理',`${unresolved}件`],['災害対応中',`${f.reduce((s,x)=>s+Number(x.active_incident_count||0),0)}件`],['J-クレジット発行',`${num(j[0]?.issued_quantity_t||0)} t`],['基金残高',yen(j[0]?.linked_fund_balance||0)]]);
+ document.getElementById('content').innerHTML=
+ table('地域全体の森林',['森林','面積','状態','権利未整理','施業状態','次期限','災害','J-クレジット'],f.map(x=>[x.name,ha(x.area_ha),`<span class="tag">${txt(x.forest_status)}</span>`,Number(x.unresolved_right_count||0)?`<span class="warn">${x.unresolved_right_count}件</span>`:'0件',txt(x.latest_work_status),date(x.next_due_on),`${x.active_incident_count}件`,`${x.active_jcredit_project_count}件`]))+
+ table('J-クレジットPJ',['PJ','対象面積','発行','販売可能','リスク留保','売却済','売上','補填案件','基金'],j.map(x=>[x.name,ha(x.target_area_ha),`${num(x.issued_quantity_t)}t`,`${num(x.available_quantity_t)}t`,`${num(x.risk_reserved_quantity_t)}t`,`${num(x.sold_quantity_t)}t`,yen(x.sales_amount_in_tax),`${x.open_compensation_cases}件`,yen(x.linked_fund_balance)]))+
+ table('自治体タスク',['期限','内容','担当','状態'],t.map(x=>[date(x.due_on),x.title,x.assigned_to,x.status]));
+}
+async function forestCoop(){
+ const [f,j,t]=await Promise.all([q('demo_forest_coop_operation','select=*&order=name'),q('demo_jcredit_project'),q('demo_role_task',"select=*&role_code=eq.forest_coop&order=due_on")]);
+ cards([['担当森林',`${f.length}件`],['担当面積',ha(f.reduce((s,x)=>s+Number(x.area_ha||0),0))],['未完了タスク',`${t.filter(x=>x.status!=='completed').length}件`],['災害対応',`${f.reduce((s,x)=>s+Number(x.active_incident_count||0),0)}件`],['販売可能クレジット',`${num(j[0]?.available_quantity_t||0)} t`],['リスク留保',`${num(j[0]?.risk_reserved_quantity_t||0)} t`]]);
+ document.getElementById('content').innerHTML=
+ table('森林・施業管理',['森林','面積','直近作業','状態','次期限','災害','J-クレジット'],f.map(x=>[x.name,ha(x.area_ha),txt(x.latest_work_type),txt(x.latest_work_status),date(x.next_due_on),`${x.active_incident_count}件`,`${x.active_jcredit_project_count}件`]))+
+ table('やること',['期限','優先度','内容','状態'],t.map(x=>[date(x.due_on),x.priority,x.title,x.status]))+
+ table('J-クレジット管理',['PJ','発行','販売可能','留保','売却済','基金'],j.map(x=>[x.name,`${num(x.issued_quantity_t)}t`,`${num(x.available_quantity_t)}t`,`${num(x.risk_reserved_quantity_t)}t`,`${num(x.sold_quantity_t)}t`,yen(x.linked_fund_balance)]));
+}
+async function forestryCompany(){
+ const w=await q('demo_forestry_company_work','select=*&order=title');
+ cards([['受託案件',`${w.length}件`],['計画面積',ha(w.reduce((s,x)=>s+Number(x.planned_area_ha||0),0))],['実績面積',ha(w.reduce((s,x)=>s+Number(x.actual_area_ha||0),0))],['完了案件',`${w.filter(x=>x.work_status==='completed').length}件`]]);
+ document.getElementById('content').innerHTML=
+ table('自社が受託している作業',['案件','森林','作業','計画面積','実績面積','作業日','検収','契約'],w.map(x=>[x.title,txt(x.forest_name),txt(x.work_type_name),ha(x.planned_area_ha),ha(x.actual_area_ha),date(x.latest_event_date),txt(x.inspection_status),`${x.contract_title}<br><span class="tag">${x.contract_status}</span>`]))+
+ `<section><h2>この立場では表示しない情報</h2><div class="empty">他社案件、他山主の権利情報、個人分配額、基金口座、自治体内部予算など。</div></section>`;
+}
+async function owner(){
+ const f=await q('demo_owner_forest','select=*&order=name');
+ const total=f.reduce((s,x)=>s+Number(x.planned_distribution_amount||0),0);
+ cards([['自分の森林',`${f.length}件`],['面積',ha(f.reduce((s,x)=>s+Number(x.area_ha||0),0))],['分配予定',yen(total)],['支払予定日',f[0]?.planned_payment_on?date(f[0].planned_payment_on):'—']]);
+ document.getElementById('content').innerHTML=
+ table('自分の森林',['森林','面積','権利','持分','施業状態','次回作業','分配予定','支払予定','状態'],f.map(x=>[x.name,ha(x.area_ha),x.right_name,txt(x.quantity_text||x.percentage),txt(x.work_status),date(x.next_work_on),yen(x.planned_distribution_amount),date(x.planned_payment_on),txt(x.distribution_status)]))+
+ `<section><h2>この立場では表示しない情報</h2><div class="empty">他山主の情報、他森林の分配、林業会社の原価、自治体内部予算、基金口座等は表示しません。</div></section>`;
+}
+const loaders={municipality,forest_coop:forestCoop,forestry_company:forestryCompany,owner};
+async function load(role){
+ document.querySelectorAll('button[data-role]').forEach(b=>b.classList.toggle('active',b.dataset.role===role));
+ document.getElementById('cards').innerHTML='';
+ document.getElementById('content').innerHTML='<div class="notice">読み込み中...</div>';
+ try{await loaders[role]();document.getElementById('notice').textContent='ダミーデータ専用Viewを表示中。本体DB・機密データは公開していません。'}
+ catch(e){document.getElementById('notice').innerHTML=`<span class="warn">DB接続エラー：</span>${e.message}`;document.getElementById('content').innerHTML='<section><div class="empty">ネット接続またはSupabase側の公開設定を確認してください。</div></section>'}
+}
+document.querySelectorAll('button[data-role]').forEach(b=>b.addEventListener('click',()=>load(b.dataset.role)));
+load('municipality');
+</script>
+</body>
+</html>
