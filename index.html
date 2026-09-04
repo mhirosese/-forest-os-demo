@@ -432,6 +432,52 @@ function featureProps(f){return typeof f.properties==='object'&&f.properties?f.p
 function coverageJP(v){return ({confirmed:'確認済',partial:'一部',unknown:'未確認',not_available:'データなし',not_applicable:'対象外'})[v]||'未確認';}
 function coverageChip(v,label){const c=v||'unknown';return `<span class="covchip cov-${esc(c)}">${esc(label)}：${esc(coverageJP(c))}</span>`;}
 
+// 町全体マップは精密境界ではなく概況把握を優先する。
+// 正本の100mメッシュ／課題形状はDBに保持し、表示時だけブロック単位の外周へ一般化する。
+function collectGeoPoints(gj){
+ const pts=[];
+ const walk=x=>{
+  if(Array.isArray(x)&&x.length>=2&&typeof x[0]==='number'&&typeof x[1]==='number'){pts.push([x[0],x[1]]);return;}
+  if(Array.isArray(x))x.forEach(walk);
+ };
+ if(gj&&gj.coordinates)walk(gj.coordinates);
+ return pts;
+}
+function convexHull(points){
+ const uniq=[...new Map(points.map(p=>[`${p[0].toFixed(7)},${p[1].toFixed(7)}`,p])).values()];
+ if(uniq.length<3)return uniq;
+ uniq.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+ const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+ const lower=[]; for(const p of uniq){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();lower.push(p);}
+ const upper=[]; for(let i=uniq.length-1;i>=0;i--){const p=uniq[i];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();upper.push(p);}
+ const hull=lower.slice(0,-1).concat(upper.slice(0,-1));
+ if(hull.length)hull.push(hull[0]);
+ return hull;
+}
+function issueOverviewFeatures(mode){
+ const src=townIssueShapes.filter(f=>issueMatchesFeature(f,mode));
+ const groups=new Map();
+ src.forEach(f=>{
+  const p=featureProps(f), block=p.block_code||'未分類';
+  if(!groups.has(block))groups.set(block,[]);
+  groups.get(block).push(f);
+ });
+ const out=[];
+ groups.forEach((features,block)=>{
+  const pts=features.flatMap(f=>collectGeoPoints(geoObj(f.geom_geojson)));
+  const hull=convexHull(pts); if(hull.length<4)return;
+  const ids=features.map(f=>featureProps(f).issue_area_id).filter(Boolean);
+  const rows=townIssues.filter(x=>ids.includes(x.issue_area_id));
+  out.push({
+   feature_code:`OV-${mode}-${block}`, layer_code:'issue_overview', display_name:`${block} ${mode==='issues'?'未整理森林概況':mode==='owner_unknown'?'所有・相続課題概況':'境界課題概況'}`,
+   feature_kind:'issue_overview', feature_subtype:mode, is_fictional:true,
+   geom_geojson:{type:'Polygon',coordinates:[hull]},
+   properties:{block_code:block,issue_ids:ids,issue_count:rows.length,reported_area_ha:rows.reduce((a,x)=>a+Number(x.area_ha||0),0),overview_mode:mode}
+  });
+ });
+ return out;
+}
+
 function issueMatchesFeature(f,mode){
  const p=featureProps(f);
  if(mode==='issues')return true;
@@ -474,19 +520,19 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  const isWater=mode==='water';
  let fillOpacity=.20,weight=0,dashArray=null,opacity=.72,smoothFactor=2.4;
  // 直感表示：正本の細かい境界はDBに残し、地図では面の意味だけを見せる
- if(mode==='reference'){fillOpacity=.11;weight=0;opacity=.56;smoothFactor=3.4;}
+ if(mode==='reference'){fillOpacity=.075;weight=0;opacity=.42;smoothFactor=4.2;}
  if(mode==='details'){fillOpacity=.035;weight=1.15;opacity=.82;smoothFactor=2.0;}
- if(mode==='issues'){fillOpacity=.19;weight=0;opacity=.70;smoothFactor=3.0;}
- if(mode==='owner_unknown'){fillOpacity=.15;weight=0;opacity=.68;smoothFactor=3.0;}
- if(mode==='boundary_unknown'){fillOpacity=0;weight=1.0;opacity=.62;dashArray='5 5';smoothFactor=2.7;}
+ if(mode==='issues'){fillOpacity=.13;weight=.55;opacity=.48;smoothFactor=4.0;}
+ if(mode==='owner_unknown'){fillOpacity=.10;weight=.55;opacity=.46;smoothFactor=4.0;}
+ if(mode==='boundary_unknown'){fillOpacity=.015;weight=1.15;opacity=.58;dashArray='8 7';smoothFactor=4.0;}
  if(mode==='credit'){fillOpacity=.27;weight=1.05;opacity=.84;smoothFactor=2.5;}
  if(mode==='candidate'){fillOpacity=.24;weight=1.0;opacity=.82;smoothFactor=2.5;}
  if(mode==='program'){fillOpacity=.23;weight=1.0;opacity=.80;smoothFactor=2.5;}
  if(mode==='disaster'){fillOpacity=f.is_fictional ? .13 : .075;weight=f.is_fictional ? 1.0 : .65;opacity=.72;smoothFactor=2.8;}
  if(isWater){
    opacity=.72;smoothFactor=3.2;
-   if(subtype==='river'){fillOpacity=0;weight=1.05;opacity=.78;}
-   else if(subtype==='tributary'){fillOpacity=0;weight=.68;opacity=.56;}
+   if(subtype==='river'){fillOpacity=0;weight=.92;opacity=.68;}
+   else if(subtype==='tributary'){fillOpacity=0;weight=.52;opacity=.47;}
    else if(['watershed','catchment'].includes(subtype)){fillOpacity=0;weight=.45;opacity=.20;dashArray='3 7';}
    else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.12;weight=.65;opacity=.58;}
    else if(subtype==='dam'){fillOpacity=.06;weight=.65;opacity=.64;}
@@ -516,7 +562,7 @@ function addWorkScopeToGroup(w,group){
 function activeLayerLegend(){
  const items=[];
  const add=(key,label,kind='box')=>{if(townMapLayers[key])items.push([label,layerColor(key),kind]);};
- add('reference','町全体森林');add('details','詳細管理森林');add('issues','未整理森林');add('owner_unknown','所有・相続');add('boundary_unknown','境界未確定','dash');add('credit','Jクレ対象');add('candidate','既存PJ候補');add('program','プログラム/認証前');add('operations','施業');add('disaster','災害');add('water','水系','line');
+ add('reference','町全体森林');add('details','詳細管理森林');add('issues','未整理（概況）');add('owner_unknown','所有・相続（概況）');add('boundary_unknown','境界未確定（概況）','dash');add('credit','Jクレ対象');add('candidate','既存PJ候補');add('program','プログラム/認証前');add('operations','施業');add('disaster','災害');add('water','水系','line');
  const el=document.getElementById('activeLegend');if(!el)return;
  el.innerHTML=`<strong>表示中</strong>${items.map(([label,color,kind])=>`<div class="legendrow"><span class="swatch ${kind}" style="${kind==='dash'?`color:${color}`:`background:${color}`}" ></span>${esc(label)}</div>`).join('')}`;
 }
@@ -533,7 +579,7 @@ function refreshLeafletLayers(){
  // 水系は業務レイヤーより下に敷き、地形文脈として見せる
  if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
  if(townMapLayers.details)addGroup('details',townMapFeatures.filter(f=>f.layer_code==='managed_forest'),'details');
- ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townIssueShapes.filter(f=>issueMatchesFeature(f,mode)),mode)});
+ ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,issueOverviewFeatures(mode),mode)});
  ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)),mode)});
  if(townMapLayers.operations){
   const g=L.layerGroup();
@@ -619,7 +665,17 @@ function renderWorkScopeDetail(w){
  <div class="detailitem"><div class="k">実施日</div><div class="v">${date(w.event_date)}</div></div>
  <div class="detailitem"><div class="k">GIS精度</div><div class="v">${w.exact_work_polygon?'実測範囲':'森林対象範囲の代理形状'}</div></div></div>`;
 }
+function renderIssueOverviewDetail(f){
+ const p=featureProps(f),ids=Array.isArray(p.issue_ids)?p.issue_ids:[];
+ const rows=townIssues.filter(x=>ids.includes(x.issue_area_id));
+ const owner=rows.filter(i=>['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status)).length;
+ const boundary=rows.filter(i=>['境界未確定','境界推定','隣接地との重複疑い'].includes(i.boundary_status)).length;
+ const hard=rows.filter(i=>i.difficulty_level==='着手困難').length;
+ const area=rows.reduce((a,x)=>a+Number(x.area_ha||0),0);
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">町全体で判断しやすくするための概略表示です。正本の課題30件・100m森林メッシュ・個別境界はDBに保持し、詳細画面で確認します。</div><div class="detailgrid"><div class="detailitem"><div class="k">課題件数</div><div class="v">${rows.length}件</div></div><div class="detailitem"><div class="k">台帳上の課題面積</div><div class="v">${ha(area)}</div></div><div class="detailitem"><div class="k">所有・相続課題</div><div class="v">${owner}件</div></div><div class="detailitem"><div class="k">境界課題</div><div class="v">${boundary}件</div></div><div class="detailitem"><div class="k">着手困難</div><div class="v">${hard}件</div></div><div class="detailitem"><div class="k">表示精度</div><div class="v">町全体概況（一般化）</div></div></div>`;
+}
 function handleMapFeatureClick(f){
+ if(f.layer_code==='issue_overview'){renderIssueOverviewDetail(f);return;}
  if(f.layer_code==='reference_forest'){renderReferenceForestDetail(f);return;}
  if(f.layer_code==='managed_forest'){renderTownDetail(f.display_name);return;}
  if(f.layer_code==='unmanaged_group'){const id=featureProps(f).issue_area_id;if(id)renderIssueDetail(id);return;}
@@ -632,7 +688,7 @@ function handleMapFeatureClick(f){
 function initLeafletTownMap(){
  if(!window.L)throw new Error('地図ライブラリを読み込めませんでした');
  if(leafletTownMap){leafletTownMap.remove();leafletTownMap=null;}
- leafletTownMap=L.map('leafletTownMap',{zoomControl:true,attributionControl:true,minZoom:9,maxZoom:15});
+ leafletTownMap=L.map('leafletTownMap',{zoomControl:true,attributionControl:true,minZoom:9,maxZoom:15,preferCanvas:true});
  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,maxNativeZoom:18,attribution:'背景地図：国土地理院 淡色地図'}).addTo(leafletTownMap);
  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',{maxZoom:16,maxNativeZoom:16,opacity:0.30,attribution:'陰影起伏：国土地理院'}).addTo(leafletTownMap);
  const boundary=townMapFeatures.find(f=>f.feature_code==='AOMINE-TOWN');
