@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v10: issue layers projected onto real forest mesh; water/disaster styling refined -->
+<!-- Forest OS v11: irregular issue shapes from real forest mesh; reduced outline clutter -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜青嶺町 v9</title>
+<title>Forest OS デモ｜青嶺町 v11</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -467,13 +467,15 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  const subtype=String(f.feature_subtype||'');
  const isWater=mode==='water';
  let fillOpacity=.34,weight=2,dashArray=null;
- if(mode==='reference'){fillOpacity=.10;weight=.8;}
+ if(mode==='reference'){fillOpacity=.075;weight=.35;}
  if(mode==='details'){fillOpacity=.18;weight=2.5;}
- if(['issues','owner_unknown','boundary_unknown'].includes(mode)){fillOpacity=.22;weight=1.8;dashArray='5 3';}
+ if(mode==='issues'){fillOpacity=.25;weight=.65;dashArray=null;}
+ if(mode==='owner_unknown'){fillOpacity=.16;weight=1.0;dashArray='3 4';}
+ if(mode==='boundary_unknown'){fillOpacity=.12;weight=1.15;dashArray='7 4';}
  if(mode==='disaster'){fillOpacity=f.is_fictional ? .30 : .18;weight=f.is_fictional ? 2.5 : 1.8;}
  if(isWater){
    if(['river','tributary'].includes(subtype)){fillOpacity=0;weight=subtype==='river'?4.8:3.4;}
-   else if(['watershed','catchment'].includes(subtype)){fillOpacity=.055;weight=1.6;dashArray='7 5';}
+   else if(['watershed','catchment'].includes(subtype)){fillOpacity=.035;weight=1.25;dashArray='7 5';}
    else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.28;weight=2.6;}
    else {fillOpacity=.20;weight=2.5;}
  }
@@ -529,7 +531,7 @@ async function openForestFromMap(name){
 function renderIssueDetail(id){
  const x=townIssues.find(v=>v.issue_area_id===id);if(!x)return;
  const shape=townIssueShapes.find(v=>v.issue_area_id===id||featureProps(v).issue_area_id===id);
- document.getElementById('mapDetail').innerHTML=`<h2>${esc(x.issue_name)}</h2><div class="map-summary-note">課題属性は架空デモ。地図上の形は、実森林100mメッシュのうち当該課題位置にある森林セルを連結した表示用形状です。旧来の円形ポリゴンは表示していません。</div><div class="detailgrid">
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(x.issue_name)}</h2><div class="map-summary-note">課題属性は架空デモ。表示形状は、実森林100mメッシュを課題中心から方向性を持たせて抽出した不規則形状です。旧来の円形ポリゴンは表示していません。</div><div class="detailgrid">
  <div class="detailitem"><div class="k">課題台帳面積 / ブロック</div><div class="v">${ha(x.area_ha)} / ${esc(x.block_code)}</div></div>
  <div class="detailitem"><div class="k">地図表示形状</div><div class="v">${shape?ha(shape.display_shape_area_ha):'—'}（実森林メッシュ投影）</div></div>
  <div class="detailitem"><div class="k">着手難度</div><div class="v">${esc(x.difficulty_level)}</div></div>
@@ -658,7 +660,7 @@ async function townMap(){
  table('森林情報の整理状況',['区分','件数','面積・状態','意味'],[
   ['実森林分布',`${refForest.length}形状`,ha(refForestArea),'100m土地利用メッシュの森林を連結した参照形状'],
   ['詳細管理森林',`${num(p.detailed_forest_count)}件`,ha(p.detailed_management_area_ha),'権利・契約・施業等を個別管理'],
-  ['未整理森林群',`${issues.length}箇所`,ha(issueArea),'課題属性は架空。地図形状は実森林メッシュに投影して表示'],
+  ['未整理森林群',`${issues.length}箇所`,ha(issueArea),'課題属性は架空。表示形状は実森林100mメッシュから不規則に抽出し、旧円形境界は使用しない'],
   ['所有・相続等未整理',`${ownerUnresolved.length}箇所`,'複数問題が重複','所有者不明・相続未登記・共有者不明等'],
   ['境界要整理',`${boundaryUnresolved.length}箇所`,'複数問題が重複','境界未確定・推定・重複疑い'],
   ['施業GIS',`${workScopes.length}件`,'計画・実績を地図連携','現時点は対象森林ポリゴン代理。実測GISで差替可能'],
