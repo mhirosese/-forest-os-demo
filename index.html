@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜青嶺町</title>
+<title>Forest OS デモ｜青嶺町 v9</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -61,6 +61,8 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .layergrouptitle{font-size:10px;font-weight:700;color:#5c675f;min-width:56px}
 .layercheck.water-toggle{border-color:#7caac0;background:#f3f9fc;font-weight:700}
 .layercheck.water-toggle:has(input:checked){background:#dceef6;border-color:#4d8eab}
+.layercheck.reference-toggle{border-color:#9caf9b;background:#f3f7f2;font-weight:700}
+.layercheck.reference-toggle:has(input:checked){background:#e4eee2;border-color:#6f8f72}
 @media(max-width:600px){
  .layergroups{padding:8px}
  .layergroup{gap:5px}
@@ -117,10 +119,10 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </nav>
 </header>
 <main>
-<div id="notice" class="notice">ダミーデータ専用Viewのみを読み込みます。</div>
+<div id="notice" class="notice">公開デモ用Viewのみを読み込みます。実GIS参照データと架空業務データを分離表示します。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">デモ専用。実在する自治体・企業・個人のデータではありません。</div>
+<div class="footer">デモ専用。青嶺町・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データです。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -412,9 +414,9 @@ async function forestView(){
 
 
 
-let townBlocks=[],townDetails=[],townIssues=[],townWater=[],townMapFeatures=[],townMapRelations=[];
+let townBlocks=[],townDetails=[],townIssues=[],townWater=[],townMapFeatures=[],townMapRelations=[],townWorkScopes=[];
 let leafletTownMap=null,leafletFeatureLayers={};
-let townMapLayers={details:false,issues:false,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:false,water:false};
+let townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:false,water:false};
 const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
 
 function geoObj(v){
@@ -436,15 +438,15 @@ function managedMatchesFeature(f,mode){
  if(mode==='credit')return p.jcredit_status==='対象';
  if(mode==='candidate')return String(p.jcredit_status||'').includes('追加候補');
  if(mode==='program')return String(p.jcredit_status||'').includes('プログラム')||String(p.jcredit_status||'').includes('認証前');
- if(mode==='operations')return String(p.work_status||'').includes('施業');
  if(mode==='disaster')return p.disaster_status==='対応中';
  return false;
 }
-function layerColor(mode){return ({details:'#3f4c44',issues:'#7d4f4f',owner_unknown:'#8b6f47',boundary_unknown:'#9a7540',credit:'#2f6b45',candidate:'#d88622',program:'#7553a5',operations:'#49779d',disaster:'#c84f45',water:'#3e88ad'})[mode]||'#65736b'}
+function layerColor(mode){return ({reference:'#6f8f72',details:'#3f4c44',issues:'#7d4f4f',owner_unknown:'#8b6f47',boundary_unknown:'#9a7540',credit:'#2f6b45',candidate:'#d88622',program:'#7553a5',operations:'#49779d',disaster:'#c84f45',water:'#3e88ad'})[mode]||'#65736b'}
 
 function clearLeafletFeatureLayers(){
- Object.values(leafletFeatureLayers).forEach(x=>{try{leafletTownMap?.removeLayer(x)}catch(_){}});
- leafletFeatureLayers={};
+ const town=leafletFeatureLayers.town;
+ Object.entries(leafletFeatureLayers).forEach(([k,x])=>{if(k==='town')return;try{leafletTownMap?.removeLayer(x)}catch(_){}});
+ leafletFeatureLayers=town?{town}:{};
 }
 function addFeatureGeoJSON(f,mode){
  const gj=geoObj(f.geom_geojson); if(!gj||!leafletTownMap)return null;
@@ -459,34 +461,62 @@ function addFeatureGeoJSON(f,mode){
  };
  return L.geoJSON(gj,opts).addTo(leafletTownMap);
 }
+function addFeatureGeoJSONToGroup(f,mode,group){
+ const gj=geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
+ const subtype=String(f.feature_subtype||'');
+ const isWater=mode==='water';
+ let fillOpacity=.34,weight=2,dashArray=null;
+ if(mode==='reference'){fillOpacity=.16;weight=1;}
+ if(mode==='details'){fillOpacity=.18;weight=2.5;}
+ if(['issues','owner_unknown','boundary_unknown'].includes(mode)){fillOpacity=.16;weight=2;dashArray='6 4';}
+ if(mode==='disaster'){fillOpacity=f.is_fictional ? .28 : .24;weight=f.is_fictional ? 2.5 : 2;}
+ if(isWater){
+   if(['river','tributary'].includes(subtype)){fillOpacity=0;weight=subtype==='river'?4:3;}
+   else if(['watershed','catchment'].includes(subtype)){fillOpacity=.09;weight=2;dashArray='6 4';}
+   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.32;weight=2.5;}
+   else {fillOpacity=.20;weight=2.5;}
+ }
+ const lyr=L.geoJSON(gj,{
+  style:()=>({color,weight,fillColor:color,fillOpacity,dashArray}),
+  pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:subtype==='dam'?8:6,color:'#fff',weight:2,fillColor:color,fillOpacity:.96}),
+  onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
+ });
+ lyr.addTo(group);return lyr;
+}
+function addWorkScopeToGroup(w,group){
+ const gj=geoObj(w.geom_geojson);if(!gj)return null;const color=layerColor('operations');
+ const exact=!!w.exact_work_polygon;
+ const lyr=L.geoJSON(gj,{
+  style:()=>({color,weight:3,fillColor:color,fillOpacity:.24,dashArray:exact?null:'5 4'}),
+  onEachFeature:(feature,layer)=>{
+   layer.on('click',()=>renderWorkScopeDetail(w));
+   layer.bindTooltip(w.work_title||'施業',{sticky:true,direction:'top'});
+  }
+ });
+ lyr.addTo(group);return lyr;
+}
 function refreshLeafletLayers(){
  if(!leafletTownMap)return;
  clearLeafletFeatureLayers();
  const addGroup=(key,features,mode)=>{
   const g=L.layerGroup();
-  features.forEach(f=>{const lyr=addFeatureGeoJSONToGroup(f,mode,g);});
+  features.forEach(f=>{addFeatureGeoJSONToGroup(f,mode,g);});
   g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
  };
+ if(townMapLayers.reference)addGroup('reference',townMapFeatures.filter(f=>f.layer_code==='reference_forest'),'reference');
  if(townMapLayers.details)addGroup('details',townMapFeatures.filter(f=>f.layer_code==='managed_forest'),'details');
  ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='unmanaged_group'&&issueMatchesFeature(f,mode)),mode)});
- ['credit','candidate','program','operations'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)),mode)});
+ ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)),mode)});
+ if(townMapLayers.operations){
+  const g=L.layerGroup();
+  townWorkScopes.forEach(w=>addWorkScopeToGroup(w,g));
+  g.addTo(leafletTownMap);leafletFeatureLayers.operations=g;
+ }
  if(townMapLayers.disaster){
   addGroup('disaster-managed',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'disaster')),'disaster');
   addGroup('disaster-events',townMapFeatures.filter(f=>f.layer_code==='hazard_area'),'disaster');
  }
  if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
-}
-function addFeatureGeoJSONToGroup(f,mode,group){
- const gj=geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
- const subtype=String(f.feature_subtype||'');
- const isWater=mode==='water';
- const fillOpacity=isWater&&['river','tributary'].includes(subtype)?0:mode==='details'?0.18:0.38;
- const lyr=L.geoJSON(gj,{
-  style:()=>({color,weight:isWater?3:2,fillColor:color,fillOpacity,dashArray:['issues','owner_unknown','boundary_unknown'].includes(mode)?'6 4':null}),
-  pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:subtype==='dam'?8:6,color:'#fff',weight:2,fillColor:color,fillOpacity:.96}),
-  onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
- });
- lyr.addTo(group);return lyr;
 }
 function setTownLayer(layer,checked){townMapLayers[layer]=checked;refreshLeafletLayers();}
 
@@ -539,11 +569,33 @@ function renderWaterDetail(assetId){
  <div class="detailitem"><div class="k">課題</div><div class="v">${esc(a.issue_summary||'—')}</div></div>
  <div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(a.next_action||'—')}</div></div></div>`;
 }
+function renderReferenceForestDetail(f){
+ const p=featureProps(f);
+ document.getElementById('mapDetail').innerHTML=`<h2>実森林分布（参照）</h2><div class="map-summary-note">国土数値情報2021 土地利用細分メッシュ（森林コード0500）を、架空の青嶺町境界で切り出した参照レイヤーです。森林計画図や地番境界ではありません。</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">表示単位</div><div class="v">100mメッシュを連結した参照形状</div></div>
+ <div class="detailitem"><div class="k">この連結部の面積</div><div class="v">${ha(f.area_ha)}</div></div>
+ <div class="detailitem"><div class="k">基準年</div><div class="v">${esc(p.source_year||'2021')}</div></div>
+ <div class="detailitem"><div class="k">土地利用コード</div><div class="v">${esc(p.land_use_code||'0500')}（森林）</div></div>
+ <div class="detailitem"><div class="k">データ区分</div><div class="v">実データ参照 / CC BY 4.0</div></div></div>`;
+}
+function renderWorkScopeDetail(w){
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(w.work_title||'施業')}</h2><div class="map-summary-note">${w.exact_work_polygon?'実測・確定した施業範囲':'現時点では対象森林ポリゴンを代理表示。実測GIS取込時に差替可能。'}</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">森林</div><div class="v">${esc(w.forest_name||'—')}</div></div>
+ <div class="detailitem"><div class="k">作業種別 / 状態</div><div class="v">${esc(w.work_type_code||'—')} / ${esc(w.work_status||'—')}</div></div>
+ <div class="detailitem"><div class="k">範囲区分</div><div class="v">${esc(w.scope_type||'—')}</div></div>
+ <div class="detailitem"><div class="k">面積</div><div class="v">${ha(w.reported_area_ha)}</div></div>
+ <div class="detailitem"><div class="k">実施日</div><div class="v">${date(w.event_date)}</div></div>
+ <div class="detailitem"><div class="k">GIS精度</div><div class="v">${w.exact_work_polygon?'実測範囲':'森林対象範囲の代理形状'}</div></div></div>`;
+}
 function handleMapFeatureClick(f){
+ if(f.layer_code==='reference_forest'){renderReferenceForestDetail(f);return;}
  if(f.layer_code==='managed_forest'){renderTownDetail(f.display_name);return;}
  if(f.layer_code==='unmanaged_group'){const id=featureProps(f).issue_area_id;if(id)renderIssueDetail(id);return;}
  if(f.layer_code==='water_system'){const p=featureProps(f);if(p.asset_id)renderWaterDetail(p.asset_id);else renderGenericWaterFeature(f);return;}
- if(f.layer_code==='hazard_area'){document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">災害位置は水系・森林との関係が分かる位置に配置。</div><div class="detailgrid"><div class="detailitem"><div class="k">種別</div><div class="v">${esc(f.feature_subtype||'—')}</div></div><div class="detailitem"><div class="k">概要</div><div class="v">${esc(f.summary_text||'軽微な倒木')}</div></div></div>`;return;}
+ if(f.layer_code==='hazard_area'){
+  const p=featureProps(f),real=!f.is_fictional;
+  document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">${real?'国土数値情報2025 奈良県の実データを、架空の青嶺町境界で切り出した参考表示です。法的図書ではありません。':'Forest OSデモ用の架空災害情報です。'}</div><div class="detailgrid"><div class="detailitem"><div class="k">種別</div><div class="v">${esc(f.feature_subtype||'—')}</div></div><div class="detailitem"><div class="k">面積</div><div class="v">${ha(f.area_ha)}</div></div><div class="detailitem"><div class="k">データ区分</div><div class="v">${real?'実データ参照 / 2025':'架空デモ'}</div></div><div class="detailitem"><div class="k">概要</div><div class="v">${esc(f.summary_text||'—')}</div></div></div>`;return;
+ }
 }
 function initLeafletTownMap(){
  if(!window.L)throw new Error('地図ライブラリを読み込めませんでした');
@@ -559,24 +611,56 @@ function initLeafletTownMap(){
  }else leafletTownMap.setView([34.17,135.88],12);
 }
 async function townMap(){
- const [profile,blocks,details,issues,water,mapFeatures,mapRelations,datasets]=await Promise.all([
-  q('demo_town_profile','select=*'),q('demo_town_forest_block','select=*&order=sort_order'),q('demo_forest_decision_context','select=*'),q('demo_town_forest_issue_area','select=*&order=issue_area_id'),q('demo_water_asset','select=*&order=asset_id'),q('demo_map_feature','select=*'),q('demo_map_feature_relation','select=*'),q('demo_map_dataset_catalog','select=*')
+ const [profile,blocks,details,issues,water,mapFeatures,mapRelations,datasets,workScopes]=await Promise.all([
+  q('demo_town_profile','select=*'),
+  q('demo_town_forest_block','select=*&order=sort_order'),
+  q('demo_forest_decision_context','select=*'),
+  q('demo_town_forest_issue_area','select=*&order=issue_area_id'),
+  q('demo_water_asset','select=*&order=asset_id'),
+  q('demo_map_feature','select=*'),
+  q('demo_map_feature_relation','select=*'),
+  q('demo_map_dataset_catalog','select=*'),
+  q('demo_work_spatial_scope','select=*&order=work_code')
  ]);
- townBlocks=blocks;townDetails=details;townIssues=issues;townWater=water;townMapFeatures=mapFeatures;townMapRelations=mapRelations;
- townMapLayers={details:false,issues:false,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:false,water:false};
- const p=profile[0]||{};const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);const ownerUnresolved=issues.filter(i=>['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status));const boundaryUnresolved=issues.filter(i=>['境界未確定','境界推定','隣接地との重複疑い'].includes(i.boundary_status));const hard=issues.filter(i=>i.difficulty_level==='着手困難');const cand=details.filter(x=>String(x.jcredit_status).includes('追加候補'));const disaster=details.filter(x=>x.disaster_status==='対応中');
- cards([['森林面積',ha(p.forest_area_ha)],['詳細管理済み',`${num(p.detailed_forest_count)}件 / ${ha(p.detailed_management_area_ha)}`],['未整理森林群',`${issues.length}箇所 / ${ha(issueArea)}`],['所有・相続等未整理',`${ownerUnresolved.length}箇所`],['境界要整理',`${boundaryUnresolved.length}箇所`],['着手困難',`${hard.length}箇所`],['既存PJ追加候補',`${cand.length}件`],['災害対応',`${disaster.length}件`]]);
- const mk=(k,label,cls='')=>`<label class="layercheck ${cls}"><input type="checkbox" onchange="setTownLayer('${k}',this.checked)"> ${label}</label>`;
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span>実在地形 × 架空町・架空業務データ</span></div><div class="layergroups">
- <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('details','詳細管理森林')}</div>
+ townBlocks=blocks;townDetails=details;townIssues=issues;townWater=water;townMapFeatures=mapFeatures;townMapRelations=mapRelations;townWorkScopes=workScopes;
+ townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:false,water:false};
+ const p=profile[0]||{};
+ const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);
+ const ownerUnresolved=issues.filter(i=>['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status));
+ const boundaryUnresolved=issues.filter(i=>['境界未確定','境界推定','隣接地との重複疑い'].includes(i.boundary_status));
+ const hard=issues.filter(i=>i.difficulty_level==='着手困難');
+ const refForest=mapFeatures.filter(f=>f.layer_code==='reference_forest'&&!f.is_fictional);
+ const refForestArea=refForest.reduce((s,x)=>s+Number(x.area_ha||0),0);
+ const realHazards=mapFeatures.filter(f=>f.layer_code==='hazard_area'&&!f.is_fictional);
+ cards([
+  ['実森林分布',`${refForest.length}形状 / ${ha(refForestArea)}`],
+  ['詳細管理済み',`${num(p.detailed_forest_count)}件 / ${ha(p.detailed_management_area_ha)}`],
+  ['未整理森林群',`${issues.length}箇所 / ${ha(issueArea)}`],
+  ['所有・相続等未整理',`${ownerUnresolved.length}箇所`],
+  ['境界要整理',`${boundaryUnresolved.length}箇所`],
+  ['着手困難',`${hard.length}箇所`],
+  ['施業GIS',`${workScopes.length}件`],
+  ['実災害区域',`${realHazards.length}区域`]
+ ]);
+ const mk=(k,label,cls='',checked=false)=>`<label class="layercheck ${cls}"><input type="checkbox" ${checked?'checked':''} onchange="setTownLayer('${k}',this.checked)"> ${label}</label>`;
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span>実地形・実森林・実災害 × 架空町・架空業務</span></div><div class="layergroups">
+ <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林')}</div>
  <div class="layergroup"><span class="layergrouptitle">未整理</span>${mk('issues','未整理森林群')}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
  <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('credit','J-クレジット対象')}${mk('candidate','既存PJ追加候補')}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害')}</div>
  <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle')}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div></div>
- <div class="map-note"><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」を重ねて表示。<br><b>架空：</b>青嶺町境界、河川・支流、青嶺ダム湖・ダム・水源、詳細森林、所有・境界・施業・J-クレジット等。<br><b>準備中：</b>国土数値情報2021土地利用細分メッシュの森林分布、2025土砂災害警戒区域（奈良県）の実データ取込。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">初期表示は実地形と架空町境界だけです。必要なレイヤーをONにしてください。</div></div></div>`+
+ <div class="map-note"><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。<br><b>実データ：</b>国土数値情報2021 土地利用細分メッシュ（森林0500）を架空町境界で切出し／国土数値情報2025 土砂災害警戒区域（奈良県）を参考表示。<br><b>架空：</b>青嶺町境界、河川・支流、ダム湖・ダム・水源、詳細森林、権利・境界・施業・J-クレジット等。実森林分布は森林計画図・地番境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">町全体森林（実データ）だけ初期表示しています。業務・課題・水系は必要なものだけONにしてください。</div></div></div>`+
  table('GISデータ構成',['データ','区分','商用','表示'],datasets.map(d=>[d.dataset_name,d.source_type,d.commercial_use_allowed?'可':'不可',d.edit_notice_text||'—']))+
- table('森林情報の整理状況',['区分','件数','面積・状態','意味'],[['詳細管理森林',`${num(p.detailed_forest_count)}件`,ha(p.detailed_management_area_ha),'権利・契約・施業等を個別管理'],['未整理森林群',`${issues.length}箇所`,ha(issueArea),'問題森林を代表的な群として管理'],['所有・相続等未整理',`${ownerUnresolved.length}箇所`,'複数問題が重複','所有者不明・相続未登記・共有者不明等'],['境界要整理',`${boundaryUnresolved.length}箇所`,'複数問題が重複','境界未確定・推定・重複疑い'],['着手困難',`${hard.length}箇所`,'直ちに施業不可','基礎情報整理から必要']]);
- setTimeout(()=>{initLeafletTownMap();},0);
+ table('森林情報の整理状況',['区分','件数','面積・状態','意味'],[
+  ['実森林分布',`${refForest.length}形状`,ha(refForestArea),'100m土地利用メッシュの森林を連結した参照形状'],
+  ['詳細管理森林',`${num(p.detailed_forest_count)}件`,ha(p.detailed_management_area_ha),'権利・契約・施業等を個別管理'],
+  ['未整理森林群',`${issues.length}箇所`,ha(issueArea),'問題森林を代表的な群として管理'],
+  ['所有・相続等未整理',`${ownerUnresolved.length}箇所`,'複数問題が重複','所有者不明・相続未登記・共有者不明等'],
+  ['境界要整理',`${boundaryUnresolved.length}箇所`,'複数問題が重複','境界未確定・推定・重複疑い'],
+  ['施業GIS',`${workScopes.length}件`,'計画・実績を地図連携','現時点は対象森林ポリゴン代理。実測GISで差替可能'],
+  ['実災害区域',`${realHazards.length}区域`,'参考表示','法的境界確定には使用しない']
+ ]);
+ setTimeout(()=>{initLeafletTownMap();setTimeout(()=>refreshLeafletLayers(),80);},0);
 }
 
 
@@ -735,7 +819,7 @@ async function load(role){
  document.querySelectorAll('button[data-role]').forEach(b=>b.classList.toggle('active',b.dataset.role===role));
  document.getElementById('cards').innerHTML='';
  document.getElementById('content').innerHTML='<div class="notice">読み込み中...</div>';
- try{await loaders[role]();document.getElementById('notice').textContent='ダミーデータ専用Viewを表示中。本体DB・機密データは公開していません。'}
+ try{await loaders[role]();document.getElementById('notice').textContent='公開デモ用Viewを表示中。本体DB・機密データは公開していません。'}
  catch(e){document.getElementById('notice').innerHTML=`<span class="warn">DB接続エラー：</span>${e.message}`;document.getElementById('content').innerHTML='<section><div class="empty">ネット接続またはSupabase側の公開設定を確認してください。</div></section>'}
 }
 document.querySelectorAll('button[data-role]').forEach(b=>b.addEventListener('click',()=>load(b.dataset.role)));
