@@ -83,7 +83,6 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .maphead strong{font-size:14px}.maphead span{font-size:11px;color:var(--muted)}
 .mapcanvas{position:relative;background:#eef2eb;min-height:520px;overflow:hidden}
 #leafletTownMap{height:560px;width:100%;background:#eef2eb}.leaflet-container{font-family:inherit}.leaflet-control-attribution{font-size:9px}.map-source-note{font-size:10px;color:var(--muted);line-height:1.45}
-.mapcanvas svg{width:100%;height:100%;min-height:520px;display:block}
 .maplegend{position:absolute;left:10px;top:10px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:7px;padding:9px 10px;font-size:10px;line-height:1.65;z-index:2;max-width:190px}
 .legendrow{display:flex;align-items:center;gap:6px;white-space:nowrap}.swatch{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
 .mapdetail{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
@@ -94,7 +93,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .detailarea{cursor:pointer;stroke-width:3}.detailarea:hover{stroke-width:5}
 .map-note{font-size:11px;color:var(--muted);padding:9px 12px;border-top:1px solid var(--line);background:#fafbfa}
 .statusline{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.statuspill{font-size:10px;padding:2px 6px;border-radius:999px;background:var(--soft);border:1px solid var(--line)}
-@media(max-width:800px){.maplayout{grid-template-columns:1fr}.mapcanvas{min-height:470px}.mapcanvas svg{min-height:470px}.maplegend{max-width:170px}}
+@media(max-width:800px){.maplayout{grid-template-columns:1fr}.mapcanvas{min-height:470px}.maplegend{max-width:170px}}
 
 @media(max-width:600px){.viewerbody{padding:8px}.docpaper{padding:28px 20px;min-height:620px}.docpaper h3{font-size:19px}}
 
@@ -550,7 +549,8 @@ function initLeafletTownMap(){
  if(!window.L)throw new Error('地図ライブラリを読み込めませんでした');
  if(leafletTownMap){leafletTownMap.remove();leafletTownMap=null;}
  leafletTownMap=L.map('leafletTownMap',{zoomControl:true,attributionControl:true,minZoom:9,maxZoom:15});
- L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png',{maxZoom:15,attribution:'地形：国土地理院 色別標高図'}).addTo(leafletTownMap);
+ L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,maxNativeZoom:18,attribution:'背景地図：国土地理院 淡色地図'}).addTo(leafletTownMap);
+ L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',{maxZoom:16,maxNativeZoom:16,opacity:0.42,attribution:'陰影起伏：国土地理院'}).addTo(leafletTownMap);
  const boundary=townMapFeatures.find(f=>f.feature_code==='AOMINE-TOWN');
  if(boundary){
   const gj=geoObj(boundary.geom_geojson);
@@ -573,7 +573,7 @@ async function townMap(){
  <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('credit','J-クレジット対象')}${mk('candidate','既存PJ追加候補')}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害')}</div>
  <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle')}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div></div>
- <div class="map-note"><b>背景地形：</b>国土地理院「色別標高図」。海域部は海上保安庁海洋情報部の資料を使用して作成。<br><b>架空：</b>青嶺町境界、河川・支流、青嶺ダム湖・ダム・水源、詳細森林、所有・境界・施業・J-クレジット等。<br><b>準備中：</b>国土数値情報2021土地利用細分メッシュの森林分布、2025土砂災害警戒区域（奈良県）の実データ取込。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">初期表示は実地形と架空町境界だけです。必要なレイヤーをONにしてください。</div></div></div>`+
+ <div class="map-note"><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」を重ねて表示。<br><b>架空：</b>青嶺町境界、河川・支流、青嶺ダム湖・ダム・水源、詳細森林、所有・境界・施業・J-クレジット等。<br><b>準備中：</b>国土数値情報2021土地利用細分メッシュの森林分布、2025土砂災害警戒区域（奈良県）の実データ取込。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">初期表示は実地形と架空町境界だけです。必要なレイヤーをONにしてください。</div></div></div>`+
  table('GISデータ構成',['データ','区分','商用','表示'],datasets.map(d=>[d.dataset_name,d.source_type,d.commercial_use_allowed?'可':'不可',d.edit_notice_text||'—']))+
  table('森林情報の整理状況',['区分','件数','面積・状態','意味'],[['詳細管理森林',`${num(p.detailed_forest_count)}件`,ha(p.detailed_management_area_ha),'権利・契約・施業等を個別管理'],['未整理森林群',`${issues.length}箇所`,ha(issueArea),'問題森林を代表的な群として管理'],['所有・相続等未整理',`${ownerUnresolved.length}箇所`,'複数問題が重複','所有者不明・相続未登記・共有者不明等'],['境界要整理',`${boundaryUnresolved.length}箇所`,'複数問題が重複','境界未確定・推定・重複疑い'],['着手困難',`${hard.length}箇所`,'直ちに施業不可','基礎情報整理から必要']]);
  setTimeout(()=>{initLeafletTownMap();},0);
