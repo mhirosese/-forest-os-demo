@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v14: intuitive map display over precise GIS source data -->
+<!-- Forest OS v20: visibility-first terrain-aware map display -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜青嶺町 v14</title>
+<title>Forest OS デモ｜青嶺町 v20</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -105,8 +105,16 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 
 @media(max-width:600px){header{padding:14px 12px 10px}main{padding:10px}.cards{grid-template-columns:repeat(2,1fr)}.card .value{font-size:18px}}
 
-.river-permanent-label{background:rgba(255,255,255,.82)!important;border:0!important;box-shadow:none!important;color:#4f7f97!important;font-size:10px!important;font-weight:700!important;padding:1px 4px!important;border-radius:4px!important}
+.river-permanent-label{background:rgba(255,255,255,.90)!important;border:0!important;box-shadow:none!important;color:#4f7f97!important;font-size:10px!important;font-weight:700!important;padding:1px 4px!important;border-radius:4px!important}
 .river-permanent-label:before{display:none!important}
+
+/* v20 visibility-first map tuning */
+#leafletTownMap{filter:saturate(.92) contrast(1.03)}
+.activelegend{background:rgba(255,255,255,.96);font-size:10.5px}
+@media(max-width:600px){
+ #leafletTownMap{height:640px}
+ .activelegend{max-width:158px;padding:7px 8px}
+}
 </style>
 </head>
 <body>
@@ -580,17 +588,18 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  const gj=mode==='water'?displayWaterGeometry(f):geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
  const subtype=String(f.feature_subtype||'');
  const isWater=mode==='water';
- let fillOpacity=.20,weight=0,dashArray=null,opacity=.72,smoothFactor=2.4;
- // 直感表示：正本の細かい境界はDBに残し、地図では面の意味だけを見せる
- if(mode==='reference'){fillOpacity=.075;weight=0;opacity=0;smoothFactor=3.6;}
- if(mode==='details'){fillOpacity=.045;weight=1.0;opacity=.76;smoothFactor=2.0;}
- if(mode==='issues'){fillOpacity=.13;weight=.18;opacity=.20;smoothFactor=3.8;}
- if(mode==='owner_unknown'){fillOpacity=.095;weight=.14;opacity=.18;smoothFactor=3.8;}
- if(mode==='boundary_unknown'){fillOpacity=.008;weight=.58;opacity=.32;dashArray='7 7';smoothFactor=3.8;}
- if(mode==='credit'){fillOpacity=.27;weight=1.05;opacity=.84;smoothFactor=2.5;}
- if(mode==='candidate'){fillOpacity=.24;weight=1.0;opacity=.82;smoothFactor=2.5;}
- if(mode==='program'){fillOpacity=.23;weight=1.0;opacity=.80;smoothFactor=2.5;}
- if(mode==='disaster'){fillOpacity=f.is_fictional ? .13 : .075;weight=f.is_fictional ? 1.0 : .65;opacity=.72;smoothFactor=2.8;}
+ let fillOpacity=.12,weight=0,dashArray=null,opacity=.62,smoothFactor=3.4;
+ // v20 視認性優先：町全体では内部境界を描かず、面の意味だけを残す。
+ // 正本GISの細かさはDBに保持し、通常画面では地形とテーマが読めることを優先する。
+ if(mode==='reference'){fillOpacity=.115;weight=0;opacity=0;smoothFactor=4.2;}
+ if(mode==='details'){fillOpacity=.07;weight=1.15;opacity=.78;smoothFactor=2.8;}
+ if(mode==='issues'){fillOpacity=.105;weight=0;opacity=0;smoothFactor=4.4;}
+ if(mode==='owner_unknown'){fillOpacity=.055;weight=.45;opacity=.26;dashArray='3 7';smoothFactor=4.4;}
+ if(mode==='boundary_unknown'){fillOpacity=0;weight=.72;opacity=.42;dashArray='7 8';smoothFactor=4.4;}
+ if(mode==='credit'){fillOpacity=.16;weight=1.25;opacity=.88;smoothFactor=3.0;}
+ if(mode==='candidate'){fillOpacity=.14;weight=1.2;opacity=.86;smoothFactor=3.0;}
+ if(mode==='program'){fillOpacity=.14;weight=1.2;opacity=.84;smoothFactor=3.0;}
+ if(mode==='disaster'){fillOpacity=f.is_fictional ? .10 : .055;weight=f.is_fictional ? 1.15 : .7;opacity=.78;smoothFactor=3.2;}
 
  // 水系は「青い線」ではなく、淡い河道＋芯線で河川らしく見せる。
  // DBの実データを使う本番でも同じ描画方式を流用できる。
@@ -598,13 +607,13 @@ function addFeatureGeoJSONToGroup(f,mode,group){
    const isMain=subtype==='river';
    const halo=L.geoJSON(gj,{
      smoothFactor:1.0,
-     style:()=>({color:isMain?'#cfe7f1':'#dcecf3',weight:isMain?3.4:2.2,opacity:isMain?.52:.40,lineCap:'round',lineJoin:'round'}),
+     style:()=>({color:isMain?'#cfe7f1':'#dcecf3',weight:isMain?4.1:2.8,opacity:isMain?.46:.34,lineCap:'round',lineJoin:'round'}),
      onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
    });
    halo.addTo(group);
    const core=L.geoJSON(gj,{
      smoothFactor:1.0,
-     style:()=>({color:isMain?'#4f8daa':'#78a9bd',weight:isMain?1.18:.74,opacity:isMain?.86:.66,lineCap:'round',lineJoin:'round'}),
+     style:()=>({color:isMain?'#4f8daa':'#78a9bd',weight:isMain?1.35:.90,opacity:isMain?.88:.70,lineCap:'round',lineJoin:'round'}),
      onEachFeature:(feature,layer)=>{
        layer.on('click',()=>handleMapFeatureClick(f));
        if(f.feature_code==='RIVER-MID'){layer.bindTooltip('青嶺川',{permanent:true,direction:'center',className:'river-permanent-label'});}
@@ -616,8 +625,8 @@ function addFeatureGeoJSONToGroup(f,mode,group){
 
  if(isWater){
    opacity=.72;smoothFactor=2.0;
-   if(['watershed','catchment'].includes(subtype)){fillOpacity=.012;weight=.5;opacity=.18;dashArray='4 8';}
-   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.24;weight=.7;opacity=.62;}
+   if(['watershed','catchment'].includes(subtype)){fillOpacity=.006;weight=.45;opacity=.14;dashArray='4 10';}
+   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.34;weight=.8;opacity=.68;}
    else if(subtype==='dam'){fillOpacity=.06;weight=.7;opacity=.64;}
    else if(subtype==='water_source'){fillOpacity=.06;weight=.65;opacity=.58;}
    else {fillOpacity=.04;weight=.55;opacity=.50;}
@@ -778,11 +787,11 @@ function initLeafletTownMap(){
  if(leafletTownMap){leafletTownMap.remove();leafletTownMap=null;}
  leafletTownMap=L.map('leafletTownMap',{zoomControl:true,attributionControl:true,minZoom:9,maxZoom:15,preferCanvas:true});
  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,maxNativeZoom:18,attribution:'背景地図：国土地理院 淡色地図'}).addTo(leafletTownMap);
- L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',{maxZoom:16,maxNativeZoom:16,opacity:0.30,attribution:'陰影起伏：国土地理院'}).addTo(leafletTownMap);
+ L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',{maxZoom:16,maxNativeZoom:16,opacity:0.20,attribution:'陰影起伏：国土地理院'}).addTo(leafletTownMap);
  const boundary=townMapFeatures.find(f=>f.feature_code==='AOMINE-TOWN');
  if(boundary){
   const gj=geoObj(boundary.geom_geojson);
-  const b=L.geoJSON(gj,{smoothFactor:3,style:{color:'#51635a',weight:1.4,opacity:.68,fillColor:'#6e8b73',fillOpacity:.018,dashArray:'7 6'}}).addTo(leafletTownMap);
+  const b=L.geoJSON(gj,{smoothFactor:3,style:{color:'#51635a',weight:1.15,opacity:.56,fillColor:'#6e8b73',fillOpacity:.012,dashArray:'7 7'}}).addTo(leafletTownMap);
   b.bindTooltip('【架空】青嶺町',{sticky:true});leafletFeatureLayers.town=b;leafletTownMap.fitBounds(b.getBounds(),{padding:[12,12]});
  }else leafletTownMap.setView([34.17,135.88],12);
 }
@@ -829,13 +838,13 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span class="mapmodebadge">直感表示</span></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span class="mapmodebadge">見やすさ優先</span></div><div class="layergroups">
  <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林','',false)}</div>
  <div class="layergroup"><span class="layergrouptitle">未整理</span>${mk('issues','未整理森林群','',true)}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
  <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('credit','J-クレジット対象')}${mk('candidate','既存PJ追加候補')}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害','',true)}</div>
  <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>直感表示：</b>正本の8,764森林メッシュや細かいGIS境界はDBに保持し、通常画面では内部線を出しません。実森林由来の一般化形状で地形に沿う程度の密度を残し、100mセル内部線は出しません。課題・業務・水系を重ねても直感的に読める表示にします。<br><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。実森林・実災害と、架空の青嶺町・業務情報を分離しています。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">最初は「町全体森林・未整理森林・災害・水系」だけを表示します。必要な業務レイヤーを追加して確認してください。</div></div></div>`+
+ <div class="map-note"><b>直感表示：</b>正本の8,764森林メッシュや細かいGIS境界はDBに保持し、通常画面では内部線を描きません。町全体では地形が読める薄い森林面、課題は面、境界は線、業務はアクセントとして表示します。<br><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。実森林・実災害と、架空の青嶺町・業務情報を分離しています。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">最初は「町全体森林・未整理森林・災害・水系」だけを表示します。必要な業務レイヤーを追加して確認してください。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
