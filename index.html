@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v20: visibility-first terrain-aware map display -->
+<!-- Forest OS v21: PM aggregation + detailed finance + terrain-aligned project map -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜青嶺町 v20</title>
+<title>Forest OS デモ｜青嶺町 v21</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -115,6 +115,12 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
  #leafletTownMap{height:640px}
  .activelegend{max-width:158px;padding:7px 8px}
 }
+
+.ownerchip,.sourcechip{display:inline-block;padding:3px 7px;border-radius:999px;font-size:11px;background:#eef3ef;border:1px solid #d8e2d9}
+.sourcechip.external{background:#f8f1e6;border-color:#ead7b8;color:#72521e}.sourcechip.internal{background:#edf3f7;border-color:#cfdee8;color:#385a70}.sourcechip.mixed{background:#f3eff7;border-color:#ddd0e9;color:#654c79}
+.stage-initial{background:#dfeee3}.stage-addition{background:#e9f2eb}.stage-candidate{background:#fbf0dd;color:#7d571d}
+.mapmodebadge{font-size:11px;color:#44554a;background:#eef3ef;border:1px solid #dce6de;border-radius:999px;padding:4px 8px}
+.project-note{padding:9px 12px;font-size:12px;color:#56645b;background:#f8faf8;border-top:1px solid #edf0ed}
 </style>
 </head>
 <body>
@@ -268,17 +274,38 @@ function detailSection(title,rows){
  return `<section><h2>${title}</h2><div class="detailgrid">${rows.map(r=>`<div class="detailitem"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('')}</div></section>`;
 }
 async function accounting(){
- const [s,e]=await Promise.all([
+ const [s,e,fc,costs]=await Promise.all([
    q('demo_accounting_summary','select=*'),
-   q('demo_accounting_entry','select=*&order=entry_date')
+   q('demo_accounting_entry','select=*&order=entry_date'),
+   q('demo_jcredit_forecast_v21','select=*&order=forecast_year'),
+   q('demo_accounting_cost_detail_v21','select=*&order=forecast_year,parent_category,cost_category_code')
  ]);
- const m=metricMap(s);
+ const m=metricMap(s), y=fc[0]||{};
+ const vendorNames=[...new Set(costs.filter(x=>x.sourcing_type==='external'&&x.vendor).map(x=>x.vendor))];
  cards([
-   ['承認予算',yen(m.budget)],['補助金決定',yen(m.subsidy_decided)],
-   ['支出',yen(m.payments)],['J-クレジット売上',yen(m.jcredit_sales)],
-   ['分配予定',yen(m.distribution)],['基金残高',yen(m.fund_balance)]
+   ['承認予算',yen(m.budget)],['支出実績',yen(m.payments)],['J-クレジット売上',yen(m.jcredit_sales)],
+   ['2027売上予測',yen(y.inflow_jpy)],['2027外注費予測',yen(y.external_outflow_jpy)],['外部業者',`${vendorNames.length}社`]
  ]);
+ const sourceLabel=v=>`<span class="sourcechip ${esc(v||'')}">${v==='external'?'外注':v==='internal'?'内製':v==='mixed'?'混在':txt(v)}</span>`;
  document.getElementById('content').innerHTML=
+ detailSection('将来会計の前提',[
+   ['対象PJ','【デモ】青嶺町 森林J-クレジットPJ'],
+   ['PJオーナー','【デモ】青嶺森林PM合同会社'],
+   ['管理モデル','PM組織が町有林・個人山主・共有林を取りまとめる集約型'],
+   ['費用管理','大項目→詳細費目→内製/外注→業者→契約→森林/施業/PJまで追跡']
+ ])+
+ table('未来会計・吸収量予測',
+ ['年度','対象面積','クレジット化可能量','予測レンジ','売上予測','運営支出','うち外注','うち内製','配分','準備金','残余'],
+ fc.map(x=>[
+   x.forecast_year,ha(x.eligible_area_ha),`${num(x.expected_creditable_tco2)} t`,`${num(x.low_tco2)}〜${num(x.high_tco2)} t`,
+   yen(x.inflow_jpy),yen(x.operating_outflow_jpy),yen(x.external_outflow_jpy),yen(x.internal_outflow_jpy),yen(x.allocation_jpy),yen(x.reserve_jpy),yen(x.net_after_all_jpy)
+ ]))+
+ table('費用内訳（予測）',
+ ['年度','大項目','費用項目','内製/外注','外部業者','数量','単価','金額','契約','証憑'],
+ costs.map(x=>[
+   x.forecast_year,txt(x.parent_category),x.cost_item,sourceLabel(x.sourcing_type),txt(x.vendor),
+   x.quantity==null?'—':`${num(x.quantity)} ${txt(x.unit)}`,yen(x.unit_price_jpy),yen(x.amount_jpy),txt(x.contract_no),txt(x.evidence_status)
+ ]))+
  table('会計・資金の流れ',
  ['日付','区分','内容','相手先','税抜','税額','税込','状態'],
  e.map(x=>[
@@ -288,43 +315,67 @@ async function accounting(){
  detailSection('会計チェック',[
    ['記録済税額',yen(m.tax)],
    ['税率の扱い','取引時点の適用税率・区分を保存。将来の税率変更を上書きしない'],
+   ['外注費','契約・業者・費目を分離し、予算→発注→請求→支払へ接続可能'],
    ['分配','山主・地域への予定額と実際の支払を分離'],
    ['基金','J-クレジット在庫のリスク留保とは別管理']
  ]);
 }
 async function jcreditProject(){
- const [j,l,e,a,allc]=await Promise.all([
+ const [j,l,e,a,allc,growth,muniWork,fc]=await Promise.all([
    q('demo_jcredit_project','select=*'),
    q('demo_jcredit_lot','select=*'),
    q('demo_jcredit_event','select=*&order=event_date'),
    q('demo_jcredit_program_activity','select=*&order=activity_code'),
-   q('demo_contract_relation','select=*&order=contract_no')
+   q('demo_contract_relation','select=*&order=contract_no'),
+   q('demo_jcredit_growth_v21','select=*&order=area_version_no,forest_name'),
+   q('demo_municipal_work_v21','select=*&order=work_code'),
+   q('demo_jcredit_forecast_v21','select=*&order=forecast_year')
  ]);
  const contracts=allc.filter(x=>hasAudience(x,'jcredit')&&x.jcredit_project_id);
  const issued=j.reduce((s,x)=>s+Number(x.issued_quantity_t||0),0);
  const available=j.reduce((s,x)=>s+Number(x.available_quantity_t||0),0);
  const reserve=j.reduce((s,x)=>s+Number(x.risk_reserved_quantity_t||0),0);
  const expected=j.reduce((s,x)=>s+Number(x.expected_first_certification_t||0),0);
- const totalArea=j.reduce((s,x)=>s+Number(x.target_area_ha||0),0);
  const programCount=j.filter(x=>x.registration_type==='program').length;
  const normalCount=j.filter(x=>x.registration_type!=='program').length;
+ const main=j.find(x=>x.project_code==='DEMO-JC-001')||{};
+ const active=growth.filter(x=>x.status==='active'), cand=growth.filter(x=>x.status==='candidate');
+ const ownerCount=new Set(growth.map(x=>x.forest_owner).filter(Boolean)).size;
  const stage=v=>({active:'認証・発行済',registered:'登録済',pre_certification:'認証前'}[v]||txt(v));
  const regtype=v=>v==='program'?'プログラム型':'通常型';
- const species=v=>{
-   try{const z=Array.isArray(v)?v:JSON.parse(v||'[]');return z.map(x=>`${x.species} ${Math.round(Number(x.ratio||0)*100)}%`).join(' / ')||'—'}catch(_){return txt(v)}
- };
- const tending=v=>{
-   try{const z=Array.isArray(v)?v:JSON.parse(v||'[]');return z.map(x=>`${x.year}:${x.work}`).join(' / ')||'—'}catch(_){return txt(v)}
- };
+ const pstage=v=>({initial:'初期実施地',addition:'追加済',candidate:'追加候補'}[v]||txt(v));
+ const species=v=>{try{const z=Array.isArray(v)?v:JSON.parse(v||'[]');return z.map(x=>`${x.species} ${Math.round(Number(x.ratio||0)*100)}%`).join(' / ')||'—'}catch(_){return txt(v)}};
+ const tending=v=>{try{const z=Array.isArray(v)?v:JSON.parse(v||'[]');return z.map(x=>`${x.year}:${x.work}`).join(' / ')||'—'}catch(_){return txt(v)}};
  cards([
-   ['プログラム型',`${programCount}件`],['通常型PJ',`${normalCount}件`],['対象面積',ha(totalArea)],
-   ['発行済',`${num(issued)} t`],['初回認証見込',`${num(expected)} t`],['外部契約',`${contracts.length}件`]
+   ['PJオーナー',txt(main.project_owner_name||main.implementing_party_name)],['現在PJ面積',ha(main.active_area_ha||active.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],
+   ['追加候補',ha(main.candidate_area_ha||cand.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],['取りまとめ山主等',`${ownerCount}主体`],
+   ['発行済',`${num(issued)} t`],['販売可能',`${num(available)} t`]
  ]);
  document.getElementById('content').innerHTML=
+ detailSection('PJ運営モデル',[
+   ['プロジェクトオーナー',txt(main.project_owner_name||main.implementing_party_name)],
+   ['集約方式',main.aggregation_model==='multi_owner_pm'?'複数山主をPM組織が取りまとめ':'—'],
+   ['拡張イメージ','町有林102.4haで開始 → 2025年18.4ha追加 → 2026年24.8ha追加 → 周辺83.8haを順次追加候補'],
+   ['森林所有とPJ所有','森林の所有者とJ-クレジットPJオーナーを別管理。森林組合がPJオーナーになる構成にも対応']
+ ])+
+ table('PJ実施地・追加履歴',
+ ['版','段階','森林','森林所有者','面積','候補化','申請','承認','有効化','状態','追加理由'],
+ growth.map(x=>[
+   `v${num(x.area_version_no)}`,`<span class="tag stage-${esc(x.participation_stage)}">${pstage(x.participation_stage)}</span>`,x.forest_name,txt(x.forest_owner),ha(x.eligible_area_ha),
+   date(x.candidate_on),date(x.application_on),date(x.approved_on),date(x.effective_from),txt(x.status),txt(x.inclusion_reason)
+ ]))+
+ table('町有林102.4ha：過去施業＋新規施業',
+ ['区分','作業','状態','面積','実施日','Jクレとの関係','モニタリング対象'],
+ muniWork.map(x=>[
+   x.relevance_period==='before_project'?'過去履歴':'PJ開始後',x.work_title,txt(x.work_status),ha(x.actual_area_ha??x.planned_area_ha),date(x.event_date),txt(x.credit_relevance),x.eligible_for_monitoring?'対象':'対象外'
+ ]))+
+ table('将来の対象面積・吸収量予測',
+ ['年度','PJ対象想定','クレジット化可能量','低位','高位','売上予測'],
+ fc.map(x=>[x.forecast_year,ha(x.eligible_area_ha),`${num(x.expected_creditable_tco2)} t`,`${num(x.low_tco2)} t`,`${num(x.high_tco2)} t`,yen(x.inflow_jpy)]))+
  table('J-クレジット プログラム・プロジェクト',
- ['区分','名称','段階','実施・運営','方法論','対象','発行','販売可能','リスク留保','初回認証見込','次工程','期限','外部契約'],
+ ['区分','名称','段階','PJオーナー/運営','方法論','対象','発行','販売可能','リスク留保','初回認証見込','次工程','期限','外部契約'],
  j.map(x=>[
-   `<span class="tag">${regtype(x.registration_type)}</span>`,x.name,txt(x.stage_label||stage(x.status)),txt(x.implementing_party_name),txt(x.methodology_code),
+   `<span class="tag">${regtype(x.registration_type)}</span>`,x.name,txt(x.stage_label||stage(x.status)),txt(x.project_owner_name||x.implementing_party_name),txt(x.methodology_code),
    `${num(x.target_forest_count||0)}件 / ${ha(x.target_area_ha)}`,`${num(x.issued_quantity_t||0)} t`,`${num(x.available_quantity_t||0)} t`,`${num(x.risk_reserved_quantity_t||0)} t`,
    x.expected_first_certification_t==null?'—':`${num(x.expected_first_certification_t)} t`,txt(x.next_milestone),date(x.next_due_on),`${num(x.external_contract_count||0)}件`
  ]))+
@@ -347,21 +398,34 @@ async function jcreditProject(){
  e.map(x=>[date(x.event_date),x.event_type,x.title,x.quantity_t==null?'—':`${num(x.quantity_t)} t`,yen(x.amount_jpy),x.status,txt(x.note)]));
 }
 async function pm(){
- const [items,allc]=await Promise.all([
+ const [items,allc,growth,fc,costs]=await Promise.all([
    q('demo_pm_item','select=*'),
-   q('demo_contract_relation','select=*&order=contract_no')
+   q('demo_contract_relation','select=*&order=contract_no'),
+   q('demo_jcredit_growth_v21','select=*&order=area_version_no,forest_name'),
+   q('demo_jcredit_forecast_v21','select=*&order=forecast_year'),
+   q('demo_accounting_cost_detail_v21','select=*&order=forecast_year,parent_category,cost_category_code')
  ]);
  const c=allc.filter(x=>hasAudience(x,'pm'));
  items.sort((a,b)=>(a.due_on||'9999-12-31').localeCompare(b.due_on||'9999-12-31'));
  const open=items.filter(x=>!['completed','closed','resolved','accepted'].includes(x.status));
  const high=open.filter(x=>x.priority==='high');
+ const active=growth.filter(x=>x.status==='active'),cand=growth.filter(x=>x.status==='candidate');
+ const vendors=[...new Set(costs.filter(x=>x.sourcing_type==='external'&&x.vendor).map(x=>x.vendor))];
  cards([
-   ['管理項目',`${items.length}件`],['未完了',`${open.length}件`],
-   ['高優先度',`${high.length}件`],['関係契約',`${c.length}件`],
-   ['施業案件',`${items.filter(x=>x.item_type==='work').length}件`],
-   ['要整理',`${items.filter(x=>['succession','data_conflict','incident'].includes(x.item_type)).length}件`]
+   ['PJオーナー','青嶺森林PM合同会社'],['現PJ面積',ha(active.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],
+   ['追加候補',ha(cand.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],['外部業者',`${vendors.length}社`],
+   ['未完了',`${open.length}件`],['高優先度',`${high.length}件`]
  ]);
  document.getElementById('content').innerHTML=
+ table('PM：参加森林・追加候補',
+ ['版','段階','森林','山主等','面積','候補日','有効日','状態','次の意味'],
+ growth.map(x=>[`v${num(x.area_version_no)}`,txt(x.participation_stage),x.forest_name,txt(x.forest_owner),ha(x.eligible_area_ha),date(x.candidate_on),date(x.effective_from),txt(x.status),txt(x.inclusion_reason)]))+
+ table('PM：将来PJ予測',
+ ['年度','対象面積','クレジット化可能量','売上','運営支出','外注費','配分・再投資','準備金','残余'],
+ fc.map(x=>[x.forecast_year,ha(x.eligible_area_ha),`${num(x.expected_creditable_tco2)} t`,yen(x.inflow_jpy),yen(x.operating_outflow_jpy),yen(x.external_outflow_jpy),yen(x.allocation_jpy),yen(x.reserve_jpy),yen(x.net_after_all_jpy)]))+
+ table('外部業者・予定費用',
+ ['年度','業者','費用項目','金額','契約'],
+ costs.filter(x=>x.sourcing_type==='external').map(x=>[x.forecast_year,txt(x.vendor),x.cost_item,yen(x.amount_jpy),txt(x.contract_no)]))+
  table('PM・事務局 管理一覧',
  ['期限','種別','森林','内容','担当','優先度','状態','メモ'],
  items.map(x=>[
@@ -431,7 +495,7 @@ async function forestView(){
 
 let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[];
 let leafletTownMap=null,leafletFeatureLayers={};
-let townMapLayers={reference:true,details:false,issues:true,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:true,water:true};
+let townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
 const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
 
 function geoObj(v){
@@ -543,13 +607,14 @@ function issueMatchesFeature(f,mode){
 function managedMatchesFeature(f,mode){
  const p=featureProps(f);
  if(mode==='details')return true;
- if(mode==='credit')return p.jcredit_status==='対象';
+ if(mode==='municipal')return p.municipal_forest===true||String(p.municipal_forest)==='true';
+ if(mode==='credit')return p.jcredit_status==='対象' && !(p.municipal_forest===true||String(p.municipal_forest)==='true');
  if(mode==='candidate')return String(p.jcredit_status||'').includes('追加候補');
  if(mode==='program')return String(p.jcredit_status||'').includes('プログラム')||String(p.jcredit_status||'').includes('認証前');
  if(mode==='disaster')return p.disaster_status==='対応中';
  return false;
 }
-function layerColor(mode){return ({reference:'#6f8d6d',details:'#355042',issues:'#8a735f',owner_unknown:'#876a53',boundary_unknown:'#796650',credit:'#2f6b45',candidate:'#c48832',program:'#755f98',operations:'#3f7d78',disaster:'#b84e47',water:'#4f89a8'})[mode]||'#65736b'}
+function layerColor(mode){return ({reference:'#799276',details:'#355042',issues:'#8a735f',owner_unknown:'#876a53',boundary_unknown:'#796650',municipal:'#3e7254',credit:'#2f6b45',candidate:'#c58a2d',program:'#755f98',operations:'#3f7d78',disaster:'#b84e47',water:'#4f89a8'})[mode]||'#65736b'}
 
 function clearLeafletFeatureLayers(){
  const town=leafletFeatureLayers.town;
@@ -580,7 +645,7 @@ function displayWaterGeometry(f){
   'RIVER-E':line([[135.9300,34.2180],[135.9268,34.2153],[135.9230,34.2120],[135.9190,34.2080],[135.9152,34.2046],[135.9110,34.2005],[135.9070,34.1970],[135.9035,34.1935],[135.9000,34.1900],[135.8962,34.1868],[135.8928,34.1835],[135.8898,34.1800],[135.8872,34.1767],[135.8848,34.1730],[135.8832,34.1698],[135.8820,34.1662]]),
   'RIVER-MID':line([[135.8820,34.1662],[135.88215,34.1655],[135.88225,34.1648],[135.88230,34.1643]]),
   'RESERVOIR-01':poly([[135.88230,34.1643],[135.88145,34.1629],[135.88175,34.1610],[135.88095,34.1592],[135.88135,34.1571],[135.88215,34.1550],[135.88275,34.1531],[135.88355,34.15235],[135.88435,34.1527],[135.88485,34.1540],[135.88615,34.1556],[135.88625,34.1576],[135.88575,34.1594],[135.88655,34.1610],[135.88510,34.1625],[135.88405,34.1637],[135.88230,34.1643]]),
-  'RIVER-DOWN':line([[135.88355,34.15235],[135.8840,34.1500],[135.8848,34.1472],[135.8858,34.1445],[135.8864,34.1418],[135.8878,34.1390],[135.8887,34.1362],[135.8895,34.1331],[135.8910,34.1301],[135.8918,34.1270],[135.8931,34.1237],[135.8940,34.1204],[135.8952,34.1168],[135.8960,34.1130]])
+  'RIVER-DOWN':line([[135.88355,34.15235],[135.8840,34.1500],[135.8848,34.1472],[135.8858,34.1445],[135.8864,34.1418],[135.8878,34.1390],[135.8887,34.1362],[135.8895,34.1331],[135.8910,34.1301],[135.8918,34.1270],[135.8931,34.1237],[135.8940,34.1204],[135.8952,34.1168],[135.8960,34.1130],[135.8970,34.1095],[135.8982,34.1060]])
  };
  return g[code]||geoObj(f.geom_geojson);
 }
@@ -591,13 +656,14 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  let fillOpacity=.12,weight=0,dashArray=null,opacity=.62,smoothFactor=3.4;
  // v20 視認性優先：町全体では内部境界を描かず、面の意味だけを残す。
  // 正本GISの細かさはDBに保持し、通常画面では地形とテーマが読めることを優先する。
- if(mode==='reference'){fillOpacity=.115;weight=0;opacity=0;smoothFactor=4.2;}
+ if(mode==='reference'){fillOpacity=.045;weight=0;opacity=0;smoothFactor=4.8;}
  if(mode==='details'){fillOpacity=.07;weight=1.15;opacity=.78;smoothFactor=2.8;}
+ if(mode==='municipal'){fillOpacity=.18;weight=1.35;opacity=.90;smoothFactor=3.6;}
  if(mode==='issues'){fillOpacity=.105;weight=0;opacity=0;smoothFactor=4.4;}
  if(mode==='owner_unknown'){fillOpacity=.055;weight=.45;opacity=.26;dashArray='3 7';smoothFactor=4.4;}
  if(mode==='boundary_unknown'){fillOpacity=0;weight=.72;opacity=.42;dashArray='7 8';smoothFactor=4.4;}
- if(mode==='credit'){fillOpacity=.16;weight=1.25;opacity=.88;smoothFactor=3.0;}
- if(mode==='candidate'){fillOpacity=.14;weight=1.2;opacity=.86;smoothFactor=3.0;}
+ if(mode==='credit'){fillOpacity=.20;weight=1.45;opacity=.92;smoothFactor=3.5;}
+ if(mode==='candidate'){fillOpacity=.08;weight=1.45;opacity=.92;dashArray='6 4';smoothFactor=3.8;}
  if(mode==='program'){fillOpacity=.14;weight=1.2;opacity=.84;smoothFactor=3.0;}
  if(mode==='disaster'){fillOpacity=f.is_fictional ? .10 : .055;weight=f.is_fictional ? 1.15 : .7;opacity=.78;smoothFactor=3.2;}
 
@@ -654,7 +720,7 @@ function addWorkScopeToGroup(w,group){
 function activeLayerLegend(){
  const items=[];
  const add=(key,label,kind='box')=>{if(townMapLayers[key])items.push([label,layerColor(key),kind]);};
- add('reference','町全体森林');add('details','詳細管理森林');add('issues','未整理（概況）');add('owner_unknown','所有・相続（概況）');add('boundary_unknown','境界未確定（概況）','dash');add('credit','Jクレ対象');add('candidate','既存PJ候補');add('program','プログラム/認証前');add('operations','施業');add('disaster','災害');add('water','水系','line');
+ add('reference','町全体森林');add('details','詳細管理森林');add('issues','未整理（概況）');add('owner_unknown','所有・相続（概況）');add('boundary_unknown','境界未確定（概況）','dash');add('municipal','町有林102.4ha');add('credit','Jクレ追加済');add('candidate','既存PJ候補');add('program','プログラム/認証前');add('operations','施業');add('disaster','災害');add('water','水系','line');
  const el=document.getElementById('activeLegend');if(!el)return;
  el.innerHTML=`<strong>表示中</strong>${items.map(([label,color,kind])=>`<div class="legendrow"><span class="swatch ${kind}" style="${kind==='dash'?`color:${color}`:`background:${color}`}" ></span>${esc(label)}</div>`).join('')}`;
 }
@@ -670,6 +736,7 @@ function refreshLeafletLayers(){
  if(townMapLayers.reference)addGroup('reference',referenceOverviewFeatures(),'reference');
  if(townMapLayers.details)addGroup('details',townMapFeatures.filter(f=>f.layer_code==='managed_forest'),'details');
  ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,issueOverviewFeatures(mode),mode)});
+ if(townMapLayers.municipal)addGroup('municipal',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'municipal')),'municipal');
  ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)),mode)});
  if(townMapLayers.operations){
   const g=L.layerGroup();
@@ -770,11 +837,26 @@ function renderForestBlockOverviewDetail(f){
  const p=featureProps(f),b=townBlocks.find(x=>x.block_code===p.block_code)||{};
  document.getElementById('mapDetail').innerHTML=`<h2>${esc(b.block_name||f.display_name||'森林ブロック')}</h2><div class="map-summary-note">町全体で直感的に判断するための概況ブロック表示です。林班・小班、100mメッシュ、個別境界はDB側に保持し、必要時に詳細表示します。</div><div class="detailgrid"><div class="detailitem"><div class="k">概算面積</div><div class="v">${ha(b.area_ha)}</div></div><div class="detailitem"><div class="k">所有概況</div><div class="v">${esc(b.ownership_summary||'未確認')}</div></div><div class="detailitem"><div class="k">境界</div><div class="v">${esc(b.boundary_status||'未確認')}</div></div><div class="detailitem"><div class="k">施業</div><div class="v">${esc(b.work_status||'未確認')}</div></div><div class="detailitem"><div class="k">Jクレ</div><div class="v">${esc(b.jcredit_status||'未評価')}</div></div><div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(b.next_action||'—')}</div></div></div>`;
 }
+
+function renderManagedProjectFeature(f){
+ const p=featureProps(f);
+ const stage=({initial:'初期実施地',addition:'追加済',candidate:'追加候補'})[p.participation_stage]||txt(p.participation_stage);
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">地図表示は国土数値情報の森林分布を基に地形へ沿わせたデモ用一般化形状です。台帳面積と表示形状は分離して管理します。</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">台帳面積</div><div class="v">${ha(f.area_ha)}</div></div>
+ <div class="detailitem"><div class="k">PJ段階</div><div class="v">${esc(stage)}</div></div>
+ <div class="detailitem"><div class="k">森林所有者</div><div class="v">${esc(p.owner_name||'未確認')}</div></div>
+ <div class="detailitem"><div class="k">PJオーナー</div><div class="v">${esc(p.project_owner_name||'—')}</div></div>
+ <div class="detailitem"><div class="k">J-クレジット</div><div class="v">${esc(p.jcredit_status||'未確認')}</div></div>
+ <div class="detailitem"><div class="k">候補化 / 有効化</div><div class="v">${date(p.candidate_on)} / ${date(p.effective_from)}</div></div>
+ <div class="detailitem"><div class="k">施業</div><div class="v">${esc(p.work_status||'未確認')}</div></div>
+ <div class="detailitem"><div class="k">権利・境界</div><div class="v">${esc(p.rights_status||'未確認')} / ${esc(p.boundary_status||'未確認')}</div></div>
+ <div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(p.next_action||'—')}</div></div></div>`;
+}
 function handleMapFeatureClick(f){
  if(f.layer_code==='forest_block_overview'){renderForestBlockOverviewDetail(f);return;}
  if(f.layer_code==='issue_overview'){renderIssueOverviewDetail(f);return;}
  if(f.layer_code==='reference_forest'){renderReferenceForestDetail(f);return;}
- if(f.layer_code==='managed_forest'){renderTownDetail(f.display_name);return;}
+ if(f.layer_code==='managed_forest'){renderManagedProjectFeature(f);return;}
  if(f.layer_code==='unmanaged_group'){const id=featureProps(f).issue_area_id;if(id)renderIssueDetail(id);return;}
  if(f.layer_code==='water_system'){const p=featureProps(f);if(p.asset_id)renderWaterDetail(p.asset_id);else renderGenericWaterFeature(f);return;}
  if(f.layer_code==='hazard_area'){
@@ -813,7 +895,7 @@ async function townMap(){
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
  townMapFeatures=[...mapFeatures.filter(f=>f.layer_code!=='reference_forest'),...refDisplay];
  townMapRelations=mapRelations;townWorkScopes=workScopes;townCoverage=coverage;
- townMapLayers={reference:true,details:false,issues:true,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:true,water:true};
+ townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
  const p=profile[0]||{};
  const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);
  const ownerUnresolved=issues.filter(i=>['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status));
@@ -823,8 +905,11 @@ async function townMap(){
  const refForestArea=refForest.reduce((s,x)=>s+Number(x.area_ha||0),0);
  const realHazards=townMapFeatures.filter(f=>f.layer_code==='hazard_area'&&!f.is_fictional);
  const avgCoverage=coverage.length?Math.round(coverage.reduce((s,x)=>s+Number(x.coverage_pct||0),0)/coverage.length):0;
+ const projectFeatures=townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&featureProps(f).dataset==='forest_os_demo_v21');
+ const activeProjectArea=projectFeatures.filter(f=>featureProps(f).jcredit_status==='対象').reduce((s,x)=>s+Number(x.area_ha||0),0);
+ const candidateProjectArea=projectFeatures.filter(f=>String(featureProps(f).jcredit_status||'').includes('追加候補')).reduce((s,x)=>s+Number(x.area_ha||0),0);
  cards([
-  ['実森林分布',`${refForest.length}形状 / ${ha(refForestArea)}`],
+  ['PJ実施地',ha(activeProjectArea)],['追加候補',ha(candidateProjectArea)],['実森林分布',`${refForest.length}形状 / ${ha(refForestArea)}`],
   ['詳細管理済み',`${num(p.detailed_forest_count)}件 / ${ha(p.detailed_management_area_ha)}`],
   ['データ濃度',`${avgCoverage}% 平均`],
   ['未整理森林群',`${issues.length}箇所 / ${ha(issueArea)}`],
@@ -840,11 +925,11 @@ async function townMap(){
  ]);
  document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span class="mapmodebadge">見やすさ優先</span></div><div class="layergroups">
  <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林','',false)}</div>
- <div class="layergroup"><span class="layergrouptitle">未整理</span>${mk('issues','未整理森林群','',true)}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
- <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('credit','J-クレジット対象')}${mk('candidate','既存PJ追加候補')}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害','',true)}</div>
+ <div class="layergroup"><span class="layergrouptitle">未整理</span>${mk('issues','未整理森林群')}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
+ <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('municipal','町有林102.4ha','',true)}${mk('credit','既存PJ追加済','',true)}${mk('candidate','既存PJ追加候補','',true)}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害')}</div>
  <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>直感表示：</b>正本の8,764森林メッシュや細かいGIS境界はDBに保持し、通常画面では内部線を描きません。町全体では地形が読める薄い森林面、課題は面、境界は線、業務はアクセントとして表示します。<br><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。実森林・実災害と、架空の青嶺町・業務情報を分離しています。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">最初は「町全体森林・未整理森林・災害・水系」だけを表示します。必要な業務レイヤーを追加して確認してください。</div></div></div>`+
+ <div class="map-note"><b>直感表示：</b>町有林・既存PJ追加済・追加候補は丸ではなく、実森林分布を基に地形へ沿わせた表示用ポリゴンです。正本の8,764森林メッシュや細かい境界はDBに保持し、通常画面では内部線を描きません。<br><b>PJ成長：</b>町有林102.4haを初期実施地とし、周辺の中規模森林を順次追加する構成を表示。<br><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。実森林・実災害と架空の青嶺町・業務情報を分離しています。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">最初は「町全体森林・未整理森林・災害・水系」だけを表示します。必要な業務レイヤーを追加して確認してください。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
