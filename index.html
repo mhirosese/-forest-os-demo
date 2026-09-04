@@ -454,28 +454,55 @@ function convexHull(points){
  if(hull.length)hull.push(hull[0]);
  return hull;
 }
+function townBoundaryBBox(){
+ const b=townMapFeatures.find(f=>f.feature_code==='AOMINE-TOWN');
+ const pts=b?collectGeoPoints(geoObj(b.geom_geojson)):[];
+ if(!pts.length)return {minLon:135.82,maxLon:135.95,minLat:34.118,maxLat:34.24};
+ return {minLon:Math.min(...pts.map(p=>p[0])),maxLon:Math.max(...pts.map(p=>p[0])),minLat:Math.min(...pts.map(p=>p[1])),maxLat:Math.max(...pts.map(p=>p[1]))};
+}
+function townBlockPointExtent(){
+ const pts=[];
+ townBlocks.forEach(b=>parseParts(b.map_parts).forEach(part=>String(part.points||'').trim().split(/\s+/).forEach(pair=>{
+  const [x,y]=pair.split(',').map(Number);if(Number.isFinite(x)&&Number.isFinite(y))pts.push([x,y]);
+ })));
+ if(!pts.length)return {minX:0,maxX:1000,minY:0,maxY:700};
+ return {minX:Math.min(...pts.map(p=>p[0])),maxX:Math.max(...pts.map(p=>p[0])),minY:Math.min(...pts.map(p=>p[1])),maxY:Math.max(...pts.map(p=>p[1]))};
+}
+function blockPartToRing(pointsText){
+ const box=townBoundaryBBox(), ext=townBlockPointExtent();
+ const padX=(box.maxLon-box.minLon)*.035,padY=(box.maxLat-box.minLat)*.035;
+ const minLon=box.minLon+padX,maxLon=box.maxLon-padX,minLat=box.minLat+padY,maxLat=box.maxLat-padY;
+ const arr=String(pointsText||'').trim().split(/\s+/).map(pair=>pair.split(',').map(Number)).filter(a=>a.length===2&&a.every(Number.isFinite));
+ const ring=arr.map(([x,y])=>{
+  const nx=(x-ext.minX)/Math.max(1,ext.maxX-ext.minX), ny=(y-ext.minY)/Math.max(1,ext.maxY-ext.minY);
+  return [minLon+nx*(maxLon-minLon), maxLat-ny*(maxLat-minLat)];
+ });
+ if(ring.length&& (ring[0][0]!==ring[ring.length-1][0]||ring[0][1]!==ring[ring.length-1][1]))ring.push([...ring[0]]);
+ return ring;
+}
+function blockFeature(block,mode,issueIds=[]){
+ const parts=parseParts(block.map_parts).map(p=>blockPartToRing(p.points)).filter(r=>r.length>=4);
+ if(!parts.length)return null;
+ const geom=parts.length===1?{type:'Polygon',coordinates:[parts[0]]}:{type:'MultiPolygon',coordinates:parts.map(r=>[r])};
+ const rows=townIssues.filter(x=>issueIds.includes(x.issue_area_id));
+ return {
+  feature_code:`BLK-${mode}-${block.block_code}`,layer_code:mode==='reference'?'forest_block_overview':'issue_overview',
+  display_name:`${block.block_name}${mode==='reference'?'':mode==='issues'?'・未整理概況':mode==='owner_unknown'?'・所有相続概況':'・境界概況'}`,
+  feature_kind:'forest_block_overview',feature_subtype:mode,is_fictional:true,geom_geojson:geom,
+  properties:{block_code:block.block_code,block_name:block.block_name,issue_ids:issueIds,issue_count:rows.length,reported_area_ha:rows.reduce((a,x)=>a+Number(x.area_ha||0),0),overview_mode:mode,block_area_ha:Number(block.area_ha||0)}
+ };
+}
+function referenceOverviewFeatures(){return townBlocks.map(b=>blockFeature(b,'reference',[])).filter(Boolean);}
 function issueOverviewFeatures(mode){
- const src=townIssueShapes.filter(f=>issueMatchesFeature(f,mode));
- const groups=new Map();
- src.forEach(f=>{
-  const p=featureProps(f), block=p.block_code||'未分類';
-  if(!groups.has(block))groups.set(block,[]);
-  groups.get(block).push(f);
- });
- const out=[];
- groups.forEach((features,block)=>{
-  const pts=features.flatMap(f=>collectGeoPoints(geoObj(f.geom_geojson)));
-  const hull=convexHull(pts); if(hull.length<4)return;
-  const ids=features.map(f=>featureProps(f).issue_area_id).filter(Boolean);
-  const rows=townIssues.filter(x=>ids.includes(x.issue_area_id));
-  out.push({
-   feature_code:`OV-${mode}-${block}`, layer_code:'issue_overview', display_name:`${block} ${mode==='issues'?'未整理森林概況':mode==='owner_unknown'?'所有・相続課題概況':'境界課題概況'}`,
-   feature_kind:'issue_overview', feature_subtype:mode, is_fictional:true,
-   geom_geojson:{type:'Polygon',coordinates:[hull]},
-   properties:{block_code:block,issue_ids:ids,issue_count:rows.length,reported_area_ha:rows.reduce((a,x)=>a+Number(x.area_ha||0),0),overview_mode:mode}
-  });
- });
- return out;
+ return townBlocks.map(block=>{
+  const ids=townIssues.filter(i=>i.block_code===block.block_code).filter(i=>{
+   if(mode==='issues')return true;
+   if(mode==='owner_unknown')return ['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status);
+   if(mode==='boundary_unknown')return ['境界未確定','境界推定','隣接地との重複疑い'].includes(i.boundary_status);
+   return false;
+  }).map(i=>i.issue_area_id);
+  return ids.length?blockFeature(block,mode,ids):null;
+ }).filter(Boolean);
 }
 
 function issueMatchesFeature(f,mode){
@@ -520,29 +547,46 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  const isWater=mode==='water';
  let fillOpacity=.20,weight=0,dashArray=null,opacity=.72,smoothFactor=2.4;
  // 直感表示：正本の細かい境界はDBに残し、地図では面の意味だけを見せる
- if(mode==='reference'){fillOpacity=.075;weight=0;opacity=.42;smoothFactor=4.2;}
+ if(mode==='reference'){fillOpacity=.085;weight=.35;opacity=.20;smoothFactor=5.0;}
  if(mode==='details'){fillOpacity=.035;weight=1.15;opacity=.82;smoothFactor=2.0;}
- if(mode==='issues'){fillOpacity=.13;weight=.55;opacity=.48;smoothFactor=4.0;}
- if(mode==='owner_unknown'){fillOpacity=.10;weight=.55;opacity=.46;smoothFactor=4.0;}
- if(mode==='boundary_unknown'){fillOpacity=.015;weight=1.15;opacity=.58;dashArray='8 7';smoothFactor=4.0;}
+ if(mode==='issues'){fillOpacity=.12;weight=.65;opacity=.36;smoothFactor=5.0;}
+ if(mode==='owner_unknown'){fillOpacity=.085;weight=.6;opacity=.34;smoothFactor=5.0;}
+ if(mode==='boundary_unknown'){fillOpacity=.012;weight=.9;opacity=.48;dashArray='8 8';smoothFactor=5.0;}
  if(mode==='credit'){fillOpacity=.27;weight=1.05;opacity=.84;smoothFactor=2.5;}
  if(mode==='candidate'){fillOpacity=.24;weight=1.0;opacity=.82;smoothFactor=2.5;}
  if(mode==='program'){fillOpacity=.23;weight=1.0;opacity=.80;smoothFactor=2.5;}
  if(mode==='disaster'){fillOpacity=f.is_fictional ? .13 : .075;weight=f.is_fictional ? 1.0 : .65;opacity=.72;smoothFactor=2.8;}
+
+ // 水系は「青い線」ではなく、淡い河道＋芯線で河川らしく見せる。
+ // DBの実データを使う本番でも同じ描画方式を流用できる。
+ if(isWater && (subtype==='river' || subtype==='tributary')){
+   const isMain=subtype==='river';
+   const halo=L.geoJSON(gj,{
+     smoothFactor:1.2,
+     style:()=>({color:isMain?'#c8e2ee':'#d8eaf2',weight:isMain?3.6:2.3,opacity:isMain?.72:.55,lineCap:'round',lineJoin:'round'}),
+     onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
+   });
+   halo.addTo(group);
+   const core=L.geoJSON(gj,{
+     smoothFactor:1.2,
+     style:()=>({color:isMain?'#4f8daa':'#73a8bf',weight:isMain?1.15:.72,opacity:isMain?.82:.64,lineCap:'round',lineJoin:'round'}),
+     onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
+   });
+   core.addTo(group);return core;
+ }
+
  if(isWater){
-   opacity=.72;smoothFactor=3.2;
-   if(subtype==='river'){fillOpacity=0;weight=.92;opacity=.68;}
-   else if(subtype==='tributary'){fillOpacity=0;weight=.52;opacity=.47;}
-   else if(['watershed','catchment'].includes(subtype)){fillOpacity=0;weight=.45;opacity=.20;dashArray='3 7';}
-   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.12;weight=.65;opacity=.58;}
-   else if(subtype==='dam'){fillOpacity=.06;weight=.65;opacity=.64;}
-   else if(subtype==='water_source'){fillOpacity=.08;weight=.6;opacity=.62;}
-   else {fillOpacity=.05;weight=.6;opacity=.55;}
+   opacity=.72;smoothFactor=2.0;
+   if(['watershed','catchment'].includes(subtype)){fillOpacity=.012;weight=.5;opacity=.18;dashArray='4 8';}
+   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.24;weight=.8;opacity=.64;}
+   else if(subtype==='dam'){fillOpacity=.06;weight=.7;opacity=.64;}
+   else if(subtype==='water_source'){fillOpacity=.06;weight=.65;opacity=.58;}
+   else {fillOpacity=.04;weight=.55;opacity=.50;}
  }
  const lyr=L.geoJSON(gj,{
   smoothFactor,
-  style:()=>({color,weight,opacity,fillColor:color,fillOpacity,dashArray,lineCap:'round',lineJoin:'round'}),
-  pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:subtype==='dam'?3.8:subtype==='water_source'?3.2:4,color:'#fff',weight:1,fillColor:color,fillOpacity:.82}),
+  style:()=>({color,weight,opacity,fillColor:isWater&&['reservoir','lake','dam_lake'].includes(subtype)?'#8fc5dc':color,fillOpacity,dashArray,lineCap:'round',lineJoin:'round'}),
+  pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:subtype==='dam'?3.2:subtype==='water_source'?2.7:3.5,color:'#fff',weight:1,fillColor:color,fillOpacity:.78}),
   onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
  });
  lyr.addTo(group);return lyr;
@@ -575,7 +619,7 @@ function refreshLeafletLayers(){
   features.forEach(f=>{addFeatureGeoJSONToGroup(f,mode,g);});
   g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
  };
- if(townMapLayers.reference)addGroup('reference',townMapFeatures.filter(f=>f.layer_code==='reference_forest'),'reference');
+ if(townMapLayers.reference)addGroup('reference',referenceOverviewFeatures(),'reference');
  // 水系は業務レイヤーより下に敷き、地形文脈として見せる
  if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
  if(townMapLayers.details)addGroup('details',townMapFeatures.filter(f=>f.layer_code==='managed_forest'),'details');
@@ -672,9 +716,14 @@ function renderIssueOverviewDetail(f){
  const boundary=rows.filter(i=>['境界未確定','境界推定','隣接地との重複疑い'].includes(i.boundary_status)).length;
  const hard=rows.filter(i=>i.difficulty_level==='着手困難').length;
  const area=rows.reduce((a,x)=>a+Number(x.area_ha||0),0);
- document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">町全体で判断しやすくするための概略表示です。正本の課題30件・100m森林メッシュ・個別境界はDBに保持し、詳細画面で確認します。</div><div class="detailgrid"><div class="detailitem"><div class="k">課題件数</div><div class="v">${rows.length}件</div></div><div class="detailitem"><div class="k">台帳上の課題面積</div><div class="v">${ha(area)}</div></div><div class="detailitem"><div class="k">所有・相続課題</div><div class="v">${owner}件</div></div><div class="detailitem"><div class="k">境界課題</div><div class="v">${boundary}件</div></div><div class="detailitem"><div class="k">着手困難</div><div class="v">${hard}件</div></div><div class="detailitem"><div class="k">表示精度</div><div class="v">町全体概況（一般化）</div></div></div>`;
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">町全体で判断しやすくするための概略表示です。正本の課題30件・100m森林メッシュ・個別境界はDBに保持し、詳細画面で確認します。</div><div class="detailgrid"><div class="detailitem"><div class="k">課題件数</div><div class="v">${rows.length}件</div></div><div class="detailitem"><div class="k">台帳上の課題面積</div><div class="v">${ha(area)}</div></div><div class="detailitem"><div class="k">所有・相続課題</div><div class="v">${owner}件</div></div><div class="detailitem"><div class="k">境界課題</div><div class="v">${boundary}件</div></div><div class="detailitem"><div class="k">着手困難</div><div class="v">${hard}件</div></div><div class="detailitem"><div class="k">表示精度</div><div class="v">町全体概況（ブロック表示）</div></div></div>`;
+}
+function renderForestBlockOverviewDetail(f){
+ const p=featureProps(f),b=townBlocks.find(x=>x.block_code===p.block_code)||{};
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(b.block_name||f.display_name||'森林ブロック')}</h2><div class="map-summary-note">町全体で直感的に判断するための概況ブロック表示です。林班・小班、100mメッシュ、個別境界はDB側に保持し、必要時に詳細表示します。</div><div class="detailgrid"><div class="detailitem"><div class="k">概算面積</div><div class="v">${ha(b.area_ha)}</div></div><div class="detailitem"><div class="k">所有概況</div><div class="v">${esc(b.ownership_summary||'未確認')}</div></div><div class="detailitem"><div class="k">境界</div><div class="v">${esc(b.boundary_status||'未確認')}</div></div><div class="detailitem"><div class="k">施業</div><div class="v">${esc(b.work_status||'未確認')}</div></div><div class="detailitem"><div class="k">Jクレ</div><div class="v">${esc(b.jcredit_status||'未評価')}</div></div><div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(b.next_action||'—')}</div></div></div>`;
 }
 function handleMapFeatureClick(f){
+ if(f.layer_code==='forest_block_overview'){renderForestBlockOverviewDetail(f);return;}
  if(f.layer_code==='issue_overview'){renderIssueOverviewDetail(f);return;}
  if(f.layer_code==='reference_forest'){renderReferenceForestDetail(f);return;}
  if(f.layer_code==='managed_forest'){renderTownDetail(f.display_name);return;}
