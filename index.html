@@ -104,6 +104,9 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 @media(max-width:600px){.viewerbody{padding:8px}.docpaper{padding:28px 20px;min-height:620px}.docpaper h3{font-size:19px}}
 
 @media(max-width:600px){header{padding:14px 12px 10px}main{padding:10px}.cards{grid-template-columns:repeat(2,1fr)}.card .value{font-size:18px}}
+
+.river-permanent-label{background:rgba(255,255,255,.82)!important;border:0!important;box-shadow:none!important;color:#4f7f97!important;font-size:10px!important;font-weight:700!important;padding:1px 4px!important;border-radius:4px!important}
+.river-permanent-label:before{display:none!important}
 </style>
 </head>
 <body>
@@ -492,16 +495,33 @@ function blockFeature(block,mode,issueIds=[]){
   properties:{block_code:block.block_code,block_name:block.block_name,issue_ids:issueIds,issue_count:rows.length,reported_area_ha:rows.reduce((a,x)=>a+Number(x.area_ha||0),0),overview_mode:mode,block_area_ha:Number(block.area_ha||0)}
  };
 }
-function referenceOverviewFeatures(){return townBlocks.map(b=>blockFeature(b,'reference',[])).filter(Boolean);}
+// v19: 町全体表示は、粗い10ブロックではなく実森林由来の一般化形状を使う。
+// 100mセル内部線は描かず、地形に沿った面だけを見せる。
+function referenceOverviewFeatures(){
+ return townMapFeatures.filter(f=>f.layer_code==='reference_forest'&&!f.is_fictional);
+}
 function issueOverviewFeatures(mode){
- return townBlocks.map(block=>{
-  const ids=townIssues.filter(i=>i.block_code===block.block_code).filter(i=>{
-   if(mode==='issues')return true;
-   if(mode==='owner_unknown')return ['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status);
-   if(mode==='boundary_unknown')return ['境界未確定','境界推定','隣接地との重複疑い'].includes(i.boundary_status);
-   return false;
-  }).map(i=>i.issue_area_id);
-  return ids.length?blockFeature(block,mode,ids):null;
+ return townIssueShapes.map(shape=>{
+   const issue=townIssues.find(i=>i.issue_area_id===shape.issue_area_id);
+   if(!issue)return null;
+   let ok=false;
+   if(mode==='issues')ok=true;
+   if(mode==='owner_unknown')ok=['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(issue.owner_status);
+   if(mode==='boundary_unknown')ok=['境界未確定','境界推定','隣接地との重複疑い'].includes(issue.boundary_status);
+   if(!ok)return null;
+   return {
+     feature_code:shape.feature_code,
+     layer_code:'unmanaged_group',
+     display_name:shape.display_name||issue.issue_name,
+     feature_kind:'unmanaged_forest_group',
+     feature_subtype:mode,
+     is_fictional:true,
+     geom_geojson:shape.geom_geojson,
+     properties:{
+       issue_area_id:issue.issue_area_id,block_code:issue.block_code,owner_status:issue.owner_status,
+       boundary_status:issue.boundary_status,difficulty_level:issue.difficulty_level,overview_mode:mode
+     }
+   };
  }).filter(Boolean);
 }
 
@@ -541,17 +561,32 @@ function addFeatureGeoJSON(f,mode){
  };
  return L.geoJSON(gj,opts).addTo(leafletTownMap);
 }
+// v19: デモ水系は地形の谷筋に沿って見える程度の密度に補間する。
+// 本番では実水系GISのGeometryをそのまま同じ描画器へ渡す。
+function displayWaterGeometry(f){
+ const code=String(f.feature_code||'');
+ const line=(coords)=>({type:'LineString',coordinates:coords});
+ const poly=(coords)=>({type:'Polygon',coordinates:[coords]});
+ const g={
+  'RIVER-W':line([[135.8450,34.2200],[135.8462,34.2155],[135.8480,34.2110],[135.8500,34.2060],[135.8522,34.2022],[135.8550,34.1983],[135.8580,34.1940],[135.8608,34.1908],[135.8640,34.1875],[135.8672,34.1840],[135.8700,34.1812],[135.8730,34.1782],[135.8760,34.1750],[135.8790,34.1717],[135.8813,34.1685],[135.8820,34.1662]]),
+  'RIVER-E':line([[135.9300,34.2180],[135.9268,34.2153],[135.9230,34.2120],[135.9190,34.2080],[135.9152,34.2046],[135.9110,34.2005],[135.9070,34.1970],[135.9035,34.1935],[135.9000,34.1900],[135.8962,34.1868],[135.8928,34.1835],[135.8898,34.1800],[135.8872,34.1767],[135.8848,34.1730],[135.8832,34.1698],[135.8820,34.1662]]),
+  'RIVER-MID':line([[135.8820,34.1662],[135.88215,34.1655],[135.88225,34.1648],[135.88230,34.1643]]),
+  'RESERVOIR-01':poly([[135.88230,34.1643],[135.88145,34.1629],[135.88175,34.1610],[135.88095,34.1592],[135.88135,34.1571],[135.88215,34.1550],[135.88275,34.1531],[135.88355,34.15235],[135.88435,34.1527],[135.88485,34.1540],[135.88615,34.1556],[135.88625,34.1576],[135.88575,34.1594],[135.88655,34.1610],[135.88510,34.1625],[135.88405,34.1637],[135.88230,34.1643]]),
+  'RIVER-DOWN':line([[135.88355,34.15235],[135.8840,34.1500],[135.8848,34.1472],[135.8858,34.1445],[135.8864,34.1418],[135.8878,34.1390],[135.8887,34.1362],[135.8895,34.1331],[135.8910,34.1301],[135.8918,34.1270],[135.8931,34.1237],[135.8940,34.1204],[135.8952,34.1168],[135.8960,34.1130]])
+ };
+ return g[code]||geoObj(f.geom_geojson);
+}
 function addFeatureGeoJSONToGroup(f,mode,group){
- const gj=geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
+ const gj=mode==='water'?displayWaterGeometry(f):geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
  const subtype=String(f.feature_subtype||'');
  const isWater=mode==='water';
  let fillOpacity=.20,weight=0,dashArray=null,opacity=.72,smoothFactor=2.4;
  // 直感表示：正本の細かい境界はDBに残し、地図では面の意味だけを見せる
- if(mode==='reference'){fillOpacity=.085;weight=.35;opacity=.20;smoothFactor=5.0;}
- if(mode==='details'){fillOpacity=.035;weight=1.15;opacity=.82;smoothFactor=2.0;}
- if(mode==='issues'){fillOpacity=.12;weight=.65;opacity=.36;smoothFactor=5.0;}
- if(mode==='owner_unknown'){fillOpacity=.085;weight=.6;opacity=.34;smoothFactor=5.0;}
- if(mode==='boundary_unknown'){fillOpacity=.012;weight=.9;opacity=.48;dashArray='8 8';smoothFactor=5.0;}
+ if(mode==='reference'){fillOpacity=.075;weight=0;opacity=0;smoothFactor=3.6;}
+ if(mode==='details'){fillOpacity=.045;weight=1.0;opacity=.76;smoothFactor=2.0;}
+ if(mode==='issues'){fillOpacity=.13;weight=.18;opacity=.20;smoothFactor=3.8;}
+ if(mode==='owner_unknown'){fillOpacity=.095;weight=.14;opacity=.18;smoothFactor=3.8;}
+ if(mode==='boundary_unknown'){fillOpacity=.008;weight=.58;opacity=.32;dashArray='7 7';smoothFactor=3.8;}
  if(mode==='credit'){fillOpacity=.27;weight=1.05;opacity=.84;smoothFactor=2.5;}
  if(mode==='candidate'){fillOpacity=.24;weight=1.0;opacity=.82;smoothFactor=2.5;}
  if(mode==='program'){fillOpacity=.23;weight=1.0;opacity=.80;smoothFactor=2.5;}
@@ -562,15 +597,19 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  if(isWater && (subtype==='river' || subtype==='tributary')){
    const isMain=subtype==='river';
    const halo=L.geoJSON(gj,{
-     smoothFactor:1.2,
-     style:()=>({color:isMain?'#c8e2ee':'#d8eaf2',weight:isMain?3.6:2.3,opacity:isMain?.72:.55,lineCap:'round',lineJoin:'round'}),
+     smoothFactor:1.0,
+     style:()=>({color:isMain?'#cfe7f1':'#dcecf3',weight:isMain?3.4:2.2,opacity:isMain?.52:.40,lineCap:'round',lineJoin:'round'}),
      onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
    });
    halo.addTo(group);
    const core=L.geoJSON(gj,{
-     smoothFactor:1.2,
-     style:()=>({color:isMain?'#4f8daa':'#73a8bf',weight:isMain?1.15:.72,opacity:isMain?.82:.64,lineCap:'round',lineJoin:'round'}),
-     onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
+     smoothFactor:1.0,
+     style:()=>({color:isMain?'#4f8daa':'#78a9bd',weight:isMain?1.18:.74,opacity:isMain?.86:.66,lineCap:'round',lineJoin:'round'}),
+     onEachFeature:(feature,layer)=>{
+       layer.on('click',()=>handleMapFeatureClick(f));
+       if(f.feature_code==='RIVER-MID'){layer.bindTooltip('青嶺川',{permanent:true,direction:'center',className:'river-permanent-label'});}
+       else if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});
+     }
    });
    core.addTo(group);return core;
  }
@@ -578,7 +617,7 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  if(isWater){
    opacity=.72;smoothFactor=2.0;
    if(['watershed','catchment'].includes(subtype)){fillOpacity=.012;weight=.5;opacity=.18;dashArray='4 8';}
-   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.24;weight=.8;opacity=.64;}
+   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.24;weight=.7;opacity=.62;}
    else if(subtype==='dam'){fillOpacity=.06;weight=.7;opacity=.64;}
    else if(subtype==='water_source'){fillOpacity=.06;weight=.65;opacity=.58;}
    else {fillOpacity=.04;weight=.55;opacity=.50;}
@@ -620,8 +659,6 @@ function refreshLeafletLayers(){
   g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
  };
  if(townMapLayers.reference)addGroup('reference',referenceOverviewFeatures(),'reference');
- // 水系は業務レイヤーより下に敷き、地形文脈として見せる
- if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
  if(townMapLayers.details)addGroup('details',townMapFeatures.filter(f=>f.layer_code==='managed_forest'),'details');
  ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,issueOverviewFeatures(mode),mode)});
  ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)),mode)});
@@ -630,6 +667,8 @@ function refreshLeafletLayers(){
   townWorkScopes.forEach(w=>addWorkScopeToGroup(w,g));
   g.addTo(leafletTownMap);leafletFeatureLayers.operations=g;
  }
+ // 水系は森林面より前、災害記号より後ろ。森林との関係を読みやすくする。
+ if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
  if(townMapLayers.disaster){
   addGroup('disaster-managed',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'disaster')),'disaster');
   addGroup('disaster-events',townMapFeatures.filter(f=>f.layer_code==='hazard_area'),'disaster');
@@ -796,7 +835,7 @@ async function townMap(){
  <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('credit','J-クレジット対象')}${mk('candidate','既存PJ追加候補')}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害','',true)}</div>
  <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>直感表示：</b>正本の8,764森林メッシュや細かいGIS境界はDBに保持し、通常画面では内部線を出しません。森林の塊・課題・業務・水系だけを判別しやすく表示します。<br><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。実森林・実災害と、架空の青嶺町・業務情報を分離しています。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">最初は「町全体森林・未整理森林・災害・水系」だけを表示します。必要な業務レイヤーを追加して確認してください。</div></div></div>`+
+ <div class="map-note"><b>直感表示：</b>正本の8,764森林メッシュや細かいGIS境界はDBに保持し、通常画面では内部線を出しません。実森林由来の一般化形状で地形に沿う程度の密度を残し、100mセル内部線は出しません。課題・業務・水系を重ねても直感的に読める表示にします。<br><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。実森林・実災害と、架空の青嶺町・業務情報を分離しています。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">最初は「町全体森林・未整理森林・災害・水系」だけを表示します。必要な業務レイヤーを追加して確認してください。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
