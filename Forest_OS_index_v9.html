@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forest OS デモ｜青嶺町 v9</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text)}
+header{padding:18px 20px 12px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+h1{margin:0;font-size:20px} .sub{margin-top:4px;color:var(--muted);font-size:12px}
+nav{display:flex;gap:8px;overflow:auto;padding-top:12px}
+button{border:1px solid var(--line);background:#fff;padding:9px 13px;border-radius:8px;white-space:nowrap;font-size:14px}
+button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{padding:16px;max-width:1180px;margin:auto}
+.notice{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px}
+.card .label{font-size:12px;color:var(--muted)} .card .value{margin-top:5px;font-size:22px;font-weight:650}
+section{background:var(--panel);border:1px solid var(--line);border-radius:9px;margin-bottom:14px;overflow:hidden}
+section h2{font-size:15px;margin:0;padding:12px 14px;border-bottom:1px solid var(--line)}
+.tablewrap{overflow:auto} table{width:100%;border-collapse:collapse;font-size:13px;min-width:680px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #edf0ed;vertical-align:top}
+th{color:var(--muted);font-weight:600;background:#fafbfa}
+.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:var(--soft);font-size:11px}
+.warn{color:var(--warn);font-weight:600} .empty{padding:14px;color:var(--muted);font-size:13px}
+.footer{color:var(--muted);font-size:11px;padding:4px 2px 24px}
+.selector{width:100%;max-width:520px;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:15px;margin-bottom:14px}
+.detailgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0}
+.detailitem{padding:11px 14px;border-bottom:1px solid #edf0ed}
+.detailitem .k{font-size:11px;color:var(--muted);margin-bottom:4px}
+.detailitem .v{font-size:14px;line-height:1.45}
+
+
+.doclink{color:#1f5f3b;text-decoration:underline;text-underline-offset:3px;font-weight:600;cursor:pointer}
+.doclink:hover{opacity:.75}
+.modal{position:fixed;inset:0;background:rgba(20,28,23,.58);display:none;align-items:flex-start;justify-content:center;padding:24px 12px;z-index:50;overflow:auto}
+.modal.open{display:flex}
+.viewerbox{width:min(900px,100%);background:#f4f5f2;border-radius:12px;box-shadow:0 18px 60px rgba(0,0,0,.25);overflow:hidden}
+.viewerhead{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-bottom:1px solid var(--line);padding:11px 14px}
+.viewerhead strong{font-size:14px}
+.closebtn{font-size:13px;padding:7px 11px}
+.viewerbody{padding:16px}
+.demo-note{font-size:12px;color:var(--muted);margin-bottom:10px}
+.docpaper{max-width:720px;margin:0 auto;background:#fff;min-height:720px;padding:42px 46px;border:1px solid #d6d9d6;box-shadow:0 5px 18px rgba(0,0,0,.08);font-family:"Yu Mincho","Hiragino Mincho ProN",serif;line-height:1.9}
+.docpaper h3{text-align:center;font-size:22px;margin:4px 0 28px}
+.docpaper .meta{font-size:13px;margin:8px 0 22px}
+.docpaper h4{font-size:15px;margin:20px 0 5px}
+.docpaper p{font-size:14px;margin:4px 0}
+.signature{margin-top:40px;border-top:1px solid #ddd;padding-top:18px}
+.mockphoto{max-width:760px;margin:auto;background:#fff;border:1px solid var(--line);padding:12px}
+.mockphoto svg{display:block;width:100%;height:auto;background:#dfe9e1}
+.photometa{font-size:12px;color:var(--muted);padding:10px 2px 2px}
+
+
+
+.layergroups{display:flex;flex-direction:column;gap:7px;padding:9px 12px;border-bottom:1px solid var(--line);background:#fafbfa}
+.layergroup{display:flex;gap:6px;flex-wrap:wrap;align-items:center;overflow:visible}
+.layergrouptitle{font-size:10px;font-weight:700;color:#5c675f;min-width:56px}
+.layercheck.water-toggle{border-color:#7caac0;background:#f3f9fc;font-weight:700}
+.layercheck.water-toggle:has(input:checked){background:#dceef6;border-color:#4d8eab}
+.layercheck.reference-toggle{border-color:#9caf9b;background:#f3f7f2;font-weight:700}
+.layercheck.reference-toggle:has(input:checked){background:#e4eee2;border-color:#6f8f72}
+@media(max-width:600px){
+ .layergroups{padding:8px}
+ .layergroup{gap:5px}
+ .layergrouptitle{width:100%;min-width:0;margin-top:2px}
+ .layercheck{font-size:10px;padding:5px 7px}
+}
+
+.layerbar{display:flex;gap:6px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--line);background:#fafbfa}
+.layercheck{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;user-select:none}
+.layercheck input{margin:0}
+.layercheck:has(input:checked){background:#edf5ef;border-color:#9bb9a2}
+.mapaction{padding:12px 14px;border-top:1px solid var(--line)}
+.primarybtn{border:1px solid #2f6b45;background:#2f6b45;color:#fff;border-radius:7px;padding:9px 12px;font-size:13px;font-weight:650;cursor:pointer;width:100%}
+.primarybtn:hover{opacity:.88}
+.map-summary-note{font-size:11px;color:var(--muted);padding:0 14px 10px}
+
+.maplayout{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);gap:12px;margin-bottom:14px}
+.mapsection{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.maphead{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}
+.maphead strong{font-size:14px}.maphead span{font-size:11px;color:var(--muted)}
+.mapcanvas{position:relative;background:#eef2eb;min-height:520px;overflow:hidden}
+#leafletTownMap{height:560px;width:100%;background:#eef2eb}.leaflet-container{font-family:inherit}.leaflet-control-attribution{font-size:9px}.map-source-note{font-size:10px;color:var(--muted);line-height:1.45}
+.maplegend{position:absolute;left:10px;top:10px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:7px;padding:9px 10px;font-size:10px;line-height:1.65;z-index:2;max-width:190px}
+.legendrow{display:flex;align-items:center;gap:6px;white-space:nowrap}.swatch{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
+.mapdetail{background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.mapdetail h2{font-size:16px;margin:0;padding:12px 14px;border-bottom:1px solid var(--line)}
+.mapdetail .detailgrid{grid-template-columns:1fr}
+.maplabel{font-size:11px;font-weight:650;fill:#243028;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.maparea{cursor:pointer;transition:opacity .15s,stroke-width .15s}.maparea:hover{opacity:.82;stroke-width:3}
+.detailarea{cursor:pointer;stroke-width:3}.detailarea:hover{stroke-width:5}
+.map-note{font-size:11px;color:var(--muted);padding:9px 12px;border-top:1px solid var(--line);background:#fafbfa}
+.statusline{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.statuspill{font-size:10px;padding:2px 6px;border-radius:999px;background:var(--soft);border:1px solid var(--line)}
+@media(max-width:800px){.maplayout{grid-template-columns:1fr}.mapcanvas{min-height:470px}.maplegend{max-width:170px}}
+
+@media(max-width:600px){.viewerbody{padding:8px}.docpaper{padding:28px 20px;min-height:620px}.docpaper h3{font-size:19px}}
+
+@media(max-width:600px){header{padding:14px 12px 10px}main{padding:10px}.cards{grid-template-columns:repeat(2,1fr)}.card .value{font-size:18px}}
+</style>
+</head>
+<body>
+<header>
+<h1>Forest OS <span style="font-weight:400">｜【デモ】青嶺町</span></h1>
+<div class="sub">立場・業務・森林の各入口から、同じ森林データを確認</div>
+<nav>
+<button data-role="municipality" class="active">自治体</button>
+<button data-role="forest_coop">森林組合</button>
+<button data-role="forestry_company">林業会社</button>
+<button data-role="owner">山主</button>
+<button data-role="accounting">会計</button>
+<button data-role="jcredit">J-クレジットPJ</button>
+<button data-role="pm">PM</button>
+<button data-role="forest">森林</button>
+<button data-role="town_map">森林全体マップ</button>
+</nav>
+</header>
+<main>
+<div id="notice" class="notice">公開デモ用Viewのみを読み込みます。実GIS参照データと架空業務データを分離表示します。</div>
+<div id="cards" class="cards"></div>
+<div id="content"></div>
+<div class="footer">デモ専用。青嶺町・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データです。</div>
+</main>
+
+<div id="viewer" class="modal" aria-hidden="true">
+  <div class="viewerbox">
+    <div class="viewerhead">
+      <strong id="viewerTitle">資料</strong>
+      <button class="closebtn" type="button" onclick="closeViewer()">閉じる</button>
+    </div>
+    <div id="viewerBody" class="viewerbody"></div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
+const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
+async function q(view,params='select=*'){
+ const r=await fetch(`${SB_URL}/rest/v1/${view}?${params}`,{headers:{apikey:SB_KEY}});
+ if(!r.ok)throw new Error(`${view}: ${r.status}`);
+ return r.json();
+}
+const yen=n=>n==null?'—':new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(n));
+const num=n=>n==null?'—':new Intl.NumberFormat('ja-JP').format(Number(n));
+const ha=n=>n==null?'—':`${Number(n).toFixed(1)} ha`;
+const date=s=>s?s.replaceAll('-','/'):'—';
+const txt=v=>(v===null||v===undefined||v==='')?'—':String(v);
+
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hasAudience=(x,role)=>Array.isArray(x?.audience_codes)&&x.audience_codes.includes(role);
+const mockLink=(ref,label='開く')=>ref?`<a href="#viewer" class="doclink" data-mock="${esc(ref)}">${esc(label)}</a>`:'—';
+const evidenceLabel=t=>String(t||'').includes('report')?'報告書を開く':'写真を開く';
+function cards(items){document.getElementById('cards').innerHTML=items.map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('')}
+function table(title,headers,rows){
+ if(!rows.length)return `<section><h2>${title}</h2><div class="empty">該当データなし</div></section>`;
+ return `<section><h2>${title}</h2><div class="tablewrap"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;
+}
+async function municipality(){
+ const [f,j,t,allc]=await Promise.all([
+   q('demo_municipality_forest','select=*&order=name'),
+   q('demo_jcredit_project'),
+   q('demo_role_task',"select=*&role_code=eq.municipality&order=due_on"),
+   q('demo_contract_relation','select=*&order=contract_no')
+ ]);
+ const c=allc.filter(x=>hasAudience(x,'municipality'));
+ const area=f.reduce((s,x)=>s+Number(x.area_ha||0),0), unresolved=f.reduce((s,x)=>s+Number(x.unresolved_right_count||0),0);
+ const jcIssued=j.reduce((s,x)=>s+Number(x.issued_quantity_t||0),0), jcFund=j.reduce((s,x)=>s+Number(x.linked_fund_balance||0),0);
+ cards([['管理森林',`${f.length}件`],['管理面積',ha(area)],['権利未整理',`${unresolved}件`],['J-クレジット案件',`${j.length}件`],['J-クレジット発行',`${num(jcIssued)} t`],['基金残高',yen(jcFund)]]);
+ document.getElementById('content').innerHTML=
+ table('地域全体の森林',['森林','面積','状態','権利未整理','施業状態','次期限','災害','J-クレジット'],f.map(x=>[x.name,ha(x.area_ha),`<span class="tag">${txt(x.forest_status)}</span>`,Number(x.unresolved_right_count||0)?`<span class="warn">${x.unresolved_right_count}件</span>`:'0件',txt(x.latest_work_status),date(x.next_due_on),`${x.active_incident_count}件`,`${x.active_jcredit_project_count}件`]))+
+ table('関係契約',['契約','当事者','対象','期間','状態','契約書'],c.map(x=>[
+   x.title,txt(x.parties_text),txt(x.target_name),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')
+ ]))+
+ table('J-クレジットPJ',['PJ','対象面積','発行','販売可能','リスク留保','売却済','売上','補填案件','基金'],j.map(x=>[x.name,ha(x.target_area_ha),`${num(x.issued_quantity_t)}t`,`${num(x.available_quantity_t)}t`,`${num(x.risk_reserved_quantity_t)}t`,`${num(x.sold_quantity_t)}t`,yen(x.sales_amount_in_tax),`${x.open_compensation_cases}件`,yen(x.linked_fund_balance)]))+
+ table('自治体タスク',['期限','内容','担当','状態'],t.map(x=>[date(x.due_on),x.title,x.assigned_to,x.status]));
+}
+async function forestCoop(){
+ const [f,j,t,allc,wc]=await Promise.all([
+   q('demo_forest_coop_operation','select=*&order=name'),
+   q('demo_jcredit_project'),
+   q('demo_role_task',"select=*&role_code=eq.forest_coop&order=due_on"),
+   q('demo_contract_relation','select=*&order=contract_no'),
+   q('demo_work_credit_context','select=*')
+ ]);
+ const c=allc.filter(x=>hasAudience(x,'forest_coop'));
+ const jcAvailable=j.reduce((s,x)=>s+Number(x.available_quantity_t||0),0), jcReserve=j.reduce((s,x)=>s+Number(x.risk_reserved_quantity_t||0),0);
+ cards([['担当森林',`${f.length}件`],['担当面積',ha(f.reduce((s,x)=>s+Number(x.area_ha||0),0))],['未完了タスク',`${t.filter(x=>x.status!=='completed').length}件`],['J-クレジット案件',`${j.length}件`],['販売可能クレジット',`${num(jcAvailable)} t`],['リスク留保',`${num(jcReserve)} t`]]);
+ document.getElementById('content').innerHTML=
+ table('森林・施業管理',['森林','面積','直近作業','状態','クレジット','PJ段階','必要証憑','次期限','災害'],f.map(x=>{
+   const z=wc.find(v=>v.forest_name===x.name);
+   return [x.name,ha(x.area_ha),txt(x.latest_work_type),txt(x.latest_work_status),txt(z?.jcredit_status),txt(z?.project_stage),txt(z?.evidence_requirements),date(x.next_due_on),`${x.active_incident_count}件`];
+ }))+
+ table('関係契約',['契約','当事者','対象','期間','状態','契約書'],c.map(x=>[
+   x.title,txt(x.parties_text),txt(x.target_name),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')
+ ]))+
+ table('やること',['期限','優先度','内容','状態'],t.map(x=>[date(x.due_on),x.priority,x.title,x.status]))+
+ table('J-クレジット管理',['PJ','発行','販売可能','留保','売却済','基金'],j.map(x=>[x.name,`${num(x.issued_quantity_t)}t`,`${num(x.available_quantity_t)}t`,`${num(x.risk_reserved_quantity_t)}t`,`${num(x.sold_quantity_t)}t`,yen(x.linked_fund_balance)]));
+}
+async function forestryCompany(){
+ const [w,allc,alle,wc]=await Promise.all([
+   q('demo_forestry_company_work','select=*&order=title'),
+   q('demo_contract_relation','select=*&order=contract_no'),
+   q('demo_work_evidence','select=*'),
+   q('demo_work_credit_context','select=*')
+ ]);
+ const c=allc.filter(x=>hasAudience(x,'forestry_company'));
+ const e=alle.filter(x=>hasAudience(x,'forestry_company'));
+ cards([['受託案件',`${w.length}件`],['計画面積',ha(w.reduce((s,x)=>s+Number(x.planned_area_ha||0),0))],['実績面積',ha(w.reduce((s,x)=>s+Number(x.actual_area_ha||0),0))],['完了案件',`${w.filter(x=>x.work_status==='completed').length}件`]]);
+ document.getElementById('content').innerHTML=
+ table('自社が受託している作業',['案件','森林','作業','計画','実績','クレジット','PJ','段階','必要証憑','作業日','検収','契約書'],w.map(x=>{
+   const cc=c.find(z=>z.forest_unit_id===x.forest_unit_id);
+   const z=wc.find(v=>v.work_case_id===x.work_case_id);
+   return [x.title,txt(x.forest_name),txt(x.work_type_name),ha(x.planned_area_ha),ha(x.actual_area_ha),txt(z?.jcredit_status),txt(z?.jcredit_project_name),txt(z?.project_stage),txt(z?.evidence_requirements),date(x.latest_event_date),txt(x.inspection_status),cc?mockLink(cc.mock_ref,'契約書を開く'):'—'];
+ }))+
+ table('作業記録・証憑',['作業','日付','資料','表示'],e.map(x=>[
+   x.work_title,date(x.event_date),x.title,mockLink(x.mock_ref,evidenceLabel(x.evidence_type))
+ ]));
+}
+async function owner(){
+ const [f,allc,alle]=await Promise.all([
+   q('demo_owner_forest','select=*&order=name'),
+   q('demo_contract_relation','select=*&order=contract_no'),
+   q('demo_work_evidence','select=*')
+ ]);
+ const c=allc.filter(x=>hasAudience(x,'owner'));
+ const e=alle.filter(x=>hasAudience(x,'owner'));
+ const total=f.reduce((s,x)=>s+Number(x.planned_distribution_amount||0),0);
+ cards([['自分の森林',`${f.length}件`],['面積',ha(f.reduce((s,x)=>s+Number(x.area_ha||0),0))],['分配予定',yen(total)],['支払予定日',f[0]?.planned_payment_on?date(f[0].planned_payment_on):'—']]);
+ document.getElementById('content').innerHTML=
+ table('自分の森林',['森林','面積','権利','持分','施業状態','次回作業','分配予定','支払予定','状態'],f.map(x=>[x.name,ha(x.area_ha),x.right_name,txt(x.quantity_text||x.percentage),txt(x.work_status),date(x.next_work_on),yen(x.planned_distribution_amount),date(x.planned_payment_on),txt(x.distribution_status)]))+
+ table('この森林に関係する契約',['契約','当事者','対象','期間','状態','契約書'],c.map(x=>[
+   x.title,txt(x.parties_text),txt(x.target_name),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')
+ ]))+
+ table('現在の作業・証憑',['作業','日付','資料','表示'],e.map(x=>[
+   x.work_title,date(x.event_date),x.title,mockLink(x.mock_ref,evidenceLabel(x.evidence_type))
+ ]));
+}
+
+function metricMap(rows){
+ const m={}; rows.forEach(x=>m[x.metric_code]=Number(x.amount||0)); return m;
+}
+function speciesLabel(s){
+ if(!s)return '—';
+ try{
+   const a=JSON.parse(s);
+   return a.map(x=>`${x.species}${x.ratio!=null?` ${Math.round(Number(x.ratio)*100)}%`:''}`).join(' / ');
+ }catch(e){return s;}
+}
+function detailSection(title,rows){
+ return `<section><h2>${title}</h2><div class="detailgrid">${rows.map(r=>`<div class="detailitem"><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('')}</div></section>`;
+}
+async function accounting(){
+ const [s,e]=await Promise.all([
+   q('demo_accounting_summary','select=*'),
+   q('demo_accounting_entry','select=*&order=entry_date')
+ ]);
+ const m=metricMap(s);
+ cards([
+   ['承認予算',yen(m.budget)],['補助金決定',yen(m.subsidy_decided)],
+   ['支出',yen(m.payments)],['J-クレジット売上',yen(m.jcredit_sales)],
+   ['分配予定',yen(m.distribution)],['基金残高',yen(m.fund_balance)]
+ ]);
+ document.getElementById('content').innerHTML=
+ table('会計・資金の流れ',
+ ['日付','区分','内容','相手先','税抜','税額','税込','状態'],
+ e.map(x=>[
+   date(x.entry_date),txt(x.category),txt(x.description),txt(x.counterparty),
+   yen(x.amount_ex_tax),yen(x.tax_amount),yen(x.amount_in_tax),txt(x.status)
+ ]))+
+ detailSection('会計チェック',[
+   ['記録済税額',yen(m.tax)],
+   ['税率の扱い','取引時点の適用税率・区分を保存。将来の税率変更を上書きしない'],
+   ['分配','山主・地域への予定額と実際の支払を分離'],
+   ['基金','J-クレジット在庫のリスク留保とは別管理']
+ ]);
+}
+async function jcreditProject(){
+ const [j,l,e,a,allc]=await Promise.all([
+   q('demo_jcredit_project','select=*'),
+   q('demo_jcredit_lot','select=*'),
+   q('demo_jcredit_event','select=*&order=event_date'),
+   q('demo_jcredit_program_activity','select=*&order=activity_code'),
+   q('demo_contract_relation','select=*&order=contract_no')
+ ]);
+ const contracts=allc.filter(x=>hasAudience(x,'jcredit')&&x.jcredit_project_id);
+ const issued=j.reduce((s,x)=>s+Number(x.issued_quantity_t||0),0);
+ const available=j.reduce((s,x)=>s+Number(x.available_quantity_t||0),0);
+ const reserve=j.reduce((s,x)=>s+Number(x.risk_reserved_quantity_t||0),0);
+ const expected=j.reduce((s,x)=>s+Number(x.expected_first_certification_t||0),0);
+ const totalArea=j.reduce((s,x)=>s+Number(x.target_area_ha||0),0);
+ const programCount=j.filter(x=>x.registration_type==='program').length;
+ const normalCount=j.filter(x=>x.registration_type!=='program').length;
+ const stage=v=>({active:'認証・発行済',registered:'登録済',pre_certification:'認証前'}[v]||txt(v));
+ const regtype=v=>v==='program'?'プログラム型':'通常型';
+ const species=v=>{
+   try{const z=Array.isArray(v)?v:JSON.parse(v||'[]');return z.map(x=>`${x.species} ${Math.round(Number(x.ratio||0)*100)}%`).join(' / ')||'—'}catch(_){return txt(v)}
+ };
+ const tending=v=>{
+   try{const z=Array.isArray(v)?v:JSON.parse(v||'[]');return z.map(x=>`${x.year}:${x.work}`).join(' / ')||'—'}catch(_){return txt(v)}
+ };
+ cards([
+   ['プログラム型',`${programCount}件`],['通常型PJ',`${normalCount}件`],['対象面積',ha(totalArea)],
+   ['発行済',`${num(issued)} t`],['初回認証見込',`${num(expected)} t`],['外部契約',`${contracts.length}件`]
+ ]);
+ document.getElementById('content').innerHTML=
+ table('J-クレジット プログラム・プロジェクト',
+ ['区分','名称','段階','実施・運営','方法論','対象','発行','販売可能','リスク留保','初回認証見込','次工程','期限','外部契約'],
+ j.map(x=>[
+   `<span class="tag">${regtype(x.registration_type)}</span>`,x.name,txt(x.stage_label||stage(x.status)),txt(x.implementing_party_name),txt(x.methodology_code),
+   `${num(x.target_forest_count||0)}件 / ${ha(x.target_area_ha)}`,`${num(x.issued_quantity_t||0)} t`,`${num(x.available_quantity_t||0)} t`,`${num(x.risk_reserved_quantity_t||0)} t`,
+   x.expected_first_certification_t==null?'—':`${num(x.expected_first_certification_t)} t`,txt(x.next_milestone),date(x.next_due_on),`${num(x.external_contract_count||0)}件`
+ ]))+
+ table('プログラム型：再造林活動（FO-003）',
+ ['活動','森林','状態','面積','主伐完了','再造林','土地所有者協定','過去5年の主伐収益関与','FO-001重複','樹種計画','植栽密度','苗木本数','苗木由来','地拵え','生存確認','生存率','保育計画','吸収見込','証憑'],
+ a.map(x=>[
+   `${x.activity_code}<br>${x.activity_name}`,x.forest_name,txt(x.status),ha(x.eligible_area_ha),date(x.clearcut_completed_on),date(x.reforestation_on),
+   x.land_owner_agreement_status==='executed'?'締結済':txt(x.land_owner_agreement_status),x.prior_5yr_harvest_revenue_involvement===false?'関与なし':'要確認',
+   x.fo001_overlap_status==='no_overlap'?'重複なし':txt(x.fo001_overlap_status),species(x.species_plan),`${num(x.planting_density_per_ha)}本/ha`,`${num(x.seedlings_planted)}本`,txt(x.seedling_origin),
+   date(x.site_preparation_on),date(x.survival_check_on),x.survival_rate_percent==null?'—':`${num(x.survival_rate_percent)}%`,tending(x.tending_plan),`${num(x.expected_absorption_t)} t`,txt(x.evidence_status)
+ ]))+
+ table('外部機関との契約',
+ ['対象','契約','当事者','期間','状態','契約書'],
+ contracts.map(x=>[txt(x.target_name),x.title,txt(x.parties_text),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')]))+
+ table('発行済PJ：クレジット在庫・シリアル',
+ ['ロット','シリアル開始','シリアル終了','数量','区分','状態'],
+ l.map(x=>[x.lot_code,x.registry_serial_from,x.registry_serial_to,`${num(x.quantity_t)} t`,x.current_bucket,x.status]))+
+ table('発行済PJ：履歴',
+ ['日付','イベント','内容','数量','金額','状態','備考'],
+ e.map(x=>[date(x.event_date),x.event_type,x.title,x.quantity_t==null?'—':`${num(x.quantity_t)} t`,yen(x.amount_jpy),x.status,txt(x.note)]));
+}
+async function pm(){
+ const [items,allc]=await Promise.all([
+   q('demo_pm_item','select=*'),
+   q('demo_contract_relation','select=*&order=contract_no')
+ ]);
+ const c=allc.filter(x=>hasAudience(x,'pm'));
+ items.sort((a,b)=>(a.due_on||'9999-12-31').localeCompare(b.due_on||'9999-12-31'));
+ const open=items.filter(x=>!['completed','closed','resolved','accepted'].includes(x.status));
+ const high=open.filter(x=>x.priority==='high');
+ cards([
+   ['管理項目',`${items.length}件`],['未完了',`${open.length}件`],
+   ['高優先度',`${high.length}件`],['関係契約',`${c.length}件`],
+   ['施業案件',`${items.filter(x=>x.item_type==='work').length}件`],
+   ['要整理',`${items.filter(x=>['succession','data_conflict','incident'].includes(x.item_type)).length}件`]
+ ]);
+ document.getElementById('content').innerHTML=
+ table('PM・事務局 管理一覧',
+ ['期限','種別','森林','内容','担当','優先度','状態','メモ'],
+ items.map(x=>[
+   date(x.due_on),x.item_type,txt(x.forest_name),x.title,txt(x.responsible),
+   x.priority==='high'?`<span class="warn">high</span>`:txt(x.priority),x.status,txt(x.note)
+ ]))+
+ table('契約管理',['契約','当事者','対象','期間','状態','契約書'],c.map(x=>[
+   x.title,txt(x.parties_text),txt(x.target_name),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')
+ ]));
+}
+let forestRows=[],forestContracts=[],forestEvidence=[];
+function renderForestDetail(id){
+ const x=forestRows.find(r=>r.forest_unit_id===id) || forestRows[0];
+ if(!x)return;
+ const c=forestContracts.filter(z=>z.forest_unit_id===x.forest_unit_id&&hasAudience(z,'forest'));
+ const e=forestEvidence.filter(z=>z.forest_unit_id===x.forest_unit_id&&hasAudience(z,'forest'));
+ cards([
+   ['面積',ha(x.area_ha)],['林齢',x.stand_age_years==null?'—':`${num(x.stand_age_years)}年`],
+   ['蓄積',x.volume_m3==null?'—':`${num(x.volume_m3)} m³`],
+   ['権利不一致',`${num(x.unresolved_conflicts||0)}件`],
+   ['災害',`${num(x.active_incident_count||0)}件`],
+   ['分配予定',yen(x.planned_distribution_amount)]
+ ]);
+ const selector=`<select class="selector" onchange="renderForestDetail(this.value)">${forestRows.map(r=>`<option value="${r.forest_unit_id}" ${r.forest_unit_id===x.forest_unit_id?'selected':''}>${r.name}</option>`).join('')}</select>`;
+ document.getElementById('content').innerHTML=selector+
+ detailSection('森林基本・資源',[
+   ['森林',x.name],['地域',txt(x.region_name)],['面積',ha(x.area_ha)],['状態',txt(x.forest_status)],
+   ['樹種',speciesLabel(x.species)],['森林区分',txt(x.forest_type)],['林齢 / 齢級',`${txt(x.stand_age_years)}年 / ${txt(x.age_class)}`],
+   ['平均樹高',x.mean_height_m==null?'—':`${num(x.mean_height_m)} m`],['蓄積',x.volume_m3==null?'—':`${num(x.volume_m3)} m³`],
+   ['年間成長',x.annual_growth_m3==null?'—':`${num(x.annual_growth_m3)} m³`],['データ品質',txt(x.data_quality)]
+ ])+
+ detailSection('権利・相続',[
+   ['権利関係',txt(x.rights_summary)],['未解決データ不一致',`${num(x.unresolved_conflicts||0)}件`],
+   ['相続状態',txt(x.succession_status)],['相続メモ',txt(x.succession_note)]
+ ])+
+ detailSection('施業・補助金',[
+   ['直近/予定作業',txt(x.latest_work_title)],['作業状態',txt(x.latest_work_status)],
+   ['実績面積',ha(x.latest_actual_area_ha)],['次回予定',date(x.next_work_on)],
+   ['補助金状態',txt(x.subsidy_status)],['補助金決定額',yen(x.subsidy_decided_amount)]
+ ])+
+ table('この森林に関係する契約',['契約','当事者','期間','状態','契約書'],c.map(z=>[
+   z.title,txt(z.parties_text),`${date(z.starts_on)}〜${date(z.ends_on)}`,txt(z.status),mockLink(z.mock_ref,'契約書を開く')
+ ]))+
+ table('作業写真・報告書',['作業','日付','資料','表示'],e.map(z=>[
+   z.work_title,date(z.event_date),z.title,mockLink(z.mock_ref,evidenceLabel(z.evidence_type))
+ ]))+
+ detailSection('保険・災害',[
+   ['保険',txt(x.insurance_status)],['保険金額',yen(x.insured_amount)],
+   ['対応中災害',`${num(x.active_incident_count||0)}件`],['災害内容',txt(x.incident_title)]
+ ])+
+ detailSection('J-クレジット・分配',[
+   ['J-クレジットPJ',txt(x.jcredit_project_name)],['対象状態',txt(x.jcredit_target_status)],
+   ['対象面積',ha(x.jcredit_eligible_area_ha)],['分配予定',yen(x.planned_distribution_amount)],
+   ['支払予定',date(x.planned_payment_on)],['分配状態',txt(x.distribution_status)]
+ ]);
+}
+async function forestView(){
+ [forestRows,forestContracts,forestEvidence]=await Promise.all([
+   q('demo_forest_detail','select=*&order=name'),
+   q('demo_contract_relation','select=*&order=contract_no'),
+   q('demo_work_evidence','select=*')
+ ]);
+ renderForestDetail(forestRows[0]?.forest_unit_id);
+}
+
+
+
+let townBlocks=[],townDetails=[],townIssues=[],townWater=[],townMapFeatures=[],townMapRelations=[],townWorkScopes=[];
+let leafletTownMap=null,leafletFeatureLayers={};
+let townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:false,water:false};
+const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
+
+function geoObj(v){
+ if(!v)return null;
+ if(typeof v==='object')return v;
+ try{return JSON.parse(v)}catch(_){return null}
+}
+function featureProps(f){return typeof f.properties==='object'&&f.properties?f.properties:(()=>{try{return JSON.parse(f.properties||'{}')}catch(_){return{}}})();}
+function issueMatchesFeature(f,mode){
+ const p=featureProps(f);
+ if(mode==='issues')return true;
+ if(mode==='owner_unknown')return ['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(p.owner_status);
+ if(mode==='boundary_unknown')return ['境界未確定','境界推定','隣接地との重複疑い'].includes(p.boundary_status);
+ return false;
+}
+function managedMatchesFeature(f,mode){
+ const p=featureProps(f);
+ if(mode==='details')return true;
+ if(mode==='credit')return p.jcredit_status==='対象';
+ if(mode==='candidate')return String(p.jcredit_status||'').includes('追加候補');
+ if(mode==='program')return String(p.jcredit_status||'').includes('プログラム')||String(p.jcredit_status||'').includes('認証前');
+ if(mode==='disaster')return p.disaster_status==='対応中';
+ return false;
+}
+function layerColor(mode){return ({reference:'#6f8f72',details:'#3f4c44',issues:'#7d4f4f',owner_unknown:'#8b6f47',boundary_unknown:'#9a7540',credit:'#2f6b45',candidate:'#d88622',program:'#7553a5',operations:'#49779d',disaster:'#c84f45',water:'#3e88ad'})[mode]||'#65736b'}
+
+function clearLeafletFeatureLayers(){
+ const town=leafletFeatureLayers.town;
+ Object.entries(leafletFeatureLayers).forEach(([k,x])=>{if(k==='town')return;try{leafletTownMap?.removeLayer(x)}catch(_){}});
+ leafletFeatureLayers=town?{town}:{};
+}
+function addFeatureGeoJSON(f,mode){
+ const gj=geoObj(f.geom_geojson); if(!gj||!leafletTownMap)return null;
+ const color=layerColor(mode);
+ const opts={
+  style:()=>({color,weight:mode==='water'?3:2,fillColor:color,fillOpacity:mode==='water'?0.35:0.42,dashArray:mode==='issues'||mode==='owner_unknown'||mode==='boundary_unknown'?'6 4':null}),
+  pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:mode==='water'?7:6,color:'#fff',weight:2,fillColor:color,fillOpacity:.95}),
+  onEachFeature:(feature,layer)=>{
+   layer.on('click',()=>handleMapFeatureClick(f));
+   if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});
+  }
+ };
+ return L.geoJSON(gj,opts).addTo(leafletTownMap);
+}
+function addFeatureGeoJSONToGroup(f,mode,group){
+ const gj=geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
+ const subtype=String(f.feature_subtype||'');
+ const isWater=mode==='water';
+ let fillOpacity=.34,weight=2,dashArray=null;
+ if(mode==='reference'){fillOpacity=.16;weight=1;}
+ if(mode==='details'){fillOpacity=.18;weight=2.5;}
+ if(['issues','owner_unknown','boundary_unknown'].includes(mode)){fillOpacity=.16;weight=2;dashArray='6 4';}
+ if(mode==='disaster'){fillOpacity=f.is_fictional ? .28 : .24;weight=f.is_fictional ? 2.5 : 2;}
+ if(isWater){
+   if(['river','tributary'].includes(subtype)){fillOpacity=0;weight=subtype==='river'?4:3;}
+   else if(['watershed','catchment'].includes(subtype)){fillOpacity=.09;weight=2;dashArray='6 4';}
+   else if(['reservoir','lake','dam_lake'].includes(subtype)){fillOpacity=.32;weight=2.5;}
+   else {fillOpacity=.20;weight=2.5;}
+ }
+ const lyr=L.geoJSON(gj,{
+  style:()=>({color,weight,fillColor:color,fillOpacity,dashArray}),
+  pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:subtype==='dam'?8:6,color:'#fff',weight:2,fillColor:color,fillOpacity:.96}),
+  onEachFeature:(feature,layer)=>{layer.on('click',()=>handleMapFeatureClick(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}
+ });
+ lyr.addTo(group);return lyr;
+}
+function addWorkScopeToGroup(w,group){
+ const gj=geoObj(w.geom_geojson);if(!gj)return null;const color=layerColor('operations');
+ const exact=!!w.exact_work_polygon;
+ const lyr=L.geoJSON(gj,{
+  style:()=>({color,weight:3,fillColor:color,fillOpacity:.24,dashArray:exact?null:'5 4'}),
+  onEachFeature:(feature,layer)=>{
+   layer.on('click',()=>renderWorkScopeDetail(w));
+   layer.bindTooltip(w.work_title||'施業',{sticky:true,direction:'top'});
+  }
+ });
+ lyr.addTo(group);return lyr;
+}
+function refreshLeafletLayers(){
+ if(!leafletTownMap)return;
+ clearLeafletFeatureLayers();
+ const addGroup=(key,features,mode)=>{
+  const g=L.layerGroup();
+  features.forEach(f=>{addFeatureGeoJSONToGroup(f,mode,g);});
+  g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
+ };
+ if(townMapLayers.reference)addGroup('reference',townMapFeatures.filter(f=>f.layer_code==='reference_forest'),'reference');
+ if(townMapLayers.details)addGroup('details',townMapFeatures.filter(f=>f.layer_code==='managed_forest'),'details');
+ ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='unmanaged_group'&&issueMatchesFeature(f,mode)),mode)});
+ ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)),mode)});
+ if(townMapLayers.operations){
+  const g=L.layerGroup();
+  townWorkScopes.forEach(w=>addWorkScopeToGroup(w,g));
+  g.addTo(leafletTownMap);leafletFeatureLayers.operations=g;
+ }
+ if(townMapLayers.disaster){
+  addGroup('disaster-managed',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'disaster')),'disaster');
+  addGroup('disaster-events',townMapFeatures.filter(f=>f.layer_code==='hazard_area'),'disaster');
+ }
+ if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
+}
+function setTownLayer(layer,checked){townMapLayers[layer]=checked;refreshLeafletLayers();}
+
+async function openForestFromMap(name){
+ await load('forest');
+ const x=forestRows.find(v=>v.name===name||String(v.name).replace(/（.*?）/g,'')===String(name).replace(/（.*?）/g,''));
+ if(x)renderForestDetail(x.forest_unit_id);
+}
+function renderIssueDetail(id){
+ const x=townIssues.find(v=>v.issue_area_id===id);if(!x)return;
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(x.issue_name)}</h2><div class="map-summary-note">町全体の未整理森林群。地番・所有・境界が完全把握済みという意味ではありません。</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">面積 / ブロック</div><div class="v">${ha(x.area_ha)} / ${esc(x.block_code)}</div></div>
+ <div class="detailitem"><div class="k">着手難度</div><div class="v">${esc(x.difficulty_level)}</div></div>
+ <div class="detailitem"><div class="k">所有</div><div class="v">${esc(x.owner_status)}</div></div>
+ <div class="detailitem"><div class="k">境界</div><div class="v">${esc(x.boundary_status)}</div></div>
+ <div class="detailitem"><div class="k">森林簿・登記・GIS</div><div class="v">${esc(x.registry_match_status)}</div></div>
+ <div class="detailitem"><div class="k">現地確認</div><div class="v">${esc(x.field_check_status)}</div></div>
+ <div class="detailitem"><div class="k">施業履歴</div><div class="v">${esc(x.work_history_status)}</div></div>
+ <div class="detailitem"><div class="k">アクセス</div><div class="v">${esc(x.access_status)}</div></div>
+ <div class="detailitem"><div class="k">問題</div><div class="v">${esc(x.issue_summary||'—')}</div></div>
+ <div class="detailitem"><div class="k">現実的な次手</div><div class="v">${esc(x.next_possible_action||'—')}</div></div></div>`;
+}
+function renderTownDetail(name){
+ const x=townDetails.find(v=>v.forest_name===name)||townDetails[0];if(!x)return;
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(x.forest_name)}</h2><div class="map-summary-note">町MAPでは概要のみ。詳細履歴・契約・証憑は森林詳細へ。</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">面積 / 所属ブロック</div><div class="v">${ha(x.area_ha)} / ${esc(x.block_code)}</div></div>
+ <div class="detailitem"><div class="k">所有・権利</div><div class="v">${esc(x.rights_status||'—')}</div></div>
+ <div class="detailitem"><div class="k">境界</div><div class="v">${esc(x.boundary_status||'—')}${x.is_flying_lot?' / 飛地あり':''}</div></div>
+ <div class="detailitem"><div class="k">J-クレジット</div><div class="v">${esc(x.jcredit_status||'—')}<div class="statusline"><span class="statuspill">${esc(x.credit_review_status||'—')}</span></div></div></div>
+ <div class="detailitem"><div class="k">関係PJ</div><div class="v">${esc(x.jcredit_project_name||'—')}</div></div>
+ <div class="detailitem"><div class="k">施業</div><div class="v">${esc(x.work_status||'—')}</div></div>
+ <div class="detailitem"><div class="k">災害</div><div class="v">${esc(x.disaster_status||'—')}${x.disaster_date?`（${date(x.disaster_date)}）`:''}<br>${esc(x.disaster_summary||'—')}</div></div>
+ <div class="detailitem"><div class="k">保険 / 作業道</div><div class="v">${esc(x.insurance_status||'—')} / ${esc(x.road_status||'—')}</div></div>
+ <div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(x.next_action||'—')}</div></div></div>
+ <div class="mapaction"><button type="button" class="primarybtn" onclick='openForestFromMap(${JSON.stringify(x.forest_name)})'>森林詳細を見る</button></div>`;
+}
+function renderGenericWaterFeature(f){
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name||'水系')}</h2><div class="map-summary-note">青嶺町の水系・ダム・水源は架空データです。実在地形上にデモ用として配置しています。</div><div class="detailgrid"><div class="detailitem"><div class="k">種別</div><div class="v">${esc(f.feature_subtype||'—')}</div></div><div class="detailitem"><div class="k">概要</div><div class="v">${esc(f.summary_text||'—')}</div></div>${f.area_ha?`<div class="detailitem"><div class="k">面積</div><div class="v">${ha(f.area_ha)}</div></div>`:''}${f.length_m?`<div class="detailitem"><div class="k">延長</div><div class="v">${num(f.length_m)} m</div></div>`:''}</div>`;
+}
+function renderWaterDetail(assetId){
+ const a=townWater.find(x=>x.asset_id===assetId);if(!a){const f=townMapFeatures.find(x=>featureProps(x).asset_id===assetId||x.feature_code===assetId);if(f)renderGenericWaterFeature(f);return;}
+ const rel=townMapRelations.filter(r=>r.from_feature_code===assetId&&r.forest_name);
+ const issueRelated=townMapFeatures.filter(f=>f.layer_code==='unmanaged_group'&&['B01','B02','B03','B04','B05'].includes(featureProps(f).block_code));
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(a.asset_name)}</h2><div class="map-summary-note">水源・ダムを起点に、関係森林を横断して確認。</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">種別 / 状態</div><div class="v">${esc(a.asset_type)} / ${esc(a.status||'—')}</div></div>
+ <div class="detailitem"><div class="k">集水域</div><div class="v">${ha(a.catchment_area_ha)}</div></div>
+ <div class="detailitem"><div class="k">管理目的</div><div class="v">${esc(a.management_purpose||'—')}</div></div>
+ <div class="detailitem"><div class="k">関係する詳細森林</div><div class="v">${rel.length?rel.map(x=>esc(x.forest_name)).join('<br>'):'—'}</div></div>
+ <div class="detailitem"><div class="k">上流の未整理森林群</div><div class="v">${assetId==='DAM-01'?`${issueRelated.length}箇所（デモ抽出）`:'—'}</div></div>
+ <div class="detailitem"><div class="k">課題</div><div class="v">${esc(a.issue_summary||'—')}</div></div>
+ <div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(a.next_action||'—')}</div></div></div>`;
+}
+function renderReferenceForestDetail(f){
+ const p=featureProps(f);
+ document.getElementById('mapDetail').innerHTML=`<h2>実森林分布（参照）</h2><div class="map-summary-note">国土数値情報2021 土地利用細分メッシュ（森林コード0500）を、架空の青嶺町境界で切り出した参照レイヤーです。森林計画図や地番境界ではありません。</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">表示単位</div><div class="v">100mメッシュを連結した参照形状</div></div>
+ <div class="detailitem"><div class="k">この連結部の面積</div><div class="v">${ha(f.area_ha)}</div></div>
+ <div class="detailitem"><div class="k">基準年</div><div class="v">${esc(p.source_year||'2021')}</div></div>
+ <div class="detailitem"><div class="k">土地利用コード</div><div class="v">${esc(p.land_use_code||'0500')}（森林）</div></div>
+ <div class="detailitem"><div class="k">データ区分</div><div class="v">実データ参照 / CC BY 4.0</div></div></div>`;
+}
+function renderWorkScopeDetail(w){
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(w.work_title||'施業')}</h2><div class="map-summary-note">${w.exact_work_polygon?'実測・確定した施業範囲':'現時点では対象森林ポリゴンを代理表示。実測GIS取込時に差替可能。'}</div><div class="detailgrid">
+ <div class="detailitem"><div class="k">森林</div><div class="v">${esc(w.forest_name||'—')}</div></div>
+ <div class="detailitem"><div class="k">作業種別 / 状態</div><div class="v">${esc(w.work_type_code||'—')} / ${esc(w.work_status||'—')}</div></div>
+ <div class="detailitem"><div class="k">範囲区分</div><div class="v">${esc(w.scope_type||'—')}</div></div>
+ <div class="detailitem"><div class="k">面積</div><div class="v">${ha(w.reported_area_ha)}</div></div>
+ <div class="detailitem"><div class="k">実施日</div><div class="v">${date(w.event_date)}</div></div>
+ <div class="detailitem"><div class="k">GIS精度</div><div class="v">${w.exact_work_polygon?'実測範囲':'森林対象範囲の代理形状'}</div></div></div>`;
+}
+function handleMapFeatureClick(f){
+ if(f.layer_code==='reference_forest'){renderReferenceForestDetail(f);return;}
+ if(f.layer_code==='managed_forest'){renderTownDetail(f.display_name);return;}
+ if(f.layer_code==='unmanaged_group'){const id=featureProps(f).issue_area_id;if(id)renderIssueDetail(id);return;}
+ if(f.layer_code==='water_system'){const p=featureProps(f);if(p.asset_id)renderWaterDetail(p.asset_id);else renderGenericWaterFeature(f);return;}
+ if(f.layer_code==='hazard_area'){
+  const p=featureProps(f),real=!f.is_fictional;
+  document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">${real?'国土数値情報2025 奈良県の実データを、架空の青嶺町境界で切り出した参考表示です。法的図書ではありません。':'Forest OSデモ用の架空災害情報です。'}</div><div class="detailgrid"><div class="detailitem"><div class="k">種別</div><div class="v">${esc(f.feature_subtype||'—')}</div></div><div class="detailitem"><div class="k">面積</div><div class="v">${ha(f.area_ha)}</div></div><div class="detailitem"><div class="k">データ区分</div><div class="v">${real?'実データ参照 / 2025':'架空デモ'}</div></div><div class="detailitem"><div class="k">概要</div><div class="v">${esc(f.summary_text||'—')}</div></div></div>`;return;
+ }
+}
+function initLeafletTownMap(){
+ if(!window.L)throw new Error('地図ライブラリを読み込めませんでした');
+ if(leafletTownMap){leafletTownMap.remove();leafletTownMap=null;}
+ leafletTownMap=L.map('leafletTownMap',{zoomControl:true,attributionControl:true,minZoom:9,maxZoom:15});
+ L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,maxNativeZoom:18,attribution:'背景地図：国土地理院 淡色地図'}).addTo(leafletTownMap);
+ L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',{maxZoom:16,maxNativeZoom:16,opacity:0.42,attribution:'陰影起伏：国土地理院'}).addTo(leafletTownMap);
+ const boundary=townMapFeatures.find(f=>f.feature_code==='AOMINE-TOWN');
+ if(boundary){
+  const gj=geoObj(boundary.geom_geojson);
+  const b=L.geoJSON(gj,{style:{color:'#45554a',weight:3,fillColor:'#6e8b73',fillOpacity:.08,dashArray:'8 5'}}).addTo(leafletTownMap);
+  b.bindTooltip('【架空】青嶺町',{sticky:true});leafletFeatureLayers.town=b;leafletTownMap.fitBounds(b.getBounds(),{padding:[12,12]});
+ }else leafletTownMap.setView([34.17,135.88],12);
+}
+async function townMap(){
+ const [profile,blocks,details,issues,water,mapFeatures,mapRelations,datasets,workScopes]=await Promise.all([
+  q('demo_town_profile','select=*'),
+  q('demo_town_forest_block','select=*&order=sort_order'),
+  q('demo_forest_decision_context','select=*'),
+  q('demo_town_forest_issue_area','select=*&order=issue_area_id'),
+  q('demo_water_asset','select=*&order=asset_id'),
+  q('demo_map_feature','select=*'),
+  q('demo_map_feature_relation','select=*'),
+  q('demo_map_dataset_catalog','select=*'),
+  q('demo_work_spatial_scope','select=*&order=work_code')
+ ]);
+ townBlocks=blocks;townDetails=details;townIssues=issues;townWater=water;townMapFeatures=mapFeatures;townMapRelations=mapRelations;townWorkScopes=workScopes;
+ townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,credit:false,candidate:false,program:false,operations:false,disaster:false,water:false};
+ const p=profile[0]||{};
+ const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);
+ const ownerUnresolved=issues.filter(i=>['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status));
+ const boundaryUnresolved=issues.filter(i=>['境界未確定','境界推定','隣接地との重複疑い'].includes(i.boundary_status));
+ const hard=issues.filter(i=>i.difficulty_level==='着手困難');
+ const refForest=mapFeatures.filter(f=>f.layer_code==='reference_forest'&&!f.is_fictional);
+ const refForestArea=refForest.reduce((s,x)=>s+Number(x.area_ha||0),0);
+ const realHazards=mapFeatures.filter(f=>f.layer_code==='hazard_area'&&!f.is_fictional);
+ cards([
+  ['実森林分布',`${refForest.length}形状 / ${ha(refForestArea)}`],
+  ['詳細管理済み',`${num(p.detailed_forest_count)}件 / ${ha(p.detailed_management_area_ha)}`],
+  ['未整理森林群',`${issues.length}箇所 / ${ha(issueArea)}`],
+  ['所有・相続等未整理',`${ownerUnresolved.length}箇所`],
+  ['境界要整理',`${boundaryUnresolved.length}箇所`],
+  ['着手困難',`${hard.length}箇所`],
+  ['施業GIS',`${workScopes.length}件`],
+  ['実災害区域',`${realHazards.length}区域`]
+ ]);
+ const mk=(k,label,cls='',checked=false)=>`<label class="layercheck ${cls}"><input type="checkbox" ${checked?'checked':''} onchange="setTownLayer('${k}',this.checked)"> ${label}</label>`;
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span>実地形・実森林・実災害 × 架空町・架空業務</span></div><div class="layergroups">
+ <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林')}</div>
+ <div class="layergroup"><span class="layergrouptitle">未整理</span>${mk('issues','未整理森林群')}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
+ <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('credit','J-クレジット対象')}${mk('candidate','既存PJ追加候補')}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害')}</div>
+ <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle')}</div></div>
+ <div class="mapcanvas"><div id="leafletTownMap"></div></div>
+ <div class="map-note"><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。<br><b>実データ：</b>国土数値情報2021 土地利用細分メッシュ（森林0500）を架空町境界で切出し／国土数値情報2025 土砂災害警戒区域（奈良県）を参考表示。<br><b>架空：</b>青嶺町境界、河川・支流、ダム湖・ダム・水源、詳細森林、権利・境界・施業・J-クレジット等。実森林分布は森林計画図・地番境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">町全体森林（実データ）だけ初期表示しています。業務・課題・水系は必要なものだけONにしてください。</div></div></div>`+
+ table('GISデータ構成',['データ','区分','商用','表示'],datasets.map(d=>[d.dataset_name,d.source_type,d.commercial_use_allowed?'可':'不可',d.edit_notice_text||'—']))+
+ table('森林情報の整理状況',['区分','件数','面積・状態','意味'],[
+  ['実森林分布',`${refForest.length}形状`,ha(refForestArea),'100m土地利用メッシュの森林を連結した参照形状'],
+  ['詳細管理森林',`${num(p.detailed_forest_count)}件`,ha(p.detailed_management_area_ha),'権利・契約・施業等を個別管理'],
+  ['未整理森林群',`${issues.length}箇所`,ha(issueArea),'問題森林を代表的な群として管理'],
+  ['所有・相続等未整理',`${ownerUnresolved.length}箇所`,'複数問題が重複','所有者不明・相続未登記・共有者不明等'],
+  ['境界要整理',`${boundaryUnresolved.length}箇所`,'複数問題が重複','境界未確定・推定・重複疑い'],
+  ['施業GIS',`${workScopes.length}件`,'計画・実績を地図連携','現時点は対象森林ポリゴン代理。実測GISで差替可能'],
+  ['実災害区域',`${realHazards.length}区域`,'参考表示','法的境界確定には使用しない']
+ ]);
+ setTimeout(()=>{initLeafletTownMap();setTimeout(()=>refreshLeafletLayers(),80);},0);
+}
+
+
+const contractMocks={
+ 'contract-work':{
+   title:'2026年度 東山間伐業務委託契約書',
+   meta:'契約番号 DEMO-C-2026-01　締結日 2026年5月20日',
+   parties:'委託者：【デモ】青嶺町森林組合　／　受託者：【デモ】北峰林業株式会社',
+   object:'東山101林班1小班における間伐業務（計画10.0ha）',
+   term:'2026年6月1日から2026年8月31日まで',
+   amount:'契約金額 12,000,000円（デモ）'
+ },
+ 'contract-owner-coop':{
+   title:'東山森林経営管理委託契約書',
+   meta:'契約番号 DEMO-C-2026-02　締結日 2026年4月15日',
+   parties:'委託者：山主A（デモ）　／　受託者：【デモ】青嶺町森林組合',
+   object:'東山101林班1小班の森林経営・施業調整・管理に関する業務',
+   term:'2026年4月15日から2031年3月31日まで',
+   amount:'費用・収益分配条件は別紙による（デモ）'
+ },
+ 'contract-owner-pm':{
+   title:'東山森林経営支援・PM委託契約書',
+   meta:'契約番号 DEMO-C-2026-03　締結日 2026年4月20日',
+   parties:'委託者：山主A（デモ）　／　受託者：【デモ】青嶺森林PM合同会社',
+   object:'森林経営に関する制度対応、関係者調整、進捗管理及び情報整理',
+   term:'2026年4月20日から2027年3月31日まで',
+   amount:'業務範囲・報酬は個別条件表による（デモ）'
+ },
+ 'contract-municipality-pm':{
+   title:'青嶺町森林事業PM業務委託契約書',
+   meta:'契約番号 DEMO-C-2026-04　締結日 2026年4月1日',
+   parties:'委託者：【デモ】青嶺町　／　受託者：【デモ】青嶺森林PM合同会社',
+   object:'地域森林管理事業の事業設計、進捗管理、関係者調整及び上申資料整備',
+   term:'2026年4月1日から2027年3月31日まで',
+   amount:'契約金額はデモ表示のため省略'
+ },
+ 'contract-three-party':{
+   title:'青嶺町地域森林事業 三者協定書',
+   meta:'協定番号 DEMO-C-2026-05　締結日 2026年4月5日',
+   parties:'【デモ】青嶺町　／　【デモ】青嶺森林PM合同会社　／　【デモ】青嶺町森林組合',
+   object:'地域森林事業における役割分担、情報連携、進捗共有及び責任範囲',
+   term:'2026年4月5日から2029年3月31日まで',
+   amount:'協定のため金額条項なし（個別委託契約で規定）'
+ },
+ 'jcredit-validation-existing':{
+   title:'森林J-クレジット 妥当性確認・検証業務契約書',
+   meta:'契約番号 DEMO-JC-C-01　締結日 2026年4月10日',
+   parties:'委託者：【デモ】青嶺町森林組合　／　受託者：【デモ】森環境第三者審査機構',
+   object:'既存森林J-クレジットPJの妥当性確認、モニタリング結果の検証及び審査対応',
+   term:'2026年4月10日から2027年3月31日まで',
+   amount:'審査費用は個別見積による（デモ）'
+ },
+ 'jcredit-sales-broker':{
+   title:'J-クレジット販売仲介基本契約書',
+   meta:'契約番号 DEMO-JC-C-02　締結日 2026年6月1日',
+   parties:'委託者：【デモ】青嶺町森林組合　／　仲介者：【デモ】東浜環境商事株式会社',
+   object:'クレジットの販売先探索、条件調整、売買手続及び取引連絡の支援',
+   term:'2026年6月1日から2029年5月31日まで',
+   amount:'仲介条件・手数料は取引条件表による（デモ）'
+ },
+ 'jcredit-program-validation':{
+   title:'再造林プログラム 妥当性確認・検証業務契約書',
+   meta:'契約番号 DEMO-JC-C-03　締結日 2026年3月15日',
+   parties:'委託者：【デモ】青嶺森林PM合同会社　／　受託者：【デモ】森環境第三者審査機構',
+   object:'FO-003再造林プログラムの登録、参加活動の確認及びクレジット認証に係る検証業務',
+   term:'2026年3月15日から2028年3月31日まで',
+   amount:'審査費用は各認証回の条件表による（デモ）'
+ },
+ 'jcredit-monitoring-support':{
+   title:'再造林モニタリング・森林計測支援契約書',
+   meta:'契約番号 DEMO-JC-C-04　締結日 2026年4月1日',
+   parties:'委託者：【デモ】青嶺森林PM合同会社　／　受託者：【デモ】森林計測ラボ株式会社',
+   object:'再造林面積、植栽本数、生存率、成長状況等の現地計測及びモニタリングデータ整備',
+   term:'2026年4月1日から2029年3月31日まで',
+   amount:'年度別業務仕様書・見積書による（デモ）'
+ },
+ 'jcredit-precert-verification':{
+   title:'南峰PJ 初回モニタリング検証業務契約書',
+   meta:'契約番号 DEMO-JC-C-05　締結日 2026年8月1日',
+   parties:'委託者：【デモ】青嶺町森林組合　／　受託者：【デモ】森環境第三者審査機構',
+   object:'クレジット認証前の南峰森林J-クレジットPJについて、初回モニタリング結果を第三者検証する業務',
+   term:'2026年8月1日から2027年4月30日まで',
+   amount:'検証費用は個別見積による（デモ）'
+ }
+};
+function contractPaper(x){
+ return `<div class="demo-note">デモ用の契約書イメージです。実在する契約・電子署名済み文書ではありません。</div>
+ <article class="docpaper">
+  <h3>${esc(x.title)}</h3>
+  <div class="meta">${esc(x.meta)}</div>
+  <p>${esc(x.parties)}</p>
+  <h4>第1条（目的・対象）</h4><p>${esc(x.object)}</p>
+  <h4>第2条（契約期間）</h4><p>${esc(x.term)}</p>
+  <h4>第3条（業務の実施）</h4><p>関係法令、森林計画及び当事者間で確認した実施条件に従い、本業務を遂行する。</p>
+  <h4>第4条（費用等）</h4><p>${esc(x.amount)}</p>
+  <h4>第5条（記録・報告）</h4><p>作業記録、写真、検収結果その他の証憑をForest OS上の対象森林・作業案件に紐付けて保管する。</p>
+  <div class="signature"><p>以上、本契約の成立を証するため、本書を作成する。</p><p style="margin-top:26px">署名欄　____________________________</p></div>
+ </article>`;
+}
+function forestSvg(stage){
+ const conf={
+  'photo-before':{title:'作業前',date:'2026/06/05',trees:[90,160,225,295,360,430,505,575,640],stumps:[]},
+  'photo-during':{title:'作業中',date:'2026/07/08',trees:[100,210,355,510,630],stumps:[160,285,430,575]},
+  'photo-after':{title:'作業後',date:'2026/07/20',trees:[105,225,370,525,650],stumps:[165,300,450,590]}
+ }[stage];
+ const trees=conf.trees.map((x,i)=>`<g transform="translate(${x} ${i%2?8:0})"><rect x="-7" y="180" width="14" height="110" fill="#765b3c"/><polygon points="0,30 -55,205 55,205" fill="${i%2?'#356b45':'#2b5b3b'}"/><polygon points="0,75 -48,225 48,225" fill="${i%2?'#3d7650':'#346845'}"/></g>`).join('');
+ const stumps=conf.stumps.map(x=>`<g transform="translate(${x} 0)"><rect x="-10" y="270" width="20" height="18" rx="3" fill="#896848"/><ellipse cx="0" cy="270" rx="10" ry="4" fill="#b28b61"/></g>`).join('');
+ return `<div class="demo-note">デモ用の作業写真イメージです。実在の現場写真ではありません。</div>
+ <div class="mockphoto">
+ <svg viewBox="0 0 760 420" role="img" aria-label="${conf.title}の森林イメージ">
+   <rect width="760" height="420" fill="#dce9e1"/>
+   <circle cx="650" cy="70" r="34" fill="#f1e8bf"/>
+   <path d="M0 210 Q150 135 300 205 T760 185 V420 H0Z" fill="#7da183"/>
+   <path d="M0 255 Q170 185 340 245 T760 225 V420 H0Z" fill="#5f8769"/>
+   <rect y="288" width="760" height="132" fill="#78905f"/>
+   ${trees}${stumps}
+   <rect x="18" y="18" width="165" height="58" rx="8" fill="rgba(255,255,255,.86)"/>
+   <text x="32" y="43" font-size="18" font-weight="700" fill="#24352a">${conf.title}</text>
+   <text x="32" y="64" font-size="12" fill="#526158">東山101林班1小班</text>
+ </svg>
+ <div class="photometa">撮影日：${conf.date}　位置：東山101林班1小班　作業：間伐（デモ）</div>
+ </div>`;
+}
+function workReport(){
+ return `<div class="demo-note">デモ用の作業報告書イメージです。</div>
+ <article class="docpaper">
+  <h3>東山間伐 作業報告書</h3>
+  <div class="meta">作業案件：【デモ】東山間伐　報告日：2026年7月20日</div>
+  <h4>1. 対象森林</h4><p>東山101林班1小班</p>
+  <h4>2. 実施内容</h4><p>計画面積10.0haに対し、8.4haの間伐を実施。</p>
+  <h4>3. 未実施部分</h4><p>急傾斜部1.6haは安全面及び作業条件を踏まえ翌年度へ繰越。</p>
+  <h4>4. 検収</h4><p>現地確認済み。検収状態：accepted（デモ）</p>
+  <h4>5. 添付</h4><p>作業前写真、作業中写真、作業後写真。</p>
+ </article>`;
+}
+function openMock(ref){
+ const modal=document.getElementById('viewer'),body=document.getElementById('viewerBody'),title=document.getElementById('viewerTitle');
+ if(contractMocks[ref]){title.textContent='契約書';body.innerHTML=contractPaper(contractMocks[ref]);}
+ else if(ref==='work-report'){title.textContent='作業報告書';body.innerHTML=workReport();}
+ else if(['photo-before','photo-during','photo-after'].includes(ref)){title.textContent='作業写真';body.innerHTML=forestSvg(ref);}
+ else{title.textContent='資料';body.innerHTML='<div class="empty">デモ資料を準備中です。</div>';}
+ modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+}
+function closeViewer(){
+ const modal=document.getElementById('viewer');modal.classList.remove('open');modal.setAttribute('aria-hidden','true');document.body.style.overflow='';
+}
+document.addEventListener('click',e=>{
+ const a=e.target.closest('[data-mock]');
+ if(a){e.preventDefault();openMock(a.dataset.mock);}
+ if(e.target?.id==='viewer')closeViewer();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeViewer();});
+
+const loaders={municipality,forest_coop:forestCoop,forestry_company:forestryCompany,owner,accounting,jcredit:jcreditProject,pm,forest:forestView,town_map:townMap};
+async function load(role){
+ document.querySelectorAll('button[data-role]').forEach(b=>b.classList.toggle('active',b.dataset.role===role));
+ document.getElementById('cards').innerHTML='';
+ document.getElementById('content').innerHTML='<div class="notice">読み込み中...</div>';
+ try{await loaders[role]();document.getElementById('notice').textContent='公開デモ用Viewを表示中。本体DB・機密データは公開していません。'}
+ catch(e){document.getElementById('notice').innerHTML=`<span class="warn">DB接続エラー：</span>${e.message}`;document.getElementById('content').innerHTML='<section><div class="empty">ネット接続またはSupabase側の公開設定を確認してください。</div></section>'}
+}
+document.querySelectorAll('button[data-role]').forEach(b=>b.addEventListener('click',()=>load(b.dataset.role)));
+load('municipality');
+</script>
+</body>
+</html>
