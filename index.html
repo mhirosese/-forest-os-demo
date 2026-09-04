@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v21: PM aggregation + detailed finance + terrain-aligned project map -->
+<!-- Forest OS v22: canonical DB views + read-only overview map -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜青嶺町 v21</title>
+<title>Forest OS デモ｜青嶺町 v22</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -119,6 +119,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .ownerchip,.sourcechip{display:inline-block;padding:3px 7px;border-radius:999px;font-size:11px;background:#eef3ef;border:1px solid #d8e2d9}
 .sourcechip.external{background:#f8f1e6;border-color:#ead7b8;color:#72521e}.sourcechip.internal{background:#edf3f7;border-color:#cfdee8;color:#385a70}.sourcechip.mixed{background:#f3eff7;border-color:#ddd0e9;color:#654c79}
 .stage-initial{background:#dfeee3}.stage-addition{background:#e9f2eb}.stage-candidate{background:#fbf0dd;color:#7d571d}
+.rowfocus{outline:2px solid #c58a2d;outline-offset:-2px;background:#fff8eb!important}.mapjump{border:1px solid #bfd0c3;background:#f6faf7;color:#28583a;border-radius:6px;padding:5px 8px;font-size:11px;cursor:pointer}.mapjump:hover{background:#eef6f0}.mapactions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:12px 14px;border-top:1px solid var(--line)}.mapactions .primarybtn{width:auto}.secondarybtn{border:1px solid #b9c8bd;background:#fff;color:#315440;border-radius:7px;padding:9px 12px;font-size:13px;font-weight:650;cursor:pointer}
 .mapmodebadge{font-size:11px;color:#44554a;background:#eef3ef;border:1px solid #dce6de;border-radius:999px;padding:4px 8px}
 .project-note{padding:9px 12px;font-size:12px;color:#56645b;background:#f8faf8;border-top:1px solid #edf0ed}
 </style>
@@ -182,7 +183,7 @@ function table(title,headers,rows){
 async function municipality(){
  const [f,j,t,allc]=await Promise.all([
    q('demo_municipality_forest','select=*&order=name'),
-   q('demo_jcredit_project'),
+   q('demo_jcredit_project_v22'),
    q('demo_role_task',"select=*&role_code=eq.municipality&order=due_on"),
    q('demo_contract_relation','select=*&order=contract_no')
  ]);
@@ -201,7 +202,7 @@ async function municipality(){
 async function forestCoop(){
  const [f,j,t,allc,wc]=await Promise.all([
    q('demo_forest_coop_operation','select=*&order=name'),
-   q('demo_jcredit_project'),
+   q('demo_jcredit_project_v22'),
    q('demo_role_task',"select=*&role_code=eq.forest_coop&order=due_on"),
    q('demo_contract_relation','select=*&order=contract_no'),
    q('demo_work_credit_context','select=*')
@@ -277,8 +278,8 @@ async function accounting(){
  const [s,e,fc,costs]=await Promise.all([
    q('demo_accounting_summary','select=*'),
    q('demo_accounting_entry','select=*&order=entry_date'),
-   q('demo_jcredit_forecast_v21','select=*&order=forecast_year'),
-   q('demo_accounting_cost_detail_v21','select=*&order=forecast_year,parent_category,cost_category_code')
+   q('demo_jcredit_forecast_v22','select=*&order=forecast_year'),
+   q('demo_accounting_cost_detail_v22','select=*&order=forecast_year,parent_category,cost_category_code')
  ]);
  const m=metricMap(s), y=fc[0]||{};
  const vendorNames=[...new Set(costs.filter(x=>x.sourcing_type==='external'&&x.vendor).map(x=>x.vendor))];
@@ -327,9 +328,9 @@ async function jcreditProject(){
    q('demo_jcredit_event','select=*&order=event_date'),
    q('demo_jcredit_program_activity','select=*&order=activity_code'),
    q('demo_contract_relation','select=*&order=contract_no'),
-   q('demo_jcredit_growth_v21','select=*&order=area_version_no,forest_name'),
-   q('demo_municipal_work_v21','select=*&order=work_code'),
-   q('demo_jcredit_forecast_v21','select=*&order=forecast_year')
+   q('demo_jcredit_growth_v22','select=*&project_code=eq.DEMO-JC-001&order=area_version_no,forest_name'),
+   q('demo_municipal_work_v22','select=*&order=work_code'),
+   q('demo_jcredit_forecast_v22','select=*&order=forecast_year')
  ]);
  const contracts=allc.filter(x=>hasAudience(x,'jcredit')&&x.jcredit_project_id);
  const issued=j.reduce((s,x)=>s+Number(x.issued_quantity_t||0),0);
@@ -359,10 +360,10 @@ async function jcreditProject(){
    ['森林所有とPJ所有','森林の所有者とJ-クレジットPJオーナーを別管理。森林組合がPJオーナーになる構成にも対応']
  ])+
  table('PJ実施地・追加履歴',
- ['版','段階','森林','森林所有者','面積','候補化','申請','承認','有効化','状態','追加理由'],
+ ['版','段階','森林','森林所有者','面積','候補化','申請','承認','有効化','状態','追加理由','地図'],
  growth.map(x=>[
-   `v${num(x.area_version_no)}`,`<span class="tag stage-${esc(x.participation_stage)}">${pstage(x.participation_stage)}</span>`,x.forest_name,txt(x.forest_owner),ha(x.eligible_area_ha),
-   date(x.candidate_on),date(x.application_on),date(x.approved_on),date(x.effective_from),txt(x.status),txt(x.inclusion_reason)
+   `v${num(x.area_version_no)}`,`<span class="tag stage-${esc(x.participation_stage)}">${pstage(x.participation_stage)}</span>`,`<span id="jc-${esc(x.project_target_id)}">${esc(x.forest_name)}</span>`,txt(x.forest_owner),ha(x.eligible_area_ha),
+   date(x.candidate_on),date(x.application_on),date(x.approved_on),date(x.effective_from),txt(x.status),txt(x.inclusion_reason),`<button class="mapjump" type="button" onclick="openProjectAreaOnMap('${esc(x.project_target_id)}')">地図で見る</button>`
  ]))+
  table('町有林102.4ha：過去施業＋新規施業',
  ['区分','作業','状態','面積','実施日','Jクレとの関係','モニタリング対象'],
@@ -401,9 +402,9 @@ async function pm(){
  const [items,allc,growth,fc,costs]=await Promise.all([
    q('demo_pm_item','select=*'),
    q('demo_contract_relation','select=*&order=contract_no'),
-   q('demo_jcredit_growth_v21','select=*&order=area_version_no,forest_name'),
-   q('demo_jcredit_forecast_v21','select=*&order=forecast_year'),
-   q('demo_accounting_cost_detail_v21','select=*&order=forecast_year,parent_category,cost_category_code')
+   q('demo_jcredit_growth_v22','select=*&project_code=eq.DEMO-JC-001&order=area_version_no,forest_name'),
+   q('demo_jcredit_forecast_v22','select=*&order=forecast_year'),
+   q('demo_accounting_cost_detail_v22','select=*&order=forecast_year,parent_category,cost_category_code')
  ]);
  const c=allc.filter(x=>hasAudience(x,'pm'));
  items.sort((a,b)=>(a.due_on||'9999-12-31').localeCompare(b.due_on||'9999-12-31'));
@@ -412,7 +413,7 @@ async function pm(){
  const active=growth.filter(x=>x.status==='active'),cand=growth.filter(x=>x.status==='candidate');
  const vendors=[...new Set(costs.filter(x=>x.sourcing_type==='external'&&x.vendor).map(x=>x.vendor))];
  cards([
-   ['PJオーナー','青嶺森林PM合同会社'],['現PJ面積',ha(active.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],
+   ['PJオーナー',txt(growth[0]?.project_owner)],['現PJ面積',ha(active.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],
    ['追加候補',ha(cand.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],['外部業者',`${vendors.length}社`],
    ['未完了',`${open.length}件`],['高優先度',`${high.length}件`]
  ]);
@@ -493,7 +494,7 @@ async function forestView(){
 
 
 
-let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[];
+let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[];
 let leafletTownMap=null,leafletFeatureLayers={};
 let townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
 const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
@@ -614,7 +615,7 @@ function managedMatchesFeature(f,mode){
  if(mode==='disaster')return p.disaster_status==='対応中';
  return false;
 }
-function layerColor(mode){return ({reference:'#799276',details:'#355042',issues:'#8a735f',owner_unknown:'#876a53',boundary_unknown:'#796650',municipal:'#3e7254',credit:'#2f6b45',candidate:'#c58a2d',program:'#755f98',operations:'#3f7d78',disaster:'#b84e47',water:'#4f89a8'})[mode]||'#65736b'}
+function layerColor(mode){return ({reference:'#8da28a',details:'#42594a',issues:'#9a8068',owner_unknown:'#8d705a',boundary_unknown:'#7a6555',municipal:'#1f6f78',credit:'#287a43',candidate:'#df8a24',program:'#7058a3',operations:'#3f7d78',disaster:'#c14f47',water:'#3d8db3'})[mode]||'#65736b'}
 
 function clearLeafletFeatureLayers(){
  const town=leafletFeatureLayers.town;
@@ -652,19 +653,20 @@ function displayWaterGeometry(f){
 function addFeatureGeoJSONToGroup(f,mode,group){
  const gj=mode==='water'?displayWaterGeometry(f):geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
  const subtype=String(f.feature_subtype||'');
+ const props=featureProps(f);
  const isWater=mode==='water';
  let fillOpacity=.12,weight=0,dashArray=null,opacity=.62,smoothFactor=3.4;
  // v20 視認性優先：町全体では内部境界を描かず、面の意味だけを残す。
  // 正本GISの細かさはDBに保持し、通常画面では地形とテーマが読めることを優先する。
- if(mode==='reference'){fillOpacity=.045;weight=0;opacity=0;smoothFactor=4.8;}
+ if(mode==='reference'){fillOpacity=.035;weight=0;opacity=0;smoothFactor=4.8;}
  if(mode==='details'){fillOpacity=.07;weight=1.15;opacity=.78;smoothFactor=2.8;}
- if(mode==='municipal'){fillOpacity=.18;weight=1.35;opacity=.90;smoothFactor=3.6;}
+ if(mode==='municipal'){fillOpacity=0;weight=2.2;opacity=.96;dashArray='10 5';smoothFactor=3.8;}
  if(mode==='issues'){fillOpacity=.105;weight=0;opacity=0;smoothFactor=4.4;}
  if(mode==='owner_unknown'){fillOpacity=.055;weight=.45;opacity=.26;dashArray='3 7';smoothFactor=4.4;}
  if(mode==='boundary_unknown'){fillOpacity=0;weight=.72;opacity=.42;dashArray='7 8';smoothFactor=4.4;}
- if(mode==='credit'){fillOpacity=.20;weight=1.45;opacity=.92;smoothFactor=3.5;}
- if(mode==='candidate'){fillOpacity=.08;weight=1.45;opacity=.92;dashArray='6 4';smoothFactor=3.8;}
- if(mode==='program'){fillOpacity=.14;weight=1.2;opacity=.84;smoothFactor=3.0;}
+ if(mode==='credit'){fillOpacity=props.participation_stage==='initial'?.30:.22;weight=props.participation_stage==='initial'?1.9:1.55;opacity=.96;dashArray=props.participation_stage==='addition'?'2 3':null;smoothFactor=3.6;}
+ if(mode==='candidate'){fillOpacity=.16;weight=2.0;opacity=.98;dashArray='7 5';smoothFactor=3.8;}
+ if(mode==='program'){fillOpacity=.16;weight=1.55;opacity=.90;smoothFactor=3.0;}
  if(mode==='disaster'){fillOpacity=f.is_fictional ? .10 : .055;weight=f.is_fictional ? 1.15 : .7;opacity=.78;smoothFactor=3.2;}
 
  // 水系は「青い線」ではなく、淡い河道＋芯線で河川らしく見せる。
@@ -720,7 +722,7 @@ function addWorkScopeToGroup(w,group){
 function activeLayerLegend(){
  const items=[];
  const add=(key,label,kind='box')=>{if(townMapLayers[key])items.push([label,layerColor(key),kind]);};
- add('reference','町全体森林');add('details','詳細管理森林');add('issues','未整理（概況）');add('owner_unknown','所有・相続（概況）');add('boundary_unknown','境界未確定（概況）','dash');add('municipal','町有林102.4ha');add('credit','Jクレ追加済');add('candidate','既存PJ候補');add('program','プログラム/認証前');add('operations','施業');add('disaster','災害');add('water','水系','line');
+ add('reference','町全体森林');add('details','詳細管理森林');add('municipal','町有林（所有）','dash');add('credit','Jクレ実施地');add('candidate','Jクレ追加候補');add('program','別PJ/認証前');add('issues','未整理（概況）');add('owner_unknown','所有・相続（概況）');add('boundary_unknown','境界未確定（概況）','dash');add('operations','施業');add('disaster','災害');add('water','水系','line');
  const el=document.getElementById('activeLegend');if(!el)return;
  el.innerHTML=`<strong>表示中</strong>${items.map(([label,color,kind])=>`<div class="legendrow"><span class="swatch ${kind}" style="${kind==='dash'?`color:${color}`:`background:${color}`}" ></span>${esc(label)}</div>`).join('')}`;
 }
@@ -734,7 +736,7 @@ function refreshLeafletLayers(){
   g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
  };
  if(townMapLayers.reference)addGroup('reference',referenceOverviewFeatures(),'reference');
- if(townMapLayers.details)addGroup('details',townMapFeatures.filter(f=>f.layer_code==='managed_forest'),'details');
+ if(townMapLayers.details)addGroup('details',townDetailFeatures,'details');
  ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,issueOverviewFeatures(mode),mode)});
  if(townMapLayers.municipal)addGroup('municipal',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'municipal')),'municipal');
  ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)),mode)});
@@ -757,6 +759,14 @@ async function openForestFromMap(name){
  await load('forest');
  const x=forestRows.find(v=>v.name===name||String(v.name).replace(/（.*?）/g,'')===String(name).replace(/（.*?）/g,''));
  if(x)renderForestDetail(x.forest_unit_id);
+}
+async function openJcreditTarget(targetId){
+ await load('jcredit');
+ setTimeout(()=>{const el=document.getElementById('jc-'+targetId);if(el){el.scrollIntoView({behavior:'smooth',block:'center'});const tr=el.closest('tr');if(tr){tr.classList.add('rowfocus');setTimeout(()=>tr.classList.remove('rowfocus'),2200);}}},80);
+}
+async function openProjectAreaOnMap(targetId){
+ await load('town_map');
+ setTimeout(()=>{const f=townMapFeatures.find(x=>String(featureProps(x).project_target_id||'')===String(targetId));if(!f)return;handleMapFeatureClick(f);const gj=geoObj(f.geom_geojson);if(gj&&leafletTownMap){const z=L.geoJSON(gj);leafletTownMap.fitBounds(z.getBounds(),{padding:[38,38],maxZoom:14});}},180);
 }
 function renderIssueDetail(id){
  const x=townIssues.find(v=>v.issue_area_id===id);if(!x)return;
@@ -841,6 +851,8 @@ function renderForestBlockOverviewDetail(f){
 function renderManagedProjectFeature(f){
  const p=featureProps(f);
  const stage=({initial:'初期実施地',addition:'追加済',candidate:'追加候補'})[p.participation_stage]||txt(p.participation_stage);
+ const hasForest=townDetails.some(x=>x.forest_name===f.display_name);
+ const forestBtn=hasForest?`<button type="button" class="secondarybtn" onclick='openForestFromMap(${JSON.stringify(f.display_name)})'>森林詳細を見る</button>`:'';
  document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">地図表示は国土数値情報の森林分布を基に地形へ沿わせたデモ用一般化形状です。台帳面積と表示形状は分離して管理します。</div><div class="detailgrid">
  <div class="detailitem"><div class="k">台帳面積</div><div class="v">${ha(f.area_ha)}</div></div>
  <div class="detailitem"><div class="k">PJ段階</div><div class="v">${esc(stage)}</div></div>
@@ -850,7 +862,7 @@ function renderManagedProjectFeature(f){
  <div class="detailitem"><div class="k">候補化 / 有効化</div><div class="v">${date(p.candidate_on)} / ${date(p.effective_from)}</div></div>
  <div class="detailitem"><div class="k">施業</div><div class="v">${esc(p.work_status||'未確認')}</div></div>
  <div class="detailitem"><div class="k">権利・境界</div><div class="v">${esc(p.rights_status||'未確認')} / ${esc(p.boundary_status||'未確認')}</div></div>
- <div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(p.next_action||'—')}</div></div></div>`;
+ <div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(p.next_action||'—')}</div></div></div><div class="mapactions" style="grid-template-columns:${hasForest?'1fr 1fr':'1fr'}"><button type="button" class="primarybtn" onclick="openJcreditTarget('${esc(p.project_target_id||'')}')">J-クレジットPJで確認</button>${forestBtn}</div>`;
 }
 function handleMapFeatureClick(f){
  if(f.layer_code==='forest_block_overview'){renderForestBlockOverviewDetail(f);return;}
@@ -878,7 +890,7 @@ function initLeafletTownMap(){
  }else leafletTownMap.setView([34.17,135.88],12);
 }
 async function townMap(){
- const [profile,blocks,details,issues,issueShapes,water,mapFeatures,mapRelations,datasets,workScopes,refDisplay,coverage]=await Promise.all([
+ const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage]=await Promise.all([
   q('demo_town_profile','select=*'),
   q('demo_town_forest_block','select=*&order=sort_order'),
   q('demo_forest_decision_context','select=*'),
@@ -886,6 +898,7 @@ async function townMap(){
   q('demo_issue_forest_display_v12','select=*&order=feature_code'),
   q('demo_water_asset','select=*&order=asset_id'),
   q('demo_map_feature','select=*'),
+  q('demo_project_map_v22','select=*'),
   q('demo_map_feature_relation','select=*'),
   q('demo_map_dataset_catalog','select=*'),
   q('demo_work_spatial_scope','select=*&order=work_code'),
@@ -893,7 +906,9 @@ async function townMap(){
   q('demo_forest_data_coverage','select=*&order=forest_name')
  ]);
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
- townMapFeatures=[...mapFeatures.filter(f=>f.layer_code!=='reference_forest'),...refDisplay];
+ townDetailFeatures=mapFeatures.filter(f=>f.layer_code==='managed_forest');
+ const legacyProgram=townDetailFeatures.filter(f=>managedMatchesFeature(f,'program'));
+ townMapFeatures=[...mapFeatures.filter(f=>f.layer_code!=='reference_forest'&&f.layer_code!=='managed_forest'),...legacyProgram,...projectMap,...refDisplay];
  townMapRelations=mapRelations;townWorkScopes=workScopes;townCoverage=coverage;
  townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
  const p=profile[0]||{};
@@ -905,7 +920,7 @@ async function townMap(){
  const refForestArea=refForest.reduce((s,x)=>s+Number(x.area_ha||0),0);
  const realHazards=townMapFeatures.filter(f=>f.layer_code==='hazard_area'&&!f.is_fictional);
  const avgCoverage=coverage.length?Math.round(coverage.reduce((s,x)=>s+Number(x.coverage_pct||0),0)/coverage.length):0;
- const projectFeatures=townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&featureProps(f).dataset==='forest_os_demo_v21');
+ const projectFeatures=townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&featureProps(f).dataset==='forest_os_demo_v22');
  const activeProjectArea=projectFeatures.filter(f=>featureProps(f).jcredit_status==='対象').reduce((s,x)=>s+Number(x.area_ha||0),0);
  const candidateProjectArea=projectFeatures.filter(f=>String(featureProps(f).jcredit_status||'').includes('追加候補')).reduce((s,x)=>s+Number(x.area_ha||0),0);
  cards([
@@ -923,13 +938,15 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span class="mapmodebadge">見やすさ優先</span></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span class="mapmodebadge">閲覧・全体把握</span></div><div class="layergroups">
  <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林','',false)}</div>
- <div class="layergroup"><span class="layergrouptitle">未整理</span>${mk('issues','未整理森林群')}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
- <div class="layergroup"><span class="layergrouptitle">業務</span>${mk('municipal','町有林102.4ha','',true)}${mk('credit','既存PJ追加済','',true)}${mk('candidate','既存PJ追加候補','',true)}${mk('program','プログラム/認証前')}${mk('operations','施業')}${mk('disaster','災害')}</div>
+ <div class="layergroup"><span class="layergrouptitle">所有</span>${mk('municipal','町有林（輪郭）','',true)}</div>
+ <div class="layergroup"><span class="layergrouptitle">Jクレ</span>${mk('credit','PJ実施地','',true)}${mk('candidate','追加候補','',true)}${mk('program','別PJ/認証前')}</div>
+ <div class="layergroup"><span class="layergrouptitle">課題</span>${mk('issues','未整理森林群')}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
+ <div class="layergroup"><span class="layergrouptitle">現場</span>${mk('operations','施業')}${mk('disaster','災害')}</div>
  <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>直感表示：</b>町有林・既存PJ追加済・追加候補は丸ではなく、実森林分布を基に地形へ沿わせた表示用ポリゴンです。正本の8,764森林メッシュや細かい境界はDBに保持し、通常画面では内部線を描きません。<br><b>PJ成長：</b>町有林102.4haを初期実施地とし、周辺の中規模森林を順次追加する構成を表示。<br><b>背景地形：</b>国土地理院「淡色地図」＋「陰影起伏図」。実森林・実災害と架空の青嶺町・業務情報を分離しています。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">最初は「町全体森林・未整理森林・災害・水系」だけを表示します。必要な業務レイヤーを追加して確認してください。</div></div></div>`+
+ <div class="map-note"><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読み、町全体を俯瞰します。<br><b>色の軸：</b>町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面で分離。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>実森林分布を基に地形へ沿う程度に一般化した閲覧用形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
@@ -998,7 +1015,7 @@ const contractMocks={
  'jcredit-validation-existing':{
    title:'森林J-クレジット 妥当性確認・検証業務契約書',
    meta:'契約番号 DEMO-JC-C-01　締結日 2026年4月10日',
-   parties:'委託者：【デモ】青嶺町森林組合　／　受託者：【デモ】森環境第三者審査機構',
+   parties:'委託者：【デモ】青嶺森林PM合同会社　／　受託者：【デモ】森環境第三者審査機構',
    object:'既存森林J-クレジットPJの妥当性確認、モニタリング結果の検証及び審査対応',
    term:'2026年4月10日から2027年3月31日まで',
    amount:'審査費用は個別見積による（デモ）'
@@ -1006,7 +1023,7 @@ const contractMocks={
  'jcredit-sales-broker':{
    title:'J-クレジット販売仲介基本契約書',
    meta:'契約番号 DEMO-JC-C-02　締結日 2026年6月1日',
-   parties:'委託者：【デモ】青嶺町森林組合　／　仲介者：【デモ】東浜環境商事株式会社',
+   parties:'委託者：【デモ】青嶺森林PM合同会社　／　仲介者：【デモ】東浜環境商事株式会社',
    object:'クレジットの販売先探索、条件調整、売買手続及び取引連絡の支援',
    term:'2026年6月1日から2029年5月31日まで',
    amount:'仲介条件・手数料は取引条件表による（デモ）'
