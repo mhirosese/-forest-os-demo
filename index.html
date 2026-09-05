@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v38統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、森林は不定形を小区画群で近似表示します。台帳haと描画規模を概ね合わせつつ、線状のひげを抑え、塊の外周を少し残す補正を入れています。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v39統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、森林は不定形を小区画群で近似表示します。台帳haと描画規模を概ね合わせつつ、元ポリゴンの内側をより密に埋め、1〜2セル幅の線状部分を抑える補正を入れています。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -1144,93 +1144,116 @@ function managedForestMosaicGeometry(f){
  const gj=geoObj(f.geom_geojson);
  if(!gj||!['Polygon','MultiPolygon'].includes(gj.type)){managedMosaicGeomCache.set(key,gj);return gj;}
  const areaHa=Math.max(.8,Number(f.area_ha||featureProps(f).area_ha||0)||0);
- const targetCells=Math.max(6,Math.min(180,Math.round(areaHa/0.75)));
+ const targetCells=Math.max(8,Math.min(180,Math.round(areaHa/0.72)));
  const box=geomBbox(gj); if(!box){managedMosaicGeomCache.set(key,gj);return gj;}
  const ctr=geomCentroid(gj), latMid=ctr[1]||((box.minY+box.maxY)/2), cosLat=Math.max(.25,Math.cos((latMid||34)*Math.PI/180));
  let candidates=[];
- const scales=[1.0,0.92,0.84,0.76,0.68];
+ const scales=[1.0,0.94,0.88,0.80,0.72];
  for(const scale of scales){
    const cellAreaM2=(areaHa*10000/targetCells)*(scale*scale);
-   const cellSideM=Math.max(42,Math.sqrt(cellAreaM2));
+   const cellSideM=Math.max(38,Math.sqrt(cellAreaM2));
    const stepY=cellSideM/111320;
    const stepX=cellSideM/(111320*cosLat);
-   const padX=stepX*.15,padY=stepY*.15;
+   const padX=stepX*.14,padY=stepY*.14;
    const rows=[];
    let r=0;
    for(let y=box.minY;y<=box.maxY+1e-9;y+=stepY,r++){
      let c=0;
      for(let x=box.minX;x<=box.maxX+1e-9;x+=stepX,c++){
        const cx=x+stepX/2, cy=y+stepY/2;
-       if(pointInPolygonGeom([cx,cy],gj)){
-         const d=((cx-ctr[0])**2)+((cy-ctr[1])**2);
-         rows.push({id:`${r}:${c}`,r,c,cx,cy,d,ring:squareRing(x+padX,y+padY,x+stepX-padX,y+stepY-padY)});
-       }
+       if(pointInPolygonGeom([cx,cy],gj))rows.push({id:`${r}:${c}`,r,c,cx,cy,ring:squareRing(x+padX,y+padY,x+stepX-padX,y+stepY-padY)});
      }
    }
-   if(rows.length){
-     candidates=rows;
-     if(rows.length>=Math.max(6,targetCells*0.82))break;
-   }
+   if(rows.length){candidates=rows; if(rows.length>=Math.max(8,targetCells*0.9))break;}
  }
  if(!candidates.length){managedMosaicGeomCache.set(key,gj);return gj;}
  const byId=new Map(candidates.map(c=>[c.id,c]));
- let active=new Set(candidates.map(c=>c.id));
- const minKeep=Math.max(5,Math.round(Math.min(candidates.length,targetCells*0.72)));
- const maxKeep=Math.max(minKeep,Math.round(targetCells*1.35));
  const n8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
  const n4=[[1,0],[-1,0],[0,1],[0,-1]];
- const statsOf=(id,setRef=active)=>{
-   const cell=byId.get(id); let total=0, orth=0;
-   n4.forEach(([dr,dc])=>{ if(setRef.has(`${cell.r+dr}:${cell.c+dc}`)){ total++; orth++; } });
-   for(const [dr,dc] of [[1,1],[1,-1],[-1,1],[-1,-1]])if(setRef.has(`${cell.r+dr}:${cell.c+dc}`))total++;
-   return {total,orth};
- };
- const trimRule=(pass)=>{
-   const drops=[];
-   for(const id of active){
-     const st=statsOf(id);
-     if(pass===0 && st.total<=1)drops.push(id);
-     else if(pass===1 && st.orth===0 && st.total<=2)drops.push(id);
-     else if(pass===2 && st.orth<=1 && st.total<=2 && active.size-drops.length>Math.max(minKeep,targetCells*0.8))drops.push(id);
-   }
-   if(!drops.length)return false;
-   if(active.size-drops.length<minKeep)return false;
-   drops.forEach(id=>active.delete(id));
-   return true;
- };
- trimRule(0); trimRule(1); trimRule(2);
- const components=[];
-   {
-   const seen=new Set();
-   for(const id of active){
+ const allIds=new Set(candidates.map(c=>c.id));
+ const orthCount=(id,setRef=allIds)=>{const cell=byId.get(id);let n=0;n4.forEach(([dr,dc])=>{if(setRef.has(`${cell.r+dr}:${cell.c+dc}`))n++;});return n;};
+ const totalCount=(id,setRef=allIds)=>{const cell=byId.get(id);let n=0;n8.forEach(([dr,dc])=>{if(setRef.has(`${cell.r+dr}:${cell.c+dc}`))n++;});return n;};
+ const getComponents=(setRef)=>{
+   const comps=[]; const seen=new Set();
+   for(const id of setRef){
      if(seen.has(id))continue;
      const comp=[]; const stack=[id]; seen.add(id);
      while(stack.length){
        const cur=stack.pop(); comp.push(cur); const cell=byId.get(cur);
-       n8.forEach(([dr,dc])=>{ const nid=`${cell.r+dr}:${cell.c+dc}`; if(active.has(nid) && !seen.has(nid)){ seen.add(nid); stack.push(nid);} });
+       n8.forEach(([dr,dc])=>{const nid=`${cell.r+dr}:${cell.c+dc}`; if(setRef.has(nid)&&!seen.has(nid)){seen.add(nid); stack.push(nid);}});
      }
-     components.push(comp);
+     comps.push(comp);
    }
- }
- if(components.length>1 && active.size>10){
-   const sorted=components.slice().sort((a,b)=>b.length-a.length);
-   const keepers=new Set(sorted[0]);
-   for(let i=1;i<sorted.length;i++){
-     const comp=sorted[i];
-     if(comp.length>=3 || comp.length>=active.size*0.12)comp.forEach(id=>keepers.add(id));
+   return comps;
+ };
+ const comps=getComponents(allIds);
+ const finalIds=new Set();
+ const totalCandidates=candidates.length;
+ const desiredKeep=Math.max(6,Math.min(totalCandidates,Math.round(Math.max(targetCells*0.92,totalCandidates*0.68))));
+ for(const comp of comps){
+   if(comp.length<=5){comp.forEach(id=>finalIds.add(id)); continue;}
+   const compSet=new Set(comp);
+   let keep=new Set(comp.filter(id=>orthCount(id,compSet)>=2 || totalCount(id,compSet)>=4));
+   if(keep.size<Math.max(4,Math.round(comp.length*0.35))){
+     const ranked=comp.map(id=>{const cell=byId.get(id); const d=Math.abs(cell.cx-ctr[0])+Math.abs(cell.cy-ctr[1]); return {id,d};}).sort((a,b)=>a.d-b.d);
+     ranked.slice(0,Math.max(4,Math.round(comp.length*0.45))).forEach(x=>keep.add(x.id));
    }
-   if(keepers.size>=minKeep)active=keepers;
+   let changed=true;
+   while(changed){
+     changed=false;
+     for(const id of comp){
+       if(keep.has(id))continue;
+       const cell=byId.get(id);
+       let near=0;
+       n8.forEach(([dr,dc])=>{if(keep.has(`${cell.r+dr}:${cell.c+dc}`))near++;});
+       const orth=orthCount(id,compSet);
+       if(near>=3 || (near>=2 && orth>=2) || (comp.length<=10 && near>=1 && orth>=1)){
+         keep.add(id); changed=true;
+       }
+     }
+   }
+   let trimmed=true;
+   while(trimmed){
+     trimmed=false;
+     const drops=[];
+     for(const id of keep){
+       const cell=byId.get(id);
+       let nearKeep4=0, nearKeep8=0;
+       n4.forEach(([dr,dc])=>{if(keep.has(`${cell.r+dr}:${cell.c+dc}`))nearKeep4++;});
+       n8.forEach(([dr,dc])=>{if(keep.has(`${cell.r+dr}:${cell.c+dc}`))nearKeep8++;});
+       if(nearKeep4===0 && keep.size-drops.length>Math.max(4,Math.round(comp.length*0.5)))drops.push(id);
+       else if(nearKeep4<=1 && nearKeep8<=2 && keep.size-drops.length>Math.max(5,Math.round(comp.length*0.62)))drops.push(id);
+     }
+     if(drops.length){drops.forEach(id=>keep.delete(id)); trimmed=true;}
+   }
+   for(const id of comp){
+     if(keep.has(id))continue;
+     const cell=byId.get(id);
+     let near=0;
+     n8.forEach(([dr,dc])=>{if(keep.has(`${cell.r+dr}:${cell.c+dc}`))near++;});
+     if(near>=4 && ((cell.r+cell.c)%3!==0))keep.add(id);
+   }
+   keep.forEach(id=>finalIds.add(id));
  }
- if(active.size>maxKeep){
-   const cells=[...active].map(id=>{
-     const cell=byId.get(id); const st=statsOf(id);
-     const spread=Math.abs(cell.cx-ctr[0])+Math.abs(cell.cy-ctr[1]);
-     const edgeBias=(st.orth<=2?0.8:0)+(st.total<=4?0.3:0);
-     return {id,score:spread+edgeBias+(st.total*0.02)};
-   }).sort((a,b)=>b.score-a.score);
-   active=new Set(cells.slice(0,maxKeep).map(x=>x.id));
+ if(finalIds.size>desiredKeep){
+   const arr=[...finalIds].map(id=>{
+     const cell=byId.get(id); let near4=0, near8=0;
+     n4.forEach(([dr,dc])=>{if(finalIds.has(`${cell.r+dr}:${cell.c+dc}`))near4++;});
+     n8.forEach(([dr,dc])=>{if(finalIds.has(`${cell.r+dr}:${cell.c+dc}`))near8++;});
+     const dist=Math.abs(cell.cx-ctr[0])+Math.abs(cell.cy-ctr[1]);
+     const removable=(near4<=1?2.5:0)+(near4===2?0.8:0)+(near8<=3?0.7:0)+dist*1000;
+     return {id,removable};
+   }).sort((a,b)=>b.removable-a.removable);
+   const keepSet=new Set(finalIds);
+   for(const x of arr){
+     if(keepSet.size<=desiredKeep)break;
+     const cell=byId.get(x.id); let near4=0;
+     n4.forEach(([dr,dc])=>{if(keepSet.has(`${cell.r+dr}:${cell.c+dc}`))near4++;});
+     if(near4<=1 || keepSet.size>desiredKeep+4)keepSet.delete(x.id);
+   }
+   finalIds.clear(); keepSet.forEach(id=>finalIds.add(id));
  }
- const picked=[...active].map(id=>byId.get(id));
+ const picked=[...finalIds].map(id=>byId.get(id));
  if(!picked.length){managedMosaicGeomCache.set(key,gj);return gj;}
  const mosaic={type:'MultiPolygon',coordinates:picked.map(c=>[c.ring])};
  managedMosaicGeomCache.set(key,mosaic);
@@ -1558,14 +1581,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v38 小区画群補正</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v39 小区画群近似</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','関連森林','',true)+mk('municipal','町有林（関係時のみ）','',true))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v38表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の小区画群、追加候補は橙の小区画群、別PJ/認証前は青系の小区画群で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>森林は不定形を小区画群で近似し、台帳面積haと描画規模を概ね合わせます。1〜2セル幅のひげを抑え、塊の外周は少し残します。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v39表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の小区画群、追加候補は橙の小区画群、別PJ/認証前は青系の小区画群で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>森林は不定形を小区画群で近似し、台帳面積haと描画規模を概ね合わせます。元ポリゴンの内側をやや密に埋めつつ、1〜2セル幅の線状部分を抑えます。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
