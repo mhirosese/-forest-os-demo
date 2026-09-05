@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v33統合デモ。利用者目線・GIS/森林詳細スコープに加え、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離の権利パターンを追加。青嶺町・蒼谷村・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v34統合デモ。利用者目線・GIS/森林詳細スコープに加え、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離の権利パターンを追加。地図UIは関連森林中心に整理し、町全体森林レイヤーを外しています。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -1116,7 +1116,7 @@ function addWorkScopeToGroup(w,group){
 function activeLayerLegend(){
  const items=[];
  const add=(key,label,kind='box')=>{if(townMapLayers[key]&&mapLayerAllowedForPersona(key))items.push([label,layerColor(key),kind]);};
- add('reference','町全体森林');add('details','詳細管理森林');add('municipal','町有林（所有）','dash');add('credit','Jクレ実施地');add('candidate','Jクレ追加候補');add('program','別PJ/認証前');add('issues','未整理（概況）');add('owner_unknown','所有・相続（概況）');add('boundary_unknown','境界未確定（概況）','dash');add('operations','施業');add('disaster','災害');add('water','水系','line');
+ add('details','関連森林');add('municipal','町有林（関係時のみ）','dash');add('credit','PJ実施地');add('candidate','追加候補');add('program','別PJ/認証前');add('issues','未整理森林群');add('owner_unknown','所有・相続等未整理');add('boundary_unknown','境界未確定等','dash');add('operations','施業');add('disaster','災害');add('water','水系','line');
  const el=document.getElementById('activeLegend');if(!el)return;
  el.innerHTML=`<strong>表示中</strong>${items.map(([label,color,kind])=>`<div class="legendrow"><span class="swatch ${kind}" style="${kind==='dash'?`color:${color}`:`background:${color}`}" ></span>${esc(label)}</div>`).join('')}`;
 }
@@ -1129,7 +1129,6 @@ function refreshLeafletLayers(){
   features.forEach(f=>{addFeatureGeoJSONToGroup(f,mode,g);});
   g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
  };
- if(townMapLayers.reference&&townMapFilterState.region!=='【デモ】蒼谷村')addGroup('reference',referenceOverviewFeatures(),'reference');
  if(townMapLayers.details)addGroup('details',townDetailFeatures.filter(passesMapFilters),'details');
  ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode]&&mapLayerAllowedForPersona(mode))addGroup(mode,issueOverviewFeatures(mode),mode)});
  if(townMapLayers.municipal&&mapLayerAllowedForPersona('municipal'))addGroup('municipal',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'municipal')&&passesMapFilters(f)),'municipal');
@@ -1324,7 +1323,7 @@ async function townMap(){
  const personaScopeRows=currentPersonaScopeRows();
  townMapAllowedForestIds=new Set(personaScopeRows.map(x=>String(x.forest_unit_id)));
  townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
- townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:mapLayerAllowedForPersona('municipal'),credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
+ townMapLayers={reference:false,details:true,issues:false,owner_unknown:false,boundary_unknown:false,municipal:mapLayerAllowedForPersona('municipal'),credit:true,candidate:true,program:true,operations:false,disaster:false,water:true};
  const p=profile[0]||{};
  const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);
  const ownerUnresolved=issues.filter(i=>['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status));
@@ -1354,15 +1353,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v33 権利構造連動</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
- <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林','',false)}</div>
- <div class="layergroup"><span class="layergrouptitle">所有</span>${mk('municipal','町有林（輪郭）','',true)}</div>
- <div class="layergroup"><span class="layergrouptitle">Jクレ</span>${mk('credit','PJ実施地','',true)}${mk('candidate','追加候補','',true)}${mk('program','別PJ/認証前')}</div>
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v34 表示整理</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ <div class="layergroup"><span class="layergrouptitle">森林</span>${mk('details','関連森林','',true)}${mk('municipal','町有林（関係時のみ）','',true)}</div>
+ <div class="layergroup"><span class="layergrouptitle">Jクレ</span>${mk('credit','PJ実施地','',true)}${mk('candidate','追加候補','',true)}${mk('program','別PJ/認証前','',true)}</div>
  <div class="layergroup"><span class="layergrouptitle">課題</span>${mk('issues','未整理森林群')}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
  <div class="layergroup"><span class="layergrouptitle">現場</span>${mk('operations','施業')}${mk('disaster','災害')}</div>
- <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
+ <div class="layergroup"><span class="layergrouptitle">参照</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v33表示制御：</b>まず現在の利用者とDB上で関係する森林だけに絞り、その中で地域・プロジェクト・森林・地権者・管理者・施業者を追加絞り込みます。町有林は、その利用者の関係範囲に町有林がある場合だけレイヤーを表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読み、町全体を俯瞰します。<br><b>色の軸：</b>町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面で分離。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>実森林分布を基に地形へ沿う程度に一般化した閲覧用形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v34表示整理：</b>町全体森林レイヤーは外し、現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面、別PJ/認証前は青系で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>閲覧用に一般化した形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
@@ -1376,7 +1374,7 @@ async function townMap(){
  table('現在の利用者に見える地図情報',['区分','件数','面積・状態','意味'],[
   ['関連森林',`${personaScopeRows.length}件`,ha(scopedArea),`${currentPersona().roleLabel}と権利・委任・管理・施業・PJ・担当区域等で関係する森林`],
   ['関連施業GIS',`${scopedWorks.length}件`,'計画・実績を地図連携','現在の利用者に関係する森林の施業範囲だけを表示'],
-  ['背景森林分布',`${refForest.length}形状`,ha(refForestArea),'公開参照レイヤー。業務権限とは分離'],
+  ['水系・地形背景','参照表示','位置把握用','業務権限とは分離した背景参照情報'],
   ...(personaAllowsOperationalContext()?[
    ['未整理森林群',`${issues.length}箇所`,ha(issueArea),'自治体・森林組合・PM・運営向けの地域管理情報'],
    ['実災害区域',`${realHazards.length}区域`,'参考表示','運営・地域管理上の参考レイヤー']
