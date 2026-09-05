@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v35統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、利用者スコープに応じて表示します。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v36統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、利用者スコープに応じて表示します。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -286,6 +286,7 @@ const partyLinksHtml=(names,empty='—')=>{const a=(Array.isArray(names)?names:[
 const DEMO_PERSONAS=[
  {id:'platform_admin',kind:'admin',roleLabel:'運営管理者',party:'Forest OS運営（デモ）',scopeParty:'【デモ】森林OS全国運営株式会社',scope:'全地域・全プロジェクト・関係主体を横断',startRole:'admin'},
  {id:'municipality_aomine',kind:'municipality',roleLabel:'自治体',party:'【デモ】青嶺町',scope:'青嶺町の地域森林・事業・集計',region:'【デモ】青嶺町',startRole:'municipality'},
+ {id:'municipality_soutani',kind:'municipality',roleLabel:'自治体',party:'【デモ】蒼谷村',scope:'蒼谷村の管内森林・村有林・施業・J-クレジットを確認',region:'【デモ】蒼谷村',startRole:'municipality'},
  {id:'coop_aomine',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】青嶺町森林組合',scope:'自組合が管理・施業・PJ運営等で関係する森林',startRole:'forest_coop'},
  {id:'coop_soutani',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】蒼谷村森林組合',scope:'自組合が管理・PJ運営等で関係する蒼谷村森林',startRole:'forest_coop'},
  {id:'forestry_kitamine',kind:'forestry_company',roleLabel:'林業会社',party:'【デモ】北峰林業株式会社',scope:'自社が受託・実施する施業案件と対象森林',startRole:'forestry_company'},
@@ -341,24 +342,67 @@ function table(title,headers,rows){
  return `<section><h2>${title}</h2><div class="tablewrap"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;
 }
 async function municipality(){
- const [f,j,t,allc]=await Promise.all([
-   q('demo_municipality_forest','select=*&order=name'),
+ const p=currentPersona();
+ const [scopes,matrix,mapFeatures,j,t,allc]=await Promise.all([
+   q('demo_party_forest_scope_v31',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
+   q('demo_forest_rights_matrix_v33','select=*&order=region_name,forest_name'),
+   q('demo_map_feature','select=*'),
    q('demo_jcredit_project_v22'),
-   q('demo_role_task',"select=*&role_code=eq.municipality&order=due_on"),
+   q('demo_role_task',`select=*&role_code=eq.municipality&assigned_to=eq.${encodeURIComponent(p.party)}&order=due_on`),
    q('demo_contract_relation','select=*&order=contract_no')
  ]);
- const c=allc.filter(x=>hasAudience(x,'municipality'));
- const area=f.reduce((s,x)=>s+Number(x.area_ha||0),0), unresolved=f.reduce((s,x)=>s+Number(x.unresolved_right_count||0),0);
- const jcIssued=j.reduce((s,x)=>s+Number(x.issued_quantity_t||0),0), jcFund=j.reduce((s,x)=>s+Number(x.linked_fund_balance||0),0);
- cards([['管理森林',`${f.length}件`],['管理面積',ha(area)],['権利未整理',`${unresolved}件`],['J-クレジット案件',`${j.length}件`],['J-クレジット発行',`${num(jcIssued)} t`],['基金残高',yen(jcFund)]]);
- document.getElementById('content').innerHTML=
- table('地域全体の森林',['森林','面積','状態','権利未整理','施業状態','次期限','災害','J-クレジット'],f.map(x=>[x.name,ha(x.area_ha),`<span class="tag">${txt(x.forest_status)}</span>`,Number(x.unresolved_right_count||0)?`<span class="warn">${x.unresolved_right_count}件</span>`:'0件',txt(x.latest_work_status),date(x.next_due_on),`${x.active_incident_count}件`,`${x.active_jcredit_project_count}件`]))+
- table('関係契約',['契約','当事者','対象','期間','状態','契約書'],c.map(x=>[
-   x.title,txt(x.parties_text),txt(x.target_name),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')
+ const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
+ const byId=new Map(matrix.filter(x=>ids.has(String(x.forest_unit_id))).map(x=>[String(x.forest_unit_id),x]));
+ const mfById=new Map(mapFeatures.filter(x=>x.layer_code==='managed_forest').map(x=>[String((x.properties||{}).forest_unit_id||''),x]));
+ const forests=scopes.map(x=>{
+   const r=byId.get(String(x.forest_unit_id))||{};
+   const mf=mfById.get(String(x.forest_unit_id));
+   const pr=mf?.properties||{};
+   return {...x,rights:r,props:pr};
+ });
+ const municipalLabel=p.party.includes('村')?'村有林':'町有林';
+ const municipalForests=forests.filter(x=>Array.isArray(x.rights?.land_owners)&&x.rights.land_owners.some(h=>h.name===p.party));
+ const noHistory=forests.filter(x=>x.props?.past_work_history===false||String(x.props?.work_status||'').includes('過去施業履歴なし'));
+ const neglected=forests.filter(x=>String(x.props?.work_status||'').includes('長期未整備')||String(x.props?.management_status||'')==='neglected');
+ const jcForests=forests.filter(x=>Array.isArray(x.rights?.jcredit_projects)&&x.rights.jcredit_projects.length);
+ let projects=[];
+ if(p.region==='【デモ】蒼谷村'){
+   projects=[{project_code:'DEMO-JC-SOUTANI-001',name:'【デモ】蒼谷村 森林J-クレジットPJ',target_area_ha:67.0,target_forest_count:3,active_area_ha:49.7,candidate_area_ha:17.3,issued_quantity_t:0,available_quantity_t:0,risk_reserved_quantity_t:0,sold_quantity_t:0,sales_amount_in_tax:0,open_compensation_cases:0,linked_fund_balance:0,project_owner_name:'【デモ】蒼谷村森林組合'}];
+ }else{
+   projects=j.filter(x=>!String(x.name||'').includes('蒼谷村'));
+ }
+ const c=allc.filter(x=>hasAudience(x,'municipality')&&(!x.parties_text||String(x.parties_text).includes(p.party)));
+ const area=forests.reduce((sum,x)=>sum+Number(x.area_ha||0),0);
+ cards([
+   ['管内森林',`${forests.length}件`],['管内面積',ha(area)],[municipalLabel,`${municipalForests.length}件`],
+   ['長期未整備',`${neglected.length}件`],['過去施業履歴なし',`${noHistory.length}件`],['Jクレ関係森林',`${jcForests.length}件`]
+ ]);
+ document.getElementById('content').innerHTML=personaNoteHtml()+
+ table(`${p.party}｜管内森林`,['森林','面積','所有・権利','管理・施業','J-クレジット','次アクション'],forests.map(x=>{
+   const r=x.rights||{},pr=x.props||{};
+   const owners=rightsHolderText(r.land_owners);
+   const managers=rightsHolderText(r.managers);
+   const work=pr.work_status||((pr.past_work_history===false)?'過去施業履歴なし':'記録確認中');
+   const jc=(Array.isArray(r.jcredit_projects)&&r.jcredit_projects.length)?r.jcredit_projects.map(v=>`${esc(v.project_name)}<br><span class="tag">${esc(v.participation_stage||v.target_status||'')}</span>`).join('<br>'):'—';
+   const action=pr.next_action||((pr.past_work_history===false)?'現況調査・境界/路網確認・施業要否判定':'—');
+   return [
+     `<button type="button" class="entitylink" onclick="openForestFromMap(decodeURIComponent('${encodeURIComponent(x.forest_name)}'))">${esc(x.forest_name)}</button>`,
+     ha(x.area_ha),
+     `<span class="tag">${esc(r.rights_pattern||'—')}</span><br>${owners}`,
+     `${managers!=='—'?managers+'<br>':''}${esc(work)}`,
+     jc,
+     esc(action)
+   ];
+ }))+
+ table('J-クレジットPJ',['PJ','対象面積','実施','候補','対象森林','発行','運営主体'],projects.map(x=>[
+   x.name,ha(x.target_area_ha),ha(x.active_area_ha),ha(x.candidate_area_ha),`${num(x.target_forest_count)}件`,`${num(x.issued_quantity_t)}t`,partyLink(x.project_owner_name)
  ]))+
- table('J-クレジットPJ',['PJ','対象面積','発行','販売可能','リスク留保','売却済','売上','補填案件','基金'],j.map(x=>[x.name,ha(x.target_area_ha),`${num(x.issued_quantity_t)}t`,`${num(x.available_quantity_t)}t`,`${num(x.risk_reserved_quantity_t)}t`,`${num(x.sold_quantity_t)}t`,yen(x.sales_amount_in_tax),`${x.open_compensation_cases}件`,yen(x.linked_fund_balance)]))+
- table('自治体タスク',['期限','内容','担当','状態'],t.map(x=>[date(x.due_on),x.title,x.assigned_to,x.status]));
+ table('自治体タスク',['期限','優先度','内容','状態'],t.map(x=>[date(x.due_on),txt(x.priority),x.title,txt(x.status)]))+
+ (c.length?table('関係契約',['契約','当事者','対象','期間','状態','契約書'],c.map(x=>[
+   x.title,txt(x.parties_text),txt(x.target_name),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')
+ ])):'');
 }
+
 async function forestCoop(){
  const [f,j,t,allc,wc]=await Promise.all([
    q('demo_forest_coop_operation','select=*&order=name'),
@@ -1372,14 +1416,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v35 地域・権利拡張</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v36 村自治体・自然形状</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','関連森林','',true)+mk('municipal','町有林（関係時のみ）','',true))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v35表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面、別PJ/認証前は青系で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>閲覧用に一般化した形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v36表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面、別PJ/認証前は青系で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>閲覧用に一般化した形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
