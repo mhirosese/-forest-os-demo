@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v41統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、森林はデモ地図専用の小区画群で近似表示します。権利・面積・位置はDB準拠のまま、表示用形状のみ別生成し、台帳haと描画規模を概ね合わせます。今回は丸・菱形に寄りすぎない不定形外形を先に作り、その内部を小区画で埋める方式に変更しています。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v42統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、森林はデモ地図専用の小区画群で近似表示します。権利・面積・位置はDB準拠のまま、表示用形状のみ別生成し、台帳haと描画規模を概ね合わせます。今回は矩形・円形に寄りすぎないよう、連結セルを不規則に成長させて外周の凹凸を作る方式へ変更し、同一森林のPJ色は同じ小区画群に重ねます。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -1151,168 +1151,132 @@ function seeded01(seed){
  return x-Math.floor(x);
 }
 function managedForestMosaicGeometry(f){
- const key=`${f.feature_code||''}:${Number(f.area_ha||featureProps(f).area_ha||0)||0}`;
+ const props=featureProps(f);
+ const stableId=String(props.forest_unit_id||props.external_code||f.display_name||f.feature_code||'forest');
+ const areaHa=Math.max(.8,Number(f.area_ha||props.area_ha||0)||0);
+ const key=`${stableId}:${areaHa}`;
  if(managedMosaicGeomCache.has(key))return managedMosaicGeomCache.get(key);
  const gj=geoObj(f.geom_geojson);
  if(!gj||!['Polygon','MultiPolygon'].includes(gj.type)){managedMosaicGeomCache.set(key,gj);return gj;}
- const areaHa=Math.max(.8,Number(f.area_ha||featureProps(f).area_ha||0)||0);
  const box=geomBbox(gj); if(!box){managedMosaicGeomCache.set(key,gj);return gj;}
  const ctr=geomCentroid(gj);
  const latMid=ctr[1]||((box.minY+box.maxY)/2), cosLat=Math.max(.25,Math.cos((latMid||34)*Math.PI/180));
- const seedBase=hashString32(String(f.feature_code||f.display_name||'forest'));
- const targetCells=Math.max(10,Math.min(210,Math.round(areaHa/0.62)));
+ const seedBase=hashString32(stableId);
+ const targetCells=Math.max(10,Math.min(220,Math.round(areaHa/0.60)));
  const cellAreaM2=(areaHa*10000)/targetCells;
- const cellSideM=Math.max(32,Math.sqrt(cellAreaM2));
+ const cellSideM=Math.max(31,Math.sqrt(cellAreaM2));
  const stepY=cellSideM/111320;
  const stepX=cellSideM/(111320*cosLat);
  const padX=stepX*.14,padY=stepY*.14;
- const bboxW=Math.max(stepX*3, box.maxX-box.minX), bboxH=Math.max(stepY*3, box.maxY-box.minY);
- const rawAspect=bboxW/bboxH;
- const aspect=Math.min(1.35,Math.max(0.78,rawAspect||1));
- const angle=((seeded01(seedBase+1)-0.5)*1.0) + (rawAspect>1.15 ? 0.22 : rawAspect<0.87 ? -0.22 : 0);
- const baseA=Math.max(2.0,Math.sqrt(targetCells*aspect/Math.PI)*0.86);
- const baseB=Math.max(2.0,Math.sqrt(targetCells/(aspect*Math.PI))*0.86);
- const seedCount=targetCells>85?3:(targetCells>26?2:1);
- const spread=Math.max(1.4,Math.min(3.8,Math.sqrt(targetCells)*0.28));
- const centers=[];
- if(seedCount===1){
-   centers.push({u:0,v:0});
- }else if(seedCount===2){
-   if(rawAspect>=1){ centers.push({u:-spread*0.75,v:0}); centers.push({u:spread*0.75,v:0}); }
-   else { centers.push({u:0,v:-spread*0.75}); centers.push({u:0,v:spread*0.75}); }
- }else{
-   if(rawAspect>=1){
-     centers.push({u:-spread*0.95,v:-0.2});
-     centers.push({u:spread*0.85,v:-0.05});
-     centers.push({u:0.15,v:spread*0.72});
-   }else{
-     centers.push({u:-0.18,v:-spread*0.95});
-     centers.push({u:-0.1,v:spread*0.85});
-     centers.push({u:spread*0.72,v:0.12});
+ const rawAspect=Math.max(.55,Math.min(1.55,((box.maxX-box.minX)/(box.maxY-box.minY||stepY))||1));
+ const angle=(seeded01(seedBase+1)-0.5)*1.15;
+ const dirX=Math.cos(angle), dirY=Math.sin(angle);
+ const maxR=Math.ceil(Math.sqrt(targetCells)*1.25+7);
+ const candidates=new Map();
+ const scoreCell=(r,c)=>{
+   const along=(c*dirX+r*dirY);
+   const across=(-c*dirY+r*dirX);
+   const a=Math.max(2.5,Math.sqrt(targetCells*rawAspect)*0.62);
+   const b=Math.max(2.5,Math.sqrt(targetCells/rawAspect)*0.62);
+   const base=((along/a)**2)+((across/b)**2);
+   const wave=0.11*Math.sin((along*0.75)+(seeded01(seedBase+3)*6.28))+0.08*Math.cos((across*0.95)+(seeded01(seedBase+4)*6.28));
+   const noise=(seeded01(seedBase+r*173+c*941)-0.5)*0.32;
+   return base+wave+noise;
+ };
+ for(let r=-maxR;r<=maxR;r++){
+   for(let c=-maxR;c<=maxR;c++){
+     const score=scoreCell(r,c);
+     if(score<=1.65)candidates.set(`${r}:${c}`,{r,c,score});
    }
  }
- const neighbors8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
- const neighbors4=[[1,0],[-1,0],[0,1],[0,-1]];
- const radius=Math.ceil(Math.max(baseA,baseB)+spread+6);
- const scoreEnvelope=(r,c)=>{
-   const x=c, y=r;
-   const u=x*Math.cos(angle)-y*Math.sin(angle);
-   const v=x*Math.sin(angle)+y*Math.cos(angle);
-   let best=Infinity;
-   centers.forEach((s,idx)=>{
-     const du=(u-s.u)/(baseA*(1+0.08*Math.sin(idx+1)));
-     const dv=(v-s.v)/(baseB*(1+0.08*Math.cos(idx+2)));
-     const d=(du*du)+(dv*dv);
-     if(d<best)best=d;
-   });
-   const ang=Math.atan2(v||0.0001,u||0.0001);
-   const outer=0.10*Math.sin(3*ang + seeded01(seedBase+5)*Math.PI*2)+0.06*Math.cos(5*ang + seeded01(seedBase+6)*Math.PI*2);
-   const noise=(seeded01(seedBase + r*131 + c*977)-0.5)*0.24;
-   return best + outer + noise;
+ if(!candidates.has('0:0'))candidates.set('0:0',{r:0,c:0,score:0});
+ const n4=[[1,0],[-1,0],[0,1],[0,-1]];
+ const n8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+ const selected=new Set(['0:0']);
+ const frontier=new Map();
+ const addFront=(r,c)=>{
+   const id=`${r}:${c}`; if(selected.has(id)||frontier.has(id)||!candidates.has(id))return;
+   frontier.set(id,candidates.get(id));
  };
- const candidateSet=new Set();
- for(let r=-radius;r<=radius;r++){
-   for(let c=-radius;c<=radius;c++){
-     const s=scoreEnvelope(r,c);
-     if(s<=1.22 || (s<=1.34 && seeded01(seedBase+r*71+c*199)>.62))candidateSet.add(`${r}:${c}`);
+ n8.forEach(([dr,dc])=>addFront(dr,dc));
+ while(selected.size<targetCells && frontier.size){
+   let best=null, bestV=Infinity;
+   for(const [id,cell] of frontier){
+     let n4c=0,n8c=0;
+     n4.forEach(([dr,dc])=>{if(selected.has(`${cell.r+dr}:${cell.c+dc}`))n4c++;});
+     n8.forEach(([dr,dc])=>{if(selected.has(`${cell.r+dr}:${cell.c+dc}`))n8c++;});
+     const compact=(n4c===0?9:(n4c===1?0.48:(n4c===2?-0.06:-0.18)));
+     const edge=(n8c<=1?0.35:0);
+     const jitter=(seeded01(seedBase+cell.r*67+cell.c*211)-0.5)*0.22;
+     const value=cell.score+compact+edge+jitter;
+     if(value<bestV){bestV=value;best={id,cell};}
    }
+   if(!best)break;
+   frontier.delete(best.id); selected.add(best.id);
+   n8.forEach(([dr,dc])=>addFront(best.cell.r+dr,best.cell.c+dc));
  }
- const orthCount=(id,setRef)=>{
-   const [r,c]=id.split(':').map(Number); let n=0;
-   neighbors4.forEach(([dr,dc])=>{ if(setRef.has(`${r+dr}:${c+dc}`))n++; });
-   return n;
- };
- const totalCount=(id,setRef)=>{
-   const [r,c]=id.split(':').map(Number); let n=0;
-   neighbors8.forEach(([dr,dc])=>{ if(setRef.has(`${r+dr}:${c+dc}`))n++; });
-   return n;
- };
- const selected=new Set();
- const addSeedCell=(r,c)=>{ const id=`${r}:${c}`; if(candidateSet.has(id)) selected.add(id); };
- addSeedCell(0,0);
- centers.forEach(s=>addSeedCell(Math.round(s.v),Math.round(s.u)));
- if(!selected.size)selected.add('0:0');
- const queued=new Set();
- let frontier=[];
- const pushFrontier=(r,c)=>{
-   const id=`${r}:${c}`;
-   if(!candidateSet.has(id)||selected.has(id)||queued.has(id))return;
-   const score=scoreEnvelope(r,c);
-   queued.add(id); frontier.push({id,score});
- };
- const rebuildFrontier=()=>{
-   frontier=[]; queued.clear();
-   selected.forEach(id=>{ const [r,c]=id.split(':').map(Number); neighbors8.forEach(([dr,dc])=>pushFrontier(r+dr,c+dc)); });
- };
- rebuildFrontier();
- while(selected.size<targetCells && frontier.length){
-   frontier.sort((a,b)=>a.score-b.score);
-   const slice=frontier.slice(0,Math.min(7,frontier.length));
-   let pick=slice[0];
-   let bestValue=Infinity;
-   slice.forEach(opt=>{
-     const [r,c]=opt.id.split(':').map(Number);
-     let near4=0, near8=0;
-     neighbors4.forEach(([dr,dc])=>{ if(selected.has(`${r+dr}:${c+dc}`))near4++; });
-     neighbors8.forEach(([dr,dc])=>{ if(selected.has(`${r+dr}:${c+dc}`))near8++; });
-     const compactPenalty=(near4===0?9:(near4===1?0.55:0)) + (near8<=2?0.18:0);
-     const jitter=(seeded01(seedBase + r*43 + c*59)-0.5)*0.08;
-     const value=opt.score + compactPenalty + jitter;
-     if(value<bestValue){bestValue=value; pick=opt;}
-   });
-   frontier=frontier.filter(x=>x.id!==pick.id);
-   queued.delete(pick.id);
-   selected.add(pick.id);
-   const [r,c]=pick.id.split(':').map(Number);
-   neighbors8.forEach(([dr,dc])=>pushFrontier(r+dr,c+dc));
- }
- // fill small holes / attach near-interior cells
- let changed=true;
- while(changed){
-   changed=false;
-   for(const id of candidateSet){
+ // fill compact bays, creating an irregular but area-like mass
+ for(let pass=0;pass<2;pass++){
+   const adds=[];
+   for(const [id,cell] of candidates){
      if(selected.has(id))continue;
-     const [r,c]=id.split(':').map(Number);
-     let near4=0, near8=0;
-     neighbors4.forEach(([dr,dc])=>{ if(selected.has(`${r+dr}:${c+dc}`))near4++; });
-     neighbors8.forEach(([dr,dc])=>{ if(selected.has(`${r+dr}:${c+dc}`))near8++; });
-     if((near4>=3 || near8>=5) && scoreEnvelope(r,c)<=1.18 && selected.size<Math.round(targetCells*1.12)){
-       selected.add(id); changed=true;
-     }
+     let n4c=0,n8c=0;
+     n4.forEach(([dr,dc])=>{if(selected.has(`${cell.r+dr}:${cell.c+dc}`))n4c++;});
+     n8.forEach(([dr,dc])=>{if(selected.has(`${cell.r+dr}:${cell.c+dc}`))n8c++;});
+     if((n4c>=3 || (n4c>=2&&n8c>=5)) && selected.size+adds.length<Math.round(targetCells*1.08))adds.push(id);
    }
+   adds.forEach(id=>selected.add(id));
  }
- // trim 1-cell-width spurs, keep mass
- let trimmed=true;
- while(trimmed){
-   trimmed=false;
-   const drop=[];
+ // prune true one-cell spurs only; keep ordinary irregular edges
+ let again=true;
+ while(again){
+   again=false; const drops=[];
    for(const id of selected){
-     const orth=orthCount(id,selected), all=totalCount(id,selected);
-     if(orth===0)drop.push(id);
-     else if(orth===1 && all<=2 && selected.size-drop.length>Math.round(targetCells*0.88))drop.push(id);
+     const [r,c]=id.split(':').map(Number); let n4c=0,n8c=0;
+     n4.forEach(([dr,dc])=>{if(selected.has(`${r+dr}:${c+dc}`))n4c++;});
+     n8.forEach(([dr,dc])=>{if(selected.has(`${r+dr}:${c+dc}`))n8c++;});
+     if(n4c===0 || (n4c===1&&n8c<=2&&selected.size-drops.length>Math.round(targetCells*0.90)))drops.push(id);
    }
-   if(drop.length){ drop.forEach(id=>selected.delete(id)); trimmed=true; }
+   if(drops.length){drops.forEach(id=>selected.delete(id));again=true;}
  }
- // optional tiny satellite only for larger forests
- if(targetCells>=36 && seeded01(seedBase+999)>.62){
-   const satSize=Math.max(3,Math.min(6,Math.round(targetCells*0.05)));
-   const satU=(rawAspect>=1?(spread+baseA*0.72):(seeded01(seedBase+1001)>.5?1:-1)*1.8);
-   const satV=(rawAspect<1?(spread+baseB*0.72):(seeded01(seedBase+1002)>.5?1:-1)*1.8);
-   for(let r=-1;r<=1;r++){
-     for(let c=-1;c<=1;c++){
-       if([...selected].length>=targetCells+satSize)break;
-       const rr=Math.round(satV)+r, cc=Math.round(satU)+c, id=`${rr}:${cc}`;
-       if(candidateSet.has(id) && !selected.has(id))selected.add(id);
-     }
-   }
+ // carve a few shallow notches so the mass does not become circular/rectangular
+ const boundary=[...selected].filter(id=>{
+   const [r,c]=id.split(':').map(Number); let n4c=0;
+   n4.forEach(([dr,dc])=>{if(selected.has(`${r+dr}:${c+dc}`))n4c++;});
+   return n4c<=2;
+ });
+ boundary.sort((a,b)=>seeded01(seedBase+hashString32(a))-seeded01(seedBase+hashString32(b)));
+ const carveMax=Math.max(1,Math.min(5,Math.floor(targetCells*0.035)));
+ let carved=0;
+ for(const id of boundary){
+   if(carved>=carveMax)break;
+   const [r,c]=id.split(':').map(Number); let n4c=0,n8c=0;
+   n4.forEach(([dr,dc])=>{if(selected.has(`${r+dr}:${c+dc}`))n4c++;});
+   n8.forEach(([dr,dc])=>{if(selected.has(`${r+dr}:${c+dc}`))n8c++;});
+   if(n4c===2&&n8c>=3&&seeded01(seedBase+r*31+c*79)>.48){selected.delete(id);carved++;}
+ }
+ // grow a few short lobes, never as long single-cell lines
+ const afterBoundary=[...selected].filter(id=>{
+   const [r,c]=id.split(':').map(Number); let n4c=0;
+   n4.forEach(([dr,dc])=>{if(selected.has(`${r+dr}:${c+dc}`))n4c++;});
+   return n4c<=2;
+ });
+ const lobeCount=targetCells>55?2:1;
+ for(let li=0;li<lobeCount;li++){
+   const baseId=afterBoundary[(hashString32(stableId+':'+li))%Math.max(1,afterBoundary.length)];
+   if(!baseId)continue;
+   const [br,bc]=baseId.split(':').map(Number);
+   const choices=n4.filter(([dr,dc])=>!selected.has(`${br+dr}:${bc+dc}`));
+   if(!choices.length)continue;
+   const [dr,dc]=choices[hashString32(stableId+':d'+li)%choices.length];
+   const cells=[[br+dr,bc+dc],[br+dr+(dc!==0?1:0),bc+dc+(dr!==0?1:0)],[br+dr+(dc!==0?-1:0),bc+dc+(dr!==0?-1:0)]];
+   cells.slice(0,targetCells>30?3:2).forEach(([r,c])=>selected.add(`${r}:${c}`));
  }
  const polygons=[];
  for(const id of selected){
    const [r,c]=id.split(':').map(Number);
-   const x0=ctr[0] + c*stepX - stepX/2 + padX;
-   const y0=ctr[1] + r*stepY - stepY/2 + padY;
-   const x1=ctr[0] + c*stepX + stepX/2 - padX;
-   const y1=ctr[1] + r*stepY + stepY/2 - padY;
+   const x0=ctr[0]+c*stepX-stepX/2+padX, y0=ctr[1]+r*stepY-stepY/2+padY;
+   const x1=ctr[0]+c*stepX+stepX/2-padX, y1=ctr[1]+r*stepY+stepY/2-padY;
    polygons.push([squareRing(x0,y0,x1,y1)]);
  }
  const mosaic={type:'MultiPolygon',coordinates:polygons};
@@ -1641,14 +1605,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v41 不定形小区画群</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v42 不規則セル成長</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','関連森林','',true)+mk('municipal','町有林（関係時のみ）','',true))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v41表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の小区画群、追加候補は橙の小区画群、別PJ/認証前は青系の小区画群で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>森林はデモ地図専用の小区画群で近似し、台帳面積haと描画規模を概ね合わせます。権利・位置・面積はDB準拠のまま、表示形状のみ別生成しています。丸・菱形に寄りすぎない不定形外形を先に作り、その内部を小区画で埋めています。1セル幅の長い線は抑えます。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v42表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の小区画群、追加候補は橙の小区画群、別PJ/認証前は青系の小区画群で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>森林はデモ地図専用の小区画群で近似し、台帳面積haと描画規模を概ね合わせます。権利・位置・面積はDB準拠のまま、表示形状のみ別生成しています。小区画を不規則に連結成長させ、外周の凹凸を残しつつ1セル幅の長い線を抑えます。同一森林のPJ色は同じ小区画群に重ねます。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
