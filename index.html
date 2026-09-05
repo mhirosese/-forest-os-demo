@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v34統合デモ。利用者目線・GIS/森林詳細スコープに加え、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離の権利パターンを追加。地図UIは関連森林中心に整理し、町全体森林レイヤーを外しています。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v35統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、利用者スコープに応じて表示します。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -294,6 +294,9 @@ const DEMO_PERSONAS=[
  {id:'owner_e',kind:'owner',roleLabel:'山主本人',party:'山主E（デモ）',scope:'単独所有・共同所有・立木所有をまたぐ本人の権利森林',startRole:'owner',complexRights:true},
  {id:'owner_f',kind:'owner',roleLabel:'山主本人',party:'山主F（デモ）',scope:'共同所有・土地所有・クレジット配分に関係する森林',startRole:'owner',complexRights:true},
  {id:'owner_g',kind:'owner',roleLabel:'山主本人',party:'山主G（デモ）',scope:'共同所有持分を持つ森林',startRole:'owner',complexRights:true},
+ {id:'owner_h',kind:'owner',roleLabel:'山主本人',party:'山主H（デモ）',scope:'蒼谷村で単独所有・共同所有・立木所有をまたぐ本人の権利森林',startRole:'owner',complexRights:true},
+ {id:'owner_i',kind:'owner',roleLabel:'山主本人',party:'山主I（デモ）',scope:'蒼谷村の共同所有持分を持つ森林',startRole:'owner',complexRights:true},
+ {id:'owner_j',kind:'owner',roleLabel:'山主本人',party:'山主J（デモ）',scope:'蒼谷村で土地所有し、立木所有が別主体の森林',startRole:'owner',complexRights:true},
  {id:'owner_proxy_a',kind:'owner_proxy',roleLabel:'山主代理',party:'山主Aの子（管理代理・デモ）',principal:'山主A（デモ）',scope:'親から管理を委任された森林（所有権は親のまま）',startRole:'owner'}
 ];
 let demoPersonaId=localStorage.getItem('forest_os_demo_persona_v30')||'platform_admin';
@@ -805,11 +808,12 @@ function mapLayerAllowedForPersona(layer){
  if(['issues','owner_unknown','boundary_unknown','disaster'].includes(layer))return personaAllowsOperationalContext();
  return true;
 }
+function mapLayerGroup(title,html){return html&&String(html).trim()?`<div class="layergroup"><span class="layergrouptitle">${esc(title)}</span>${html}</div>`:'';}
 function mapPersonaScopeHtml(){
  const p=currentPersona(),rows=currentPersonaScopeRows();
  const regions=[...new Set(rows.map(x=>x.region_name).filter(Boolean))];
- const direct=rows.filter(x=>x.has_direct_relation).length;
- return `<div class="persona-scope-note" style="margin:10px 12px 0"><b>v32 地図表示範囲：</b>${esc(p.roleLabel)}｜${esc(p.party)} に関係する ${rows.length}森林だけを業務レイヤーに表示します。${regions.length?` 対象地域：${regions.map(esc).join(' / ')}。`:''}${direct?` 直接関係 ${direct}森林。`:''}<br><span class="smallnote">背景地形・行政界・森林分布・水系は位置関係把握のため残します。権利・施業・PJ等の業務情報はDBの関係スコープで絞り込み、町有林は現在の利用者スコープに含まれる場合だけレイヤー自体を表示します。</span></div>`;
+ const regionText=regions.length?regions.map(esc).join(' / '):'—';
+ return `<div class="persona-scope-note" style="margin:10px 12px 0"><b>表示範囲：</b>${esc(p.party)} に関係する ${rows.length}森林　 <b>地域：</b>${regionText}<br><span class="smallnote">権利・委任・管理・施業・J-クレジット等の関係をDBから判定して表示します。背景地形・行政界・水系は位置把握用です。</span></div>`;
 }
 
 function geoObj(v){
@@ -884,19 +888,22 @@ function updateMapRegionContext(){
  const title=document.getElementById('townMapTitle'),notice=document.getElementById('mapRegionNotice');
  if(!title||!notice)return;
  const r=townMapFilterState.region,p=currentPersona(),prefix=`${p.roleLabel}｜`;
- if(r==='【デモ】蒼谷村'){
-   title.textContent=prefix+'蒼谷村 関連森林マップ';
-   notice.classList.remove('is-hidden');
-   notice.innerHTML='<strong>【デモ】蒼谷村も同じForest OSで管理</strong><div>森林2件 / 49.7ha / J-クレジットPJ 1件。青嶺町の下流側に隣接する架空地域としてGISを追加しました。</div><div class="mini">山主Aの越境所有、蒼谷村森林組合の管理、青嶺町森林組合の応援間伐を同じ地図・DBで確認できます。</div>';
- }else if(r==='【デモ】青嶺町'){
-   title.textContent=prefix+'青嶺町 関連森林マップ';
+ const scopeRegions=[...new Set(currentPersonaScopeRows().map(x=>x.region_name).filter(Boolean))];
+ if(r!=='*'){
+   title.textContent=prefix+r.replace('【デモ】','')+' 関連森林マップ';
    notice.classList.add('is-hidden');notice.innerHTML='';
+ }else if(scopeRegions.length===1){
+   title.textContent=prefix+scopeRegions[0].replace('【デモ】','')+' 関連森林マップ';
+   notice.classList.add('is-hidden');notice.innerHTML='';
+ }else if(scopeRegions.length>1){
+   title.textContent=prefix+'複数地域 関連森林マップ';
+   notice.classList.remove('is-hidden');
+   notice.innerHTML=`<strong>関連森林を地域横断で表示</strong><div>${scopeRegions.map(esc).join(' / ')} のうち、現在の利用者に関係する森林だけを表示しています。</div>`;
  }else{
    title.textContent=prefix+'関連森林マップ';
-   notice.classList.remove('is-hidden');
-   notice.innerHTML='<strong>複数地域を横断表示</strong><div>青嶺町と、その下流側に配置した蒼谷村を同じ地図で表示します。地域・PJ・地権者・管理者・施業者で横断絞り込みできます。</div>';
+   notice.classList.add('is-hidden');notice.innerHTML='';
  }
- fitTownMapRegion(r);
+ fitTownMapRegion(r==='*'&&scopeRegions.length===1?scopeRegions[0]:r);
 }
 
 function coverageJP(v){return ({confirmed:'確認済',partial:'一部',unknown:'未確認',not_available:'データなし',not_applicable:'対象外'})[v]||'未確認';}
@@ -1318,6 +1325,18 @@ async function townMap(){
  const legacyProgram=townDetailFeatures.filter(f=>managedMatchesFeature(f,'program'));
  townMapFeatures=[...mapFeatures.filter(f=>f.layer_code!=='reference_forest'&&f.layer_code!=='managed_forest'),...legacyProgram,...projectMap,...refDisplay];
  townMapRelations=mapRelations;townWorkScopes=workScopes;townCoverage=coverage;townMapFilterMeta=[...filterMeta];for(const r of neighborDemo.mapRows)if(!townMapFilterMeta.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))townMapFilterMeta.push(r);
+ // v35: v23の固定デモViewに未収載の森林も、権利マトリクス＋GIS属性から地図フィルタへ自動追加する。
+ const featureByForestId=new Map(mapFeatures.filter(f=>f.layer_code==='managed_forest').map(f=>[String(featureProps(f).forest_unit_id||''),f]));
+ for(const r of rightsMatrix){
+   if(townMapFilterMeta.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))continue;
+   const f=featureByForestId.get(String(r.forest_unit_id)),fp=f?featureProps(f):{};
+   const projects=Array.isArray(r.jcredit_projects)?r.jcredit_projects:[];
+   townMapFilterMeta.push({forest_unit_id:r.forest_unit_id,forest_name:r.forest_name,external_code:r.forest_code,region_name:r.region_name,area_ha:r.area_ha,
+     owner_names:(Array.isArray(r.land_owners)?r.land_owners:[]).map(x=>x.name).filter(Boolean),
+     manager_names:(Array.isArray(r.managers)?r.managers:[]).map(x=>x.name).filter(Boolean),
+     work_operator_names:Array.isArray(fp.work_operator_names)?fp.work_operator_names:(fp.work_operator_name?[fp.work_operator_name]:[]),
+     project_codes:projects.map(x=>x.project_code).filter(Boolean),project_names:projects.map(x=>x.project_name).filter(Boolean)});
+ }
  townMapPersonaScopes=personaScopes;
  townRightsMatrix=rightsMatrix;
  const personaScopeRows=currentPersonaScopeRows();
@@ -1353,14 +1372,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v34 表示整理</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
- <div class="layergroup"><span class="layergrouptitle">森林</span>${mk('details','関連森林','',true)}${mk('municipal','町有林（関係時のみ）','',true)}</div>
- <div class="layergroup"><span class="layergrouptitle">Jクレ</span>${mk('credit','PJ実施地','',true)}${mk('candidate','追加候補','',true)}${mk('program','別PJ/認証前','',true)}</div>
- <div class="layergroup"><span class="layergrouptitle">課題</span>${mk('issues','未整理森林群')}${mk('owner_unknown','所有・相続等未整理')}${mk('boundary_unknown','境界未確定等')}</div>
- <div class="layergroup"><span class="layergrouptitle">現場</span>${mk('operations','施業')}${mk('disaster','災害')}</div>
- <div class="layergroup"><span class="layergrouptitle">参照</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v35 地域・権利拡張</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ ${mapLayerGroup('森林',mk('details','関連森林','',true)+mk('municipal','町有林（関係時のみ）','',true))}
+ ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
+ ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
+ ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
+ ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v34表示整理：</b>町全体森林レイヤーは外し、現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面、別PJ/認証前は青系で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>閲覧用に一般化した形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v35表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面、別PJ/認証前は青系で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>閲覧用に一般化した形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
