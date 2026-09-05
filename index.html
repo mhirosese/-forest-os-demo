@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v30: explicit viewer perspective + delegated owner management -->
+<!-- Forest OS v31: viewer perspective + delegated owner management + persona-scoped GIS -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v30</title>
+<title>Forest OS デモ｜管理コンソール v31</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v30統合デモ。利用者目線切替・山主管理代理を追加。青嶺町・蒼谷村・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v31統合デモ。利用者目線切替・山主管理代理・地図の利用者スコープ連動を追加。青嶺町・蒼谷村・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -284,7 +284,7 @@ const partyLinksHtml=(names,empty='—')=>{const a=(Array.isArray(names)?names:[
 
 /* ---------------- v30 デモ利用者目線 ---------------- */
 const DEMO_PERSONAS=[
- {id:'platform_admin',kind:'admin',roleLabel:'運営管理者',party:'Forest OS運営（デモ）',scope:'全地域・全プロジェクト・関係主体を横断',startRole:'admin'},
+ {id:'platform_admin',kind:'admin',roleLabel:'運営管理者',party:'Forest OS運営（デモ）',scopeParty:'【デモ】森林OS全国運営株式会社',scope:'全地域・全プロジェクト・関係主体を横断',startRole:'admin'},
  {id:'municipality_aomine',kind:'municipality',roleLabel:'自治体',party:'【デモ】青嶺町',scope:'青嶺町の地域森林・事業・集計',region:'【デモ】青嶺町',startRole:'municipality'},
  {id:'coop_aomine',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】青嶺町森林組合',scope:'自組合が管理・施業・PJ運営等で関係する森林',startRole:'forest_coop'},
  {id:'coop_soutani',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】蒼谷村森林組合',scope:'自組合が管理・PJ運営等で関係する蒼谷村森林',startRole:'forest_coop'},
@@ -295,6 +295,7 @@ const DEMO_PERSONAS=[
 ];
 let demoPersonaId=localStorage.getItem('forest_os_demo_persona_v30')||'platform_admin';
 function currentPersona(){return DEMO_PERSONAS.find(x=>x.id===demoPersonaId)||DEMO_PERSONAS[0]}
+function personaScopePartyName(p=currentPersona()){return p.scopeParty||p.party}
 function personaOptionLabel(p){return `${p.roleLabel}｜${p.party}`}
 function renderDemoContextBar(){
  const p=currentPersona(),el=document.getElementById('demoContextBar');if(!el)return;
@@ -695,11 +696,35 @@ async function forestView(){
 
 
 
-let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[];
+let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[],townMapPersonaScopes=[];
+let townMapAllowedForestIds=new Set();
 let leafletTownMap=null,leafletFeatureLayers={};
 let townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
 let townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
 const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
+
+/* ---------------- v31 地図の利用者スコープ連動 ---------------- */
+function currentPersonaScopeRows(){
+ const viewer=personaScopePartyName();
+ return townMapPersonaScopes.filter(x=>x.viewer_name===viewer);
+}
+function scopedMapFilterMeta(){
+ if(!townMapAllowedForestIds.size)return [];
+ return townMapFilterMeta.filter(x=>townMapAllowedForestIds.has(String(x.forest_unit_id)));
+}
+function mapScopeAllowsForestId(id){return !!id&&townMapAllowedForestIds.has(String(id));}
+function mapScopeAllowsFeature(f){const m=filterMetaForFeature(f);return !!m&&mapScopeAllowsForestId(m.forest_unit_id);}
+function personaAllowsOperationalContext(){return ['admin','municipality','forest_coop','pm'].includes(currentPersona().kind);}
+function mapLayerAllowedForPersona(layer){
+ if(['issues','owner_unknown','boundary_unknown','disaster'].includes(layer))return personaAllowsOperationalContext();
+ return true;
+}
+function mapPersonaScopeHtml(){
+ const p=currentPersona(),rows=currentPersonaScopeRows();
+ const regions=[...new Set(rows.map(x=>x.region_name).filter(Boolean))];
+ const direct=rows.filter(x=>x.has_direct_relation).length;
+ return `<div class="persona-scope-note" style="margin:10px 12px 0"><b>v31 地図表示範囲：</b>${esc(p.roleLabel)}｜${esc(p.party)} に関係する ${rows.length}森林だけを業務レイヤーに表示します。${regions.length?` 対象地域：${regions.map(esc).join(' / ')}。`:''}${direct?` 直接関係 ${direct}森林。`:''}<br><span class="smallnote">背景地形・行政界・森林分布・水系は位置関係把握のため残します。権利・施業・PJ・町有林等の業務情報はDBの関係スコープで絞り込みます。</span></div>`;
+}
 
 function geoObj(v){
  if(!v)return null;
@@ -714,7 +739,8 @@ function matchesFilterValue(values,selected){if(selected==='*')return true;if(se
 function passesMapFilters(f){
  const m=filterMetaForFeature(f);
  const st=townMapFilterState;
- if(!m)return st.region==='*'&&st.forest==='*'&&st.owner==='*'&&st.manager==='*'&&st.operator==='*'&&st.projects.size===0;
+ // v31: 業務レイヤーは、現在の利用者とDB上で関係する森林だけを通す。
+ if(!m||!mapScopeAllowsForestId(m.forest_unit_id))return false;
  if(st.region!=='*'&&m.region_name!==st.region)return false;
  if(st.forest!=='*'&&m.forest_unit_id!==st.forest)return false;
  if(!matchesFilterValue(m.owner_names,st.owner))return false;
@@ -725,7 +751,7 @@ function passesMapFilters(f){
 }
 function workPassesMapFilters(w){
  const m=filterMetaByForestId(w.forest_unit_id)||townMapFilterMeta.find(x=>x.forest_name===w.forest_name);
- if(!m)return townMapFilterState.region==='*'&&townMapFilterState.forest==='*'&&townMapFilterState.owner==='*'&&townMapFilterState.manager==='*'&&townMapFilterState.operator==='*'&&townMapFilterState.projects.size===0;
+ if(!m||!mapScopeAllowsForestId(m.forest_unit_id))return false;
  return passesMapFilters({display_name:m.forest_name,properties:{forest_unit_id:m.forest_unit_id}});
 }
 function setTownMapFilter(kind,value){townMapFilterState[kind]=value;refreshLeafletLayers();updateMapRegionContext();}
@@ -733,15 +759,16 @@ function setProjectMapFilter(code,checked){if(checked)townMapFilterState.project
 function clearProjectMapFilter(){townMapFilterState.projects.clear();document.querySelectorAll('.project-choice').forEach(x=>x.checked=false);updateProjectFilterSummary();refreshLeafletLayers();}
 function updateProjectFilterSummary(){const el=document.getElementById('projectFilterSummary');if(!el)return;const n=townMapFilterState.projects.size;el.textContent=n?`プロジェクト：${n}件選択`:'プロジェクト：すべて';}
 function filterOptions(field,{array=false,includeNone=false}={}){
- let vals=[];for(const m of townMapFilterMeta){const v=m[field];if(array)vals.push(...normArr(v));else if(v)vals.push(v);}
+ const meta=scopedMapFilterMeta();
+ let vals=[];for(const m of meta){const v=m[field];if(array)vals.push(...normArr(v));else if(v)vals.push(v);}
  vals=[...new Set(vals)].sort((a,b)=>String(a).localeCompare(String(b),'ja'));
  let html='<option value="*">すべて</option>';
- if(includeNone&&townMapFilterMeta.some(m=>!normArr(m[field]).length))html+='<option value="__none__">未設定</option>';
+ if(includeNone&&meta.some(m=>!normArr(m[field]).length))html+='<option value="__none__">未設定</option>';
  return html+vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
 }
-function forestOptions(){return '<option value="*">すべて</option>'+[...townMapFilterMeta].sort((a,b)=>a.forest_name.localeCompare(b.forest_name,'ja')).map(m=>`<option value="${esc(m.forest_unit_id)}">${esc(m.forest_name)}</option>`).join('');}
+function forestOptions(){return '<option value="*">すべて</option>'+[...scopedMapFilterMeta()].sort((a,b)=>a.forest_name.localeCompare(b.forest_name,'ja')).map(m=>`<option value="${esc(m.forest_unit_id)}">${esc(m.forest_name)}</option>`).join('');}
 function projectFilterHtml(){
- const map=new Map();for(const m of townMapFilterMeta){normArr(m.project_codes).forEach((c,i)=>map.set(c,normArr(m.project_names)[i]||c));}
+ const map=new Map();for(const m of scopedMapFilterMeta()){normArr(m.project_codes).forEach((c,i)=>map.set(c,normArr(m.project_names)[i]||c));}
  const rows=[...map.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ja'));
  return `<details class="projectfilter"><summary id="projectFilterSummary">プロジェクト：すべて</summary><div class="projectmenu"><button type="button" onclick="clearProjectMapFilter()">すべて表示</button>${rows.map(([c,n])=>`<label><input class="project-choice" type="checkbox" value="${esc(c)}" onchange="setProjectMapFilter('${esc(c)}',this.checked)"><span>${esc(n)}</span></label>`).join('')}</div></details>`;
 }
@@ -752,7 +779,7 @@ function mapFilterHtml(){return `<div class="mapfilters">
  <div class="filterbox"><label>地権者</label><select id="mapOwnerFilter" onchange="setTownMapFilter('owner',this.value)">${filterOptions('owner_names',{array:true,includeNone:true})}</select></div>
  <div class="filterbox"><label>管理者</label><select id="mapManagerFilter" onchange="setTownMapFilter('manager',this.value)">${filterOptions('manager_names',{array:true,includeNone:true})}</select></div>
  <div class="filterbox"><label>施業者</label><select id="mapOperatorFilter" onchange="setTownMapFilter('operator',this.value)">${filterOptions('work_operator_names',{array:true,includeNone:true})}</select></div>
- <div class="filterhint">各条件は独立。プロジェクトだけ複数選択でき、2PJだけ／全部などを切り替えられます。</div>
+ <div class="filterhint">選択肢自体を現在の利用者に関係する森林へ限定しています。各条件は独立し、プロジェクトだけ複数選択できます。</div>
  </div>`;}
 function fitTownMapRegion(regionName){
  if(!leafletTownMap||!window.L)return;
@@ -770,16 +797,16 @@ function fitTownMapRegion(regionName){
 function updateMapRegionContext(){
  const title=document.getElementById('townMapTitle'),notice=document.getElementById('mapRegionNotice');
  if(!title||!notice)return;
- const r=townMapFilterState.region;
+ const r=townMapFilterState.region,p=currentPersona(),prefix=`${p.roleLabel}｜`;
  if(r==='【デモ】蒼谷村'){
-   title.textContent='蒼谷村 森林全体マップ';
+   title.textContent=prefix+'蒼谷村 関連森林マップ';
    notice.classList.remove('is-hidden');
    notice.innerHTML='<strong>【デモ】蒼谷村も同じForest OSで管理</strong><div>森林2件 / 49.7ha / J-クレジットPJ 1件。青嶺町の下流側に隣接する架空地域としてGISを追加しました。</div><div class="mini">山主Aの越境所有、蒼谷村森林組合の管理、青嶺町森林組合の応援間伐を同じ地図・DBで確認できます。</div>';
  }else if(r==='【デモ】青嶺町'){
-   title.textContent='青嶺町 森林全体マップ';
+   title.textContent=prefix+'青嶺町 関連森林マップ';
    notice.classList.add('is-hidden');notice.innerHTML='';
  }else{
-   title.textContent='複数地域 森林全体マップ';
+   title.textContent=prefix+'関連森林マップ';
    notice.classList.remove('is-hidden');
    notice.innerHTML='<strong>複数地域を横断表示</strong><div>青嶺町と、その下流側に配置した蒼谷村を同じ地図で表示します。地域・PJ・地権者・管理者・施業者で横断絞り込みできます。</div>';
  }
@@ -1018,7 +1045,7 @@ function refreshLeafletLayers(){
  };
  if(townMapLayers.reference&&townMapFilterState.region!=='【デモ】蒼谷村')addGroup('reference',referenceOverviewFeatures(),'reference');
  if(townMapLayers.details)addGroup('details',townDetailFeatures.filter(passesMapFilters),'details');
- ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,issueOverviewFeatures(mode),mode)});
+ ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode]&&mapLayerAllowedForPersona(mode))addGroup(mode,issueOverviewFeatures(mode),mode)});
  if(townMapLayers.municipal)addGroup('municipal',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'municipal')&&passesMapFilters(f)),'municipal');
  ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)&&passesMapFilters(f)),mode)});
  if(townMapLayers.operations){
@@ -1028,13 +1055,13 @@ function refreshLeafletLayers(){
  }
  // 水系は森林面より前、災害記号より後ろ。森林との関係を読みやすくする。
  if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
- if(townMapLayers.disaster){
+ if(townMapLayers.disaster&&mapLayerAllowedForPersona('disaster')){
   addGroup('disaster-managed',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'disaster')&&passesMapFilters(f)),'disaster');
   addGroup('disaster-events',townMapFeatures.filter(f=>f.layer_code==='hazard_area'),'disaster');
  }
  activeLayerLegend();
 }
-function setTownLayer(layer,checked){townMapLayers[layer]=checked;refreshLeafletLayers();}
+function setTownLayer(layer,checked){townMapLayers[layer]=mapLayerAllowedForPersona(layer)?checked:false;refreshLeafletLayers();}
 
 async function openForestFromMap(name){
  await load('forest');
@@ -1047,7 +1074,7 @@ async function openJcreditTarget(targetId){
 }
 async function openProjectAreaOnMap(targetId){
  await load('town_map');
- setTimeout(()=>{const f=townMapFeatures.find(x=>String(featureProps(x).project_target_id||'')===String(targetId));if(!f)return;handleMapFeatureClick(f);const gj=geoObj(f.geom_geojson);if(gj&&leafletTownMap){const z=L.geoJSON(gj);leafletTownMap.fitBounds(z.getBounds(),{padding:[38,38],maxZoom:14});}},180);
+ setTimeout(()=>{const f=townMapFeatures.find(x=>String(featureProps(x).project_target_id||'')===String(targetId));if(!f)return;if(f.layer_code==='managed_forest'&&!passesMapFilters(f)){const d=document.getElementById('mapDetail');if(d)d.innerHTML='<h2>表示対象外</h2><div class="empty">現在の利用者には、この森林・PJ範囲は表示されません。</div>';return;}handleMapFeatureClick(f);const gj=geoObj(f.geom_geojson);if(gj&&leafletTownMap){const z=L.geoJSON(gj);leafletTownMap.fitBounds(z.getBounds(),{padding:[38,38],maxZoom:14});}},180);
 }
 function renderIssueDetail(id){
  const x=townIssues.find(v=>v.issue_area_id===id);if(!x)return;
@@ -1179,7 +1206,7 @@ function initLeafletTownMap(){
  if(added)fitTownMapRegion('*');else leafletTownMap.setView([34.14,135.89],11);
 }
 async function townMap(){
- const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta]=await Promise.all([
+ const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes]=await Promise.all([
   q('demo_town_profile','select=*'),
   q('demo_town_forest_block','select=*&order=sort_order'),
   q('demo_forest_decision_context','select=*'),
@@ -1193,13 +1220,18 @@ async function townMap(){
   q('demo_work_spatial_scope','select=*&order=work_code'),
   q('demo_reference_forest_display_v12','select=*&order=feature_code'),
   q('demo_forest_data_coverage','select=*&order=forest_name'),
-  q('demo_map_filter_v23','select=*&order=forest_name')
+  q('demo_map_filter_v23','select=*&order=forest_name'),
+  q('demo_party_forest_scope_v31','select=*&order=viewer_name,region_name,forest_name')
  ]);
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
  townDetailFeatures=mapFeatures.filter(f=>f.layer_code==='managed_forest');
  const legacyProgram=townDetailFeatures.filter(f=>managedMatchesFeature(f,'program'));
  townMapFeatures=[...mapFeatures.filter(f=>f.layer_code!=='reference_forest'&&f.layer_code!=='managed_forest'),...legacyProgram,...projectMap,...refDisplay];
- townMapRelations=mapRelations;townWorkScopes=workScopes;townCoverage=coverage;townMapFilterMeta=[...filterMeta];for(const r of neighborDemo.mapRows)if(!townMapFilterMeta.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))townMapFilterMeta.push(r);townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
+ townMapRelations=mapRelations;townWorkScopes=workScopes;townCoverage=coverage;townMapFilterMeta=[...filterMeta];for(const r of neighborDemo.mapRows)if(!townMapFilterMeta.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))townMapFilterMeta.push(r);
+ townMapPersonaScopes=personaScopes;
+ const personaScopeRows=currentPersonaScopeRows();
+ townMapAllowedForestIds=new Set(personaScopeRows.map(x=>String(x.forest_unit_id)));
+ townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
  townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
  const p=profile[0]||{};
  const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);
@@ -1209,26 +1241,28 @@ async function townMap(){
  const refForest=townMapFeatures.filter(f=>f.layer_code==='reference_forest'&&!f.is_fictional);
  const refForestArea=refForest.reduce((s,x)=>s+Number(x.area_ha||0),0);
  const realHazards=townMapFeatures.filter(f=>f.layer_code==='hazard_area'&&!f.is_fictional);
- const avgCoverage=coverage.length?Math.round(coverage.reduce((s,x)=>s+Number(x.coverage_pct||0),0)/coverage.length):0;
- const projectFeatures=townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&String(featureProps(f).dataset||'').startsWith('forest_os_demo_v2'));
+ const scopedMeta=scopedMapFilterMeta();
+ const scopedForestNames=new Set(scopedMeta.map(x=>x.forest_name));
+ const scopedCoverage=coverage.filter(c=>mapScopeAllowsForestId(c.forest_unit_id)||scopedForestNames.has(c.forest_name));
+ const avgCoverage=scopedCoverage.length?Math.round(scopedCoverage.reduce((s,x)=>s+Number(x.coverage_pct||0),0)/scopedCoverage.length):0;
+ const projectFeatures=townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&passesMapFilters(f));
  const activeProjectArea=projectFeatures.filter(f=>featureProps(f).jcredit_status==='対象').reduce((s,x)=>s+Number(x.area_ha||0),0);
  const candidateProjectArea=projectFeatures.filter(f=>String(featureProps(f).jcredit_status||'').includes('追加候補')).reduce((s,x)=>s+Number(x.area_ha||0),0);
- cards([
-  ['PJ実施地',ha(activeProjectArea)],['追加候補',ha(candidateProjectArea)],['実森林分布',`${refForest.length}形状 / ${ha(refForestArea)}`],
-  ['詳細管理済み',`${num(p.detailed_forest_count)}件 / ${ha(p.detailed_management_area_ha)}`],
-  ['データ濃度',`${avgCoverage}% 平均`],
-  ['未整理森林群',`${issues.length}箇所 / ${ha(issueArea)}`],
-  ['所有・相続等未整理',`${ownerUnresolved.length}箇所`],
-  ['境界要整理',`${boundaryUnresolved.length}箇所`],
-  ['施業GIS',`${workScopes.length}件`],
-  ['実災害区域',`${realHazards.length}区域`]
- ]);
- const mk=(k,label,cls='',checked=false)=>`<label class="layercheck ${cls}"><input type="checkbox" ${checked?'checked':''} onchange="setTownLayer('${k}',this.checked)"> ${label}</label>`;
- const covRows=coverage.map(c=>[
+ const scopedArea=personaScopeRows.reduce((s,x)=>s+Number(x.area_ha||0),0);
+ const scopedRegions=new Set(personaScopeRows.map(x=>x.region_name).filter(Boolean));
+ const scopedWorks=workScopes.filter(workPassesMapFilters);
+ const cardItems=[
+  ['表示対象森林',`${personaScopeRows.length}件`],['対象面積',ha(scopedArea)],['対象地域',`${scopedRegions.size}地域`],
+  ['PJ実施地',ha(activeProjectArea)],['追加候補',ha(candidateProjectArea)],['施業GIS',`${scopedWorks.length}件`],['データ濃度',scopedCoverage.length?`${avgCoverage}% 平均`:'—']
+ ];
+ if(personaAllowsOperationalContext())cardItems.push(['未整理森林群',`${issues.length}箇所`],['実災害区域',`${realHazards.length}区域`]);
+ cards(cardItems);
+ const mk=(k,label,cls='',checked=false)=>mapLayerAllowedForPersona(k)?`<label class="layercheck ${cls}"><input type="checkbox" ${checked?'checked':''} onchange="setTownLayer('${k}',this.checked)"> ${label}</label>`:'';
+ const covRows=scopedCoverage.map(c=>[
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">複数地域 森林全体マップ</strong><span class="mapmodebadge">閲覧・全体把握</span></div>${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v31 利用者スコープ連動</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林','',false)}</div>
  <div class="layergroup"><span class="layergrouptitle">所有</span>${mk('municipal','町有林（輪郭）','',true)}</div>
  <div class="layergroup"><span class="layergrouptitle">Jクレ</span>${mk('credit','PJ実施地','',true)}${mk('candidate','追加候補','',true)}${mk('program','別PJ/認証前')}</div>
@@ -1236,7 +1270,7 @@ async function townMap(){
  <div class="layergroup"><span class="layergrouptitle">現場</span>${mk('operations','施業')}${mk('disaster','災害')}</div>
  <div class="layergroup"><span class="layergrouptitle">水系</span>${mk('water','水系（ダム・水源）','water-toggle',true)}</div></div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>絞り込み：</b>地域・プロジェクト・森林・地権者・管理者・施業者を別条件で選択します。プロジェクトは複数選択可能です。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読み、町全体を俯瞰します。<br><b>色の軸：</b>町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面で分離。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>実森林分布を基に地形へ沿う程度に一般化した閲覧用形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v31表示制御：</b>まず現在の利用者とDB上で関係する森林だけに絞り、その中で地域・プロジェクト・森林・地権者・管理者・施業者を追加絞り込みします。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読み、町全体を俯瞰します。<br><b>色の軸：</b>町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面で分離。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>実森林分布を基に地形へ沿う程度に一般化した閲覧用形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
@@ -1247,14 +1281,14 @@ async function townMap(){
  <tr><td>forest_unit_id・外部ID・geom・as_of_date・精度</td><td>任意</td><td>分かるものだけ入れ、後から照合・追記できる</td></tr>
  </tbody></table></div><div class="map-note">位置が無いデータも表・照合待ちとして保持できます。逆にGISだけある森林も地図に出せます。「データなし」と「該当なし」と「未確認」は別状態です。</div></section>`+
  table('GISデータ構成',['データ','区分','商用','表示'],datasets.map(d=>[d.dataset_name,d.source_type,d.commercial_use_allowed?'可':'不可',d.edit_notice_text||'—']))+
- table('森林情報の整理状況',['区分','件数','面積・状態','意味'],[
-  ['実森林分布',`${refForest.length}形状`,ha(refForestArea),'正本8,764メッシュを保持し、表示だけ一般化'],
-  ['詳細管理森林',`${num(p.detailed_forest_count)}件`,ha(p.detailed_management_area_ha),'権利・契約・施業等を個別管理'],
-  ['未整理森林群',`${issues.length}箇所`,ha(issueArea),'課題台帳は維持し、地図表示だけ実森林由来の一般化形状'],
-  ['所有・相続等未整理',`${ownerUnresolved.length}箇所`,'複数問題が重複','所有者不明・相続未登記・共有者不明等'],
-  ['境界要整理',`${boundaryUnresolved.length}箇所`,'複数問題が重複','境界未確定・推定・重複疑い'],
-  ['施業GIS',`${workScopes.length}件`,'計画・実績を地図連携','実測GISがあれば差替、無ければ代理範囲として明示'],
-  ['実災害区域',`${realHazards.length}区域`,'参考表示','法的境界確定には使用しない']
+ table('現在の利用者に見える地図情報',['区分','件数','面積・状態','意味'],[
+  ['関連森林',`${personaScopeRows.length}件`,ha(scopedArea),`${currentPersona().roleLabel}と権利・委任・管理・施業・PJ・担当区域等で関係する森林`],
+  ['関連施業GIS',`${scopedWorks.length}件`,'計画・実績を地図連携','現在の利用者に関係する森林の施業範囲だけを表示'],
+  ['背景森林分布',`${refForest.length}形状`,ha(refForestArea),'公開参照レイヤー。業務権限とは分離'],
+  ...(personaAllowsOperationalContext()?[
+   ['未整理森林群',`${issues.length}箇所`,ha(issueArea),'自治体・森林組合・PM・運営向けの地域管理情報'],
+   ['実災害区域',`${realHazards.length}区域`,'参考表示','運営・地域管理上の参考レイヤー']
+  ]:[])
  ]);
  setTimeout(()=>{initLeafletTownMap();updateMapRegionContext();setTimeout(()=>refreshLeafletLayers(),80);},0);
 }
