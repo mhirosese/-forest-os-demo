@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v23: independent map filters by region/project/forest/owner/manager/operator -->
+<!-- Forest OS v24: admin cross-filter / free aggregation / planning / work schedule -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜青嶺町 v23</title>
+<title>Forest OS デモ｜管理コンソール v24</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -141,29 +141,64 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .filterhint{grid-column:1/-1;font-size:10px;color:var(--muted);padding:0 2px 1px}
 @media(max-width:800px){.mapfilters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.mapfilters{grid-template-columns:1fr 1fr;gap:7px}.filterbox select,.projectfilter summary{font-size:11px;height:35px}.projectmenu{position:fixed;left:12px;right:12px;top:auto;width:auto}}
+
+
+/* v24 admin / planning / work schedule */
+.admin-toolbar{background:#fff;border:1px solid var(--line);border-radius:9px;margin-bottom:12px;overflow:visible}
+.admin-toolbar-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:11px 12px;border-bottom:1px solid var(--line)}
+.admin-toolbar-head strong{font-size:14px}.admin-toolbar-head span{font-size:11px;color:var(--muted);line-height:1.45}
+.admin-filter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:11px 12px}
+.admin-filter label,.context-select label,.planfield label{display:block;font-size:10px;font-weight:700;color:#5d695f;margin:0 0 4px 2px}
+.admin-filter select,.context-select select,.planfield select,.planfield input,.agg-controls select,.planrow select,.planrow input,.workfilter select{width:100%;height:36px;border:1px solid #d9dfda;border-radius:7px;background:#fff;padding:0 9px;font-size:12px;color:#26312a}
+.admin-filter .projectfilter summary{height:36px;font-size:12px}
+.admin-filter-actions{display:flex;gap:7px;align-items:flex-end}.admin-filter-actions button{height:36px;padding:0 11px}
+.scope-line{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;padding-top:2px}.scope-chip{font-size:10px;padding:3px 7px;border-radius:999px;border:1px solid #d9e1da;background:#f6f9f6;color:#44554a}
+.admin-modebar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}.admin-modebar button{font-size:12px;padding:7px 11px}.admin-modebar button.active{background:#425f4b;color:#fff;border-color:#425f4b}
+.admin-map-placeholder{min-height:260px;background:linear-gradient(145deg,#eef4ee,#f8faf7);display:flex;align-items:center;justify-content:center;padding:22px;border-top:1px solid #edf0ed}
+.admin-map-inner{max-width:620px;text-align:center}.admin-map-inner strong{font-size:17px}.admin-map-inner p{font-size:12px;color:var(--muted);line-height:1.7}.admin-map-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.agg-controls{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;padding:11px 12px;border-bottom:1px solid var(--line);background:#fafbfa;align-items:end}.agg-controls label{display:block;font-size:10px;font-weight:700;color:#5d695f;margin:0 0 4px 2px}.agg-controls button{height:36px}
+.barcell{min-width:180px}.bartrack{height:7px;background:#edf0ed;border-radius:999px;overflow:hidden;margin-top:5px}.bartrack span{display:block;height:100%;background:#748f79}
+.contextbar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-bottom:12px}.context-note{grid-column:1/-1;font-size:10px;color:var(--muted)}
+
+.plan-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:8px;padding:12px;border-bottom:1px solid var(--line);background:#fafbfa}.plan-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:11px 12px;border-bottom:1px solid var(--line)}
+.plan-kpi{border:1px solid #e5e9e5;border-radius:7px;padding:8px;background:#fff}.plan-kpi .k{font-size:10px;color:var(--muted)}.plan-kpi .v{font-size:15px;font-weight:700;margin-top:3px}
+.plan-actions{display:flex;gap:7px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}.plan-actions .primarybtn{width:auto}.dangerbtn{border:1px solid #d5b8b8;background:#fff;color:#844646;border-radius:7px;padding:9px 12px;font-size:12px;font-weight:650;cursor:pointer}
+.planrow{display:grid;grid-template-columns:1.6fr 1fr .7fr 1.2fr .65fr .8fr .8fr .8fr .8fr auto;gap:6px;align-items:center;padding:8px 10px;border-bottom:1px solid #edf0ed}.planrow.header{font-size:10px;color:var(--muted);font-weight:700;background:#fafbfa;padding-top:7px;padding-bottom:7px}.planrow .forest-multi{height:auto;min-height:36px;padding:7px 8px}.planrow input[type=number]{text-align:right}.planrow .remove{padding:7px 9px;font-size:11px}
+.value-strip{display:flex;gap:5px;flex-wrap:wrap;padding:8px 10px;background:#fbfcfb;border-bottom:1px solid #edf0ed}.value-pill{font-size:10px;border:1px solid #d9e1da;border-radius:999px;padding:3px 7px;background:#fff}.value-pill.high{background:#e9f2ea;border-color:#bfd0c2}.value-pill.mid{background:#f7f1e3;border-color:#e0cd9e}.value-pill.low{background:#f2f2f2}
+.plan-note{padding:9px 12px;font-size:11px;color:var(--muted);line-height:1.6}.plan-status{font-size:10px;padding:3px 7px;border-radius:999px;border:1px solid var(--line);background:var(--soft)}
+.plan-status.adopted{background:#e3efe6;border-color:#aac2b0}.plan-status.draft{background:#f5f3e9;border-color:#d8cfa9}.plan-status.comparing{background:#eef1f7;border-color:#c9d1df}
+
+.workfilter{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:11px 12px;border-bottom:1px solid var(--line);background:#fafbfa}.workfilter label{display:block;font-size:10px;font-weight:700;color:#5d695f;margin:0 0 4px 2px}
+.empty-soft{padding:18px;text-align:center;color:var(--muted);font-size:12px;background:#fafbfa}
+@media(max-width:900px){.admin-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.plan-top{grid-template-columns:1fr 1fr}.plan-summary{grid-template-columns:repeat(2,1fr)}.planrow{grid-template-columns:1.2fr .8fr .7fr 1fr .65fr .8fr .8fr .8fr .8fr auto}.workfilter{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.admin-filter-grid,.contextbar{grid-template-columns:1fr 1fr}.agg-controls{grid-template-columns:1fr 1fr}.agg-controls button{grid-column:1/-1}.plan-top{grid-template-columns:1fr}.plan-summary{grid-template-columns:1fr 1fr}.planrow{grid-template-columns:1fr 1fr}.planrow.header{display:none}.planrow .remove{grid-column:1/-1}.workfilter{grid-template-columns:1fr 1fr}.admin-toolbar-head{flex-direction:column}.admin-filter-actions{grid-column:1/-1}}
+
 </style>
 </head>
 <body>
 <header>
-<h1>Forest OS <span style="font-weight:400">｜【デモ】青嶺町</span></h1>
-<div class="sub">立場・業務・森林の各入口から、同じ森林データを確認</div>
+<h1>Forest OS <span style="font-weight:400">｜管理コンソール</span></h1>
+<div class="sub">地域・プロジェクト・関係者を横断し、森林管理・計画・作業・J-クレジットを同じデータから確認</div>
 <nav>
-<button data-role="municipality" class="active">自治体</button>
+<button data-role="admin" class="active">管理・集計</button>
+<button data-role="town_map">森林全体マップ</button>
+<button data-role="forest">森林</button>
+<button data-role="planning">計画作成</button>
+<button data-role="work_schedule">作業予定</button>
+<button data-role="jcredit">J-クレジットPJ</button>
+<button data-role="pm">PM</button>
+<button data-role="municipality">自治体</button>
 <button data-role="forest_coop">森林組合</button>
 <button data-role="forestry_company">林業会社</button>
 <button data-role="owner">山主</button>
 <button data-role="accounting">会計</button>
-<button data-role="jcredit">J-クレジットPJ</button>
-<button data-role="pm">PM</button>
-<button data-role="forest">森林</button>
-<button data-role="town_map">森林全体マップ</button>
 </nav>
 </header>
 <main>
-<div id="notice" class="notice">公開デモ用Viewのみを読み込みます。実GIS参照データと架空業務データを分離表示します。</div>
+<div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">デモ専用。青嶺町・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">デモ専用。青嶺町・蒼谷村・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -561,15 +596,15 @@ function forestOptions(){return '<option value="*">すべて</option>'+[...townM
 function projectFilterHtml(){
  const map=new Map();for(const m of townMapFilterMeta){normArr(m.project_codes).forEach((c,i)=>map.set(c,normArr(m.project_names)[i]||c));}
  const rows=[...map.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ja'));
- return `<details class="projectfilter"><summary id="projectFilterSummary">プロジェクト：すべて</summary><div class="projectmenu"><button type="button" onclick="clearProjectMapFilter()">すべて表示</button>${rows.map(([c,n])=>`<label><input class="project-choice" type="checkbox" onchange="setProjectMapFilter('${esc(c)}',this.checked)"><span>${esc(n)}</span></label>`).join('')}</div></details>`;
+ return `<details class="projectfilter"><summary id="projectFilterSummary">プロジェクト：すべて</summary><div class="projectmenu"><button type="button" onclick="clearProjectMapFilter()">すべて表示</button>${rows.map(([c,n])=>`<label><input class="project-choice" type="checkbox" value="${esc(c)}" onchange="setProjectMapFilter('${esc(c)}',this.checked)"><span>${esc(n)}</span></label>`).join('')}</div></details>`;
 }
 function mapFilterHtml(){return `<div class="mapfilters">
- <div class="filterbox"><label>地域</label><select onchange="setTownMapFilter('region',this.value)">${filterOptions('region_name')}</select></div>
+ <div class="filterbox"><label>地域</label><select id="mapRegionFilter" onchange="setTownMapFilter('region',this.value)">${filterOptions('region_name')}</select></div>
  <div class="filterbox"><label>プロジェクト</label>${projectFilterHtml()}</div>
- <div class="filterbox"><label>森林</label><select onchange="setTownMapFilter('forest',this.value)">${forestOptions()}</select></div>
- <div class="filterbox"><label>地権者</label><select onchange="setTownMapFilter('owner',this.value)">${filterOptions('owner_names',{array:true,includeNone:true})}</select></div>
- <div class="filterbox"><label>管理者</label><select onchange="setTownMapFilter('manager',this.value)">${filterOptions('manager_names',{array:true,includeNone:true})}</select></div>
- <div class="filterbox"><label>施業者</label><select onchange="setTownMapFilter('operator',this.value)">${filterOptions('work_operator_names',{array:true,includeNone:true})}</select></div>
+ <div class="filterbox"><label>森林</label><select id="mapForestFilter" onchange="setTownMapFilter('forest',this.value)">${forestOptions()}</select></div>
+ <div class="filterbox"><label>地権者</label><select id="mapOwnerFilter" onchange="setTownMapFilter('owner',this.value)">${filterOptions('owner_names',{array:true,includeNone:true})}</select></div>
+ <div class="filterbox"><label>管理者</label><select id="mapManagerFilter" onchange="setTownMapFilter('manager',this.value)">${filterOptions('manager_names',{array:true,includeNone:true})}</select></div>
+ <div class="filterbox"><label>施業者</label><select id="mapOperatorFilter" onchange="setTownMapFilter('operator',this.value)">${filterOptions('work_operator_names',{array:true,includeNone:true})}</select></div>
  <div class="filterhint">各条件は独立。プロジェクトだけ複数選択でき、2PJだけ／全部などを切り替えられます。</div>
  </div>`;}
 function coverageJP(v){return ({confirmed:'確認済',partial:'一部',unknown:'未確認',not_available:'データなし',not_applicable:'対象外'})[v]||'未確認';}
@@ -1192,7 +1227,202 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeViewer();});
 
-const loaders={municipality,forest_coop:forestCoop,forestry_company:forestryCompany,owner,accounting,jcredit:jcreditProject,pm,forest:forestView,town_map:townMap};
+
+
+/* ---------------- v24 管理・自由集計 ---------------- */
+let adminData=null;
+let adminState={region:'*',projects:new Set(),party:'*',partyRole:'*',workType:'*',year:'*',mode:'list',groupBy:'region',metric:'forest_area'};
+const uniq=a=>[...new Set(a.filter(v=>v!==null&&v!==undefined&&v!==''))].sort((x,y)=>String(x).localeCompare(String(y),'ja'));
+const safeArr=v=>Array.isArray(v)?v:[];
+const optionHtml=(vals,all='すべて')=>`<option value="*">${all}</option>`+vals.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+
+function buildAdminAreaMap(growth,activities,projects,mapRows){
+ const m=new Map();
+ for(const x of growth||[]) if(x.forest_name&&x.eligible_area_ha!=null)m.set(x.forest_name,Number(x.eligible_area_ha));
+ for(const x of activities||[]) if(x.forest_name&&x.eligible_area_ha!=null)m.set(x.forest_name,Number(x.eligible_area_ha));
+ for(const p of projects||[]){
+   const matches=(mapRows||[]).filter(r=>safeArr(r.project_codes).includes(p.project_code));
+   if(matches.length===1 && p.target_area_ha!=null && !m.has(matches[0].forest_name))m.set(matches[0].forest_name,Number(p.target_area_ha));
+ }
+ return m;
+}
+function adminProjectMenuHtml(){
+ const rows=adminData.projects||[];
+ return `<details class="projectfilter"><summary id="adminProjectSummary">プロジェクト：すべて</summary><div class="projectmenu"><button type="button" onclick="adminClearProjects()">すべて表示</button>${rows.map(p=>`<label><input class="admin-project-choice" type="checkbox" value="${esc(p.project_code)}" onchange="adminToggleProject(this.value,this.checked)"><span>${esc(p.name)}</span></label>`).join('')}</div></details>`;
+}
+function adminToggleProject(code,checked){if(checked)adminState.projects.add(code);else adminState.projects.delete(code);adminUpdateProjectSummary();adminRender();}
+function adminClearProjects(){adminState.projects.clear();document.querySelectorAll('.admin-project-choice').forEach(x=>x.checked=false);adminUpdateProjectSummary();adminRender();}
+function adminUpdateProjectSummary(){const e=document.getElementById('adminProjectSummary');if(e)e.textContent=adminState.projects.size?`プロジェクト：${adminState.projects.size}件選択`:'プロジェクト：すべて';}
+function adminSet(k,v){adminState[k]=v;adminRender();}
+function adminReset(){adminState={region:'*',projects:new Set(),party:'*',partyRole:'*',workType:'*',year:'*',mode:adminState.mode,groupBy:'region',metric:'forest_area'};adminConsole(true);}
+function projectPartyMatches(row,party){
+ if(party==='*')return true;
+ return safeArr(row.project_codes).some(c=>{const p=adminData.projectByCode.get(c);return p&&(p.project_owner_name===party||p.implementing_party_name===party);});
+}
+function forestPartyMatches(row){
+ const party=adminState.party,role=adminState.partyRole;if(party==='*')return true;
+ if(role==='owner')return safeArr(row.owner_names).includes(party);
+ if(role==='manager')return safeArr(row.manager_names).includes(party);
+ if(role==='operator')return safeArr(row.work_operator_names).includes(party);
+ if(role==='project')return projectPartyMatches(row,party);
+ if(role==='vendor')return true; // vendor is applied to cost aggregation; do not hide unrelated forest map rows.
+ return [...safeArr(row.owner_names),...safeArr(row.manager_names),...safeArr(row.work_operator_names)].includes(party)||projectPartyMatches(row,party);
+}
+function adminFilteredForests(){
+ return (adminData.mapRows||[]).filter(r=>{
+  if(adminState.region!=='*'&&r.region_name!==adminState.region)return false;
+  if(adminState.projects.size&&!safeArr(r.project_codes).some(c=>adminState.projects.has(c)))return false;
+  if(!forestPartyMatches(r))return false;
+  if(adminState.workType!=='*'){
+   const names=new Set((adminData.works||[]).filter(w=>w.work_type_name===adminState.workType).map(w=>w.forest_name));
+   if(!names.has(r.forest_name))return false;
+  }
+  return true;
+ });
+}
+function adminFilteredProjects(forests){
+ let allowed=new Set();forests.forEach(r=>safeArr(r.project_codes).forEach(c=>allowed.add(c)));
+ return (adminData.projects||[]).filter(p=>(!adminState.projects.size||adminState.projects.has(p.project_code))&&(!allowed.size||allowed.has(p.project_code))&&(adminState.party==='*'||adminState.partyRole!=='project'||p.project_owner_name===adminState.party||p.implementing_party_name===adminState.party));
+}
+function adminFilteredWorks(forests){
+ const fnames=new Set(forests.map(x=>x.forest_name));
+ return (adminData.works||[]).filter(w=>{
+  if(fnames.size&&!fnames.has(w.forest_name))return false;
+  if(adminState.workType!=='*'&&w.work_type_name!==adminState.workType)return false;
+  if(adminState.year!=='*'&&String(w.planned_start_on||'').slice(0,4)!==String(adminState.year))return false;
+  return true;
+ });
+}
+function adminFilteredCosts(){return (adminData.costs||[]).filter(c=>{
+ if(adminState.year!=='*'&&String(c.forecast_year)!==String(adminState.year))return false;
+ if(adminState.party!=='*'&&(adminState.partyRole==='vendor'||adminState.partyRole==='*')&&c.vendor&&c.vendor!==adminState.party)return false;
+ return true;
+});}
+function adminScopeText(forests,projects){
+ const a=[];a.push(adminState.region==='*'?'全地域':adminState.region);a.push(adminState.projects.size?`PJ ${adminState.projects.size}件`:'全PJ');
+ if(adminState.party!=='*')a.push(`${adminState.party}${adminState.partyRole!=='*'?`（${({owner:'地権者',manager:'管理者',operator:'施業者',project:'PJ運営',vendor:'外注先'})[adminState.partyRole]||adminState.partyRole}）`:''}`);
+ if(adminState.workType!=='*')a.push(adminState.workType);if(adminState.year!=='*')a.push(`${adminState.year}年度`);return a;
+}
+function adminCards(forests,projects,works,costs){
+ const area=forests.reduce((s,r)=>s+Number(adminData.areaByForest.get(r.forest_name)||0),0);
+ const parties=new Set();forests.forEach(r=>[...safeArr(r.owner_names),...safeArr(r.manager_names),...safeArr(r.work_operator_names)].forEach(p=>parties.add(p)));
+ const issued=projects.reduce((s,p)=>s+Number(p.issued_quantity_t||0),0),available=projects.reduce((s,p)=>s+Number(p.available_quantity_t||0),0);
+ const plannedCost=costs.reduce((s,c)=>s+Number(c.amount_jpy||0),0);
+ cards([['森林',`${forests.length}件`],['把握面積',ha(area)],['関連PJ',`${projects.length}件`],['関連主体',`${parties.size}主体`],['予定費用',yen(plannedCost)],['Jクレ発行 / 販売可能',`${num(issued)} / ${num(available)} t`]]);
+}
+function adminMetricLabel(k){return ({forest_count:'森林件数',forest_area:'森林面積',project_count:'PJ数',work_count:'施業案件数',work_area:'施業面積',planned_cost:'予定費用',issued:'Jクレ発行量',available:'販売可能量'})[k]||k;}
+function adminMetricFormat(k,v){if(k==='planned_cost')return yen(v);if(['forest_area','work_area'].includes(k))return ha(v);if(['issued','available'].includes(k))return `${num(v)} t`;return `${num(v)}件`;}
+function adminGroupRecords(forests,projects,works,costs){
+ const g=new Map();const ensure=k=>{if(!g.has(k))g.set(k,{key:k,forestSet:new Set(),projectSet:new Set(),forest_area:0,work_count:0,work_area:0,planned_cost:0,issued:0,available:0});return g.get(k)};
+ const addForest=(key,r)=>{const z=ensure(key);if(!z.forestSet.has(r.forest_unit_id)){z.forestSet.add(r.forest_unit_id);z.forest_area+=Number(adminData.areaByForest.get(r.forest_name)||0)}safeArr(r.project_codes).forEach(c=>z.projectSet.add(c));};
+ if(adminState.groupBy==='region')forests.forEach(r=>addForest(r.region_name||'未設定',r));
+ if(adminState.groupBy==='project')forests.forEach(r=>safeArr(r.project_codes).forEach((c,i)=>addForest(safeArr(r.project_names)[i]||c,r)));
+ if(adminState.groupBy==='party')forests.forEach(r=>{
+   let names=[];if(adminState.partyRole==='owner')names=safeArr(r.owner_names);else if(adminState.partyRole==='manager')names=safeArr(r.manager_names);else if(adminState.partyRole==='operator')names=safeArr(r.work_operator_names);else names=uniq([...safeArr(r.owner_names),...safeArr(r.manager_names),...safeArr(r.work_operator_names)]);
+   names.forEach(n=>addForest(n,r));
+ });
+ if(adminState.groupBy==='role')forests.forEach(r=>{safeArr(r.owner_names).forEach(_=>addForest('地権者',r));safeArr(r.manager_names).forEach(_=>addForest('管理者',r));safeArr(r.work_operator_names).forEach(_=>addForest('施業者',r));});
+ if(adminState.groupBy==='work_type')works.forEach(w=>{const z=ensure(w.work_type_name||'未設定');z.work_count++;z.work_area+=Number(w.planned_area_ha||w.actual_area_ha||0)});
+ if(adminState.groupBy==='year'){
+   works.forEach(w=>{const y=String(w.planned_start_on||'').slice(0,4)||'未設定';const z=ensure(y);z.work_count++;z.work_area+=Number(w.planned_area_ha||0)});
+   costs.forEach(c=>ensure(String(c.forecast_year||'未設定')).planned_cost+=Number(c.amount_jpy||0));
+ }
+ // Add direct project metrics to project groups; otherwise apportion by membership only where the project name is the group.
+ projects.forEach(p=>{if(adminState.groupBy==='project'){const z=ensure(p.name);z.projectSet.add(p.project_code);z.issued+=Number(p.issued_quantity_t||0);z.available+=Number(p.available_quantity_t||0)}});
+ if(adminState.groupBy==='party')costs.filter(c=>c.vendor).forEach(c=>ensure(c.vendor).planned_cost+=Number(c.amount_jpy||0));
+ if(adminState.groupBy==='year'){} else if(adminState.groupBy==='work_type'){} else if(adminState.groupBy==='region'&&g.size===1){[...g.values()][0].planned_cost=costs.reduce((s,c)=>s+Number(c.amount_jpy||0),0);[...g.values()][0].issued=projects.reduce((s,p)=>s+Number(p.issued_quantity_t||0),0);[...g.values()][0].available=projects.reduce((s,p)=>s+Number(p.available_quantity_t||0),0)}
+ return [...g.values()].map(z=>({...z,forest_count:z.forestSet.size,project_count:z.projectSet.size}));
+}
+function renderAdminAggregate(forests,projects,works,costs){
+ const groups=adminGroupRecords(forests,projects,works,costs);const k=adminState.metric;const max=Math.max(1,...groups.map(x=>Number(x[k]||0)));
+ return `<section><h2>自由集計</h2><div class="agg-controls"><div><label>何で分ける？</label><select onchange="adminState.groupBy=this.value;adminRender()"><option value="region" ${adminState.groupBy==='region'?'selected':''}>地域</option><option value="project" ${adminState.groupBy==='project'?'selected':''}>プロジェクト</option><option value="party" ${adminState.groupBy==='party'?'selected':''}>関連会社・団体</option><option value="role" ${adminState.groupBy==='role'?'selected':''}>関係役割</option><option value="work_type" ${adminState.groupBy==='work_type'?'selected':''}>施業種</option><option value="year" ${adminState.groupBy==='year'?'selected':''}>年度</option></select></div><div><label>何を見る？</label><select onchange="adminState.metric=this.value;adminRender()">${[['forest_count','森林件数'],['forest_area','森林面積'],['project_count','PJ数'],['work_count','施業案件数'],['work_area','施業面積'],['planned_cost','予定費用'],['issued','Jクレ発行量'],['available','販売可能量']].map(([v,l])=>`<option value="${v}" ${adminState.metric===v?'selected':''}>${l}</option>`).join('')}</select></div><button type="button" onclick="adminExportCsv()">CSV出力</button></div>${groups.length?`<div class="tablewrap"><table><thead><tr><th>集計軸</th><th>${adminMetricLabel(k)}</th><th>森林</th><th>PJ</th><th>施業</th><th>予定費用</th></tr></thead><tbody>${groups.sort((a,b)=>Number(b[k]||0)-Number(a[k]||0)).map(x=>`<tr><td><b>${esc(x.key)}</b></td><td class="barcell">${adminMetricFormat(k,x[k]||0)}<div class="bartrack"><span style="width:${Math.max(2,Math.round(Number(x[k]||0)/max*100))}%"></span></div></td><td>${x.forest_count}件 / ${ha(x.forest_area)}</td><td>${x.project_count}件</td><td>${x.work_count}件 / ${ha(x.work_area)}</td><td>${yen(x.planned_cost)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">この条件では集計対象がありません。</div>'}<div class="map-note">同じ関連会社でも「地権者・管理者・施業者・PJ運営・外注先」を分けて確認できます。表示用集計であり、正本は各業務テーブルです。</div></section>`;
+}
+function adminExportCsv(){
+ const forests=adminFilteredForests(),projects=adminFilteredProjects(forests),works=adminFilteredWorks(forests),costs=adminFilteredCosts();const groups=adminGroupRecords(forests,projects,works,costs);const rows=[['集計軸',adminMetricLabel(adminState.metric),'森林件数','森林面積ha','PJ数','施業件数','施業面積ha','予定費用円'],...groups.map(x=>[x.key,x[adminState.metric]||0,x.forest_count,x.forest_area,x.project_count,x.work_count,x.work_area,x.planned_cost])];
+ const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('"','""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='forest_os_admin_summary.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function renderAdminList(forests){
+ return table('森林・関係者一覧',['地域','森林','面積','プロジェクト','地権者','管理者','施業者'],forests.map(r=>[r.region_name,r.forest_name,ha(adminData.areaByForest.get(r.forest_name)||0),safeArr(r.project_names).join('<br>')||'—',safeArr(r.owner_names).join('<br>')||'—',safeArr(r.manager_names).join('<br>')||'—',safeArr(r.work_operator_names).join('<br>')||'—']));
+}
+function renderAdminMapPanel(forests,projects){
+ return `<section><h2>地図で見る</h2><div class="admin-map-placeholder"><div class="admin-map-inner"><strong>${esc(adminState.region==='*'?'選択範囲を地図へ':adminState.region+' を地図へ')}</strong><p>現在の地域・プロジェクト・地権者／管理者／施業者の絞り込みを、森林全体マップへ引き継ぎます。地図は閲覧用で、正本データの編集はしません。</p><div class="admin-map-actions"><button class="primarybtn" type="button" onclick="adminOpenMap()">この条件で地図を開く</button><button type="button" onclick="adminState.mode='list';adminRender()">一覧で確認</button></div><p>${forests.length}森林 / ${projects.length}PJ が現在の対象です。</p></div></div></section>`;
+}
+async function adminOpenMap(){
+ const snap={region:adminState.region,projects:new Set(adminState.projects),party:adminState.party,partyRole:adminState.partyRole};await load('town_map');
+ townMapFilterState.region=snap.region;townMapFilterState.projects=new Set(snap.projects);townMapFilterState.owner='*';townMapFilterState.manager='*';townMapFilterState.operator='*';
+ if(snap.party!=='*'){if(snap.partyRole==='owner')townMapFilterState.owner=snap.party;else if(snap.partyRole==='manager')townMapFilterState.manager=snap.party;else if(snap.partyRole==='operator')townMapFilterState.operator=snap.party;}
+ const r=document.getElementById('mapRegionFilter');if(r&&[...r.options].some(o=>o.value===snap.region))r.value=snap.region;
+ const ids={owner:'mapOwnerFilter',manager:'mapManagerFilter',operator:'mapOperatorFilter'};for(const [k,id] of Object.entries(ids)){const e=document.getElementById(id);if(e&&[...e.options].some(o=>o.value===townMapFilterState[k]))e.value=townMapFilterState[k];}
+ document.querySelectorAll('.project-choice').forEach(x=>x.checked=townMapFilterState.projects.has(x.value));updateProjectFilterSummary();refreshLeafletLayers();
+}
+function adminRender(){
+ if(!adminData)return;const forests=adminFilteredForests(),projects=adminFilteredProjects(forests),works=adminFilteredWorks(forests),costs=adminFilteredCosts();adminCards(forests,projects,works,costs);adminUpdateProjectSummary();
+ document.querySelectorAll('.admin-modebar button').forEach(b=>b.classList.toggle('active',b.dataset.mode===adminState.mode));
+ const target=document.getElementById('adminResult');if(!target)return;
+ target.innerHTML=adminState.mode==='map'?renderAdminMapPanel(forests,projects):adminState.mode==='aggregate'?renderAdminAggregate(forests,projects,works,costs):renderAdminList(forests)+table('施業案件',['案件','森林','施業','計画面積','実績面積','状態'],works.map(w=>[w.title,w.forest_name,w.work_type_name,ha(w.planned_area_ha),ha(w.actual_area_ha),w.work_status]));
+ const scope=document.getElementById('adminScope');if(scope)scope.innerHTML=adminScopeText(forests,projects).map(x=>`<span class="scope-chip">${esc(x)}</span>`).join('');
+}
+async function adminConsole(rebuild=false){
+ if(!adminData||rebuild){
+  const [mapRows,projects,works,costs,growth,activities]=await Promise.all([q('demo_map_filter_v23','select=*&order=forest_name'),q('demo_jcredit_project_v22','select=*&order=project_code'),q('demo_forestry_company_work','select=*&order=title'),q('demo_accounting_cost_detail_v22','select=*&order=forecast_year,parent_category,cost_category_code'),q('demo_jcredit_growth_v22','select=*&order=area_version_no,forest_name'),q('demo_jcredit_program_activity','select=*&order=activity_code')]);
+  const projectByCode=new Map(projects.map(p=>[p.project_code,p]));const areaByForest=buildAdminAreaMap(growth,activities,projects,mapRows);
+  const parties=uniq(mapRows.flatMap(r=>[...safeArr(r.owner_names),...safeArr(r.manager_names),...safeArr(r.work_operator_names)]).concat(projects.flatMap(p=>[p.project_owner_name,p.implementing_party_name])).concat(costs.map(c=>c.vendor)));
+  adminData={mapRows,projects,works,costs,growth,activities,projectByCode,areaByForest,parties};
+ }
+ const regions=uniq(adminData.mapRows.map(r=>r.region_name)),workTypes=uniq(adminData.works.map(w=>w.work_type_name)),years=uniq(adminData.costs.map(c=>String(c.forecast_year)).concat(adminData.works.map(w=>String(w.planned_start_on||'').slice(0,4))));
+ document.getElementById('content').innerHTML=`<div class="admin-toolbar"><div class="admin-toolbar-head"><div><strong>表示範囲</strong><br><span>地域・PJ・関係者を組み合わせて同じ森林データを横断表示</span></div><span>プロジェクトは複数選択可。関連会社は役割も指定できます。</span></div><div class="admin-filter-grid"><div class="admin-filter"><label>地域</label><select onchange="adminSet('region',this.value)">${optionHtml(regions,'全地域')}</select></div><div class="admin-filter"><label>プロジェクト（複数可）</label>${adminProjectMenuHtml()}</div><div class="admin-filter"><label>関連会社・団体</label><select onchange="adminSet('party',this.value)">${optionHtml(adminData.parties,'すべて')}</select></div><div class="admin-filter"><label>関係役割</label><select onchange="adminSet('partyRole',this.value)"><option value="*">すべて</option><option value="owner">地権者</option><option value="manager">管理者</option><option value="operator">施業者</option><option value="project">PJ運営</option><option value="vendor">外注先</option></select></div><div class="admin-filter"><label>施業種</label><select onchange="adminSet('workType',this.value)">${optionHtml(workTypes,'すべて')}</select></div><div class="admin-filter"><label>年度</label><select onchange="adminSet('year',this.value)">${optionHtml(years,'すべて')}</select></div><div id="adminScope" class="scope-line"></div><div class="admin-filter-actions"><button type="button" onclick="adminReset()">条件クリア</button></div></div></div><div class="admin-modebar"><button data-mode="map" onclick="adminState.mode='map';adminRender()">地図</button><button data-mode="list" onclick="adminState.mode='list';adminRender()">一覧</button><button data-mode="aggregate" onclick="adminState.mode='aggregate';adminRender()">自由集計</button></div><div id="adminResult"></div>`;
+ // Restore selected UI after rebuild.
+ const selects=document.querySelectorAll('.admin-filter select');if(selects[0])selects[0].value=adminState.region;if(selects[1])selects[1].value=adminState.party;if(selects[2])selects[2].value=adminState.partyRole;if(selects[3])selects[3].value=adminState.workType;if(selects[4])selects[4].value=adminState.year;
+ document.querySelectorAll('.admin-project-choice').forEach(x=>x.checked=adminState.projects.has(x.value));adminRender();
+}
+
+/* ---------------- v24 計画作成（画面操作デモ） ---------------- */
+const PLAN_KEY='forest_os_v24_plans';const ADOPTED_KEY='forest_os_v24_adopted_work';
+const defaultPlans=[
+ {id:'plan-a',name:'計画案A｜2027重点施業',status:'draft',region:'【デモ】青嶺町',project:'DEMO-JC-001',note:'費用と防災・水源価値を見ながら優先森林を調整',rows:[
+  {id:'a1',forests:['東山101林班1小班','西谷共有林102林班2小班'],work:'間伐',year:'2027',operator:'【デモ】青嶺町森林組合',area:28.0,cost:5200000,subsidy:3000000,timber:900000,jcredit:450000,values:{water:'high',disaster:'high',biodiversity:'mid'}},
+  {id:'a2',forests:['北谷103林班1小班（相続整理中）'],work:'権利整理',year:'2027',operator:'【デモ】青嶺森林PM合同会社',area:9.6,cost:350000,subsidy:0,timber:0,jcredit:0,values:{water:'mid',disaster:'mid',biodiversity:'mid'}}]},
+ {id:'plan-b',name:'計画案B｜施業分散',status:'comparing',region:'【デモ】青嶺町',project:'DEMO-JC-001',note:'2027年の資金需要を抑え、2028年へ一部延期',rows:[
+  {id:'b1',forests:['東山101林班1小班'],work:'間伐',year:'2027',operator:'【デモ】北峰林業株式会社',area:10.0,cost:2400000,subsidy:1400000,timber:450000,jcredit:200000,values:{water:'high',disaster:'high',biodiversity:'mid'}},
+  {id:'b2',forests:['西谷共有林102林班2小班'],work:'間伐',year:'2028',operator:'【デモ】青嶺町森林組合',area:18.0,cost:3300000,subsidy:1900000,timber:600000,jcredit:300000,values:{water:'high',disaster:'mid',biodiversity:'high'}}]}
+];
+function loadPlans(){try{const v=JSON.parse(localStorage.getItem(PLAN_KEY)||'null');return Array.isArray(v)&&v.length?v:structuredClone(defaultPlans)}catch(_){return structuredClone(defaultPlans)}}
+let planState={plans:loadPlans(),currentId:null};
+function currentPlan(){if(!planState.currentId)planState.currentId=planState.plans[0]?.id;return planState.plans.find(p=>p.id===planState.currentId)||planState.plans[0]}
+function savePlans(){localStorage.setItem(PLAN_KEY,JSON.stringify(planState.plans));}
+const planForests=['東山101林班1小班','西谷共有林102林班2小班','北谷103林班1小班（相続整理中）','青嶺町有林・白峰団地','白峰北東斜面・追加候補A','東沢中腹・追加候補B','西谷奥・追加候補C'];
+const planWorks=['間伐','主伐','植栽','下刈','巡視','測量・境界','作業道整備','権利整理','保全・モニタリング'];
+const planOperators=['【デモ】青嶺町森林組合','【デモ】北峰林業株式会社','【デモ】青嶺森林PM合同会社'];
+function multiForestSelect(row){return `<select class="forest-multi" multiple size="2" onchange="planMultiForest('${row.id}',this)">${planForests.map(f=>`<option value="${esc(f)}" ${row.forests.includes(f)?'selected':''}>${esc(f)}</option>`).join('')}</select>`}
+function planMultiForest(id,sel){const p=currentPlan(),r=p.rows.find(x=>x.id===id);r.forests=[...sel.selectedOptions].map(o=>o.value);savePlans();renderPlanningBody();}
+function planUpdate(id,k,v){const r=currentPlan().rows.find(x=>x.id===id);if(!r)return;r[k]=['area','cost','subsidy','timber','jcredit'].includes(k)?Number(v||0):v;savePlans();renderPlanningSummary();}
+function planAddRow(){const p=currentPlan();p.rows.push({id:'r'+Date.now(),forests:[planForests[0]],work:'間伐',year:'2027',operator:planOperators[0],area:0,cost:0,subsidy:0,timber:0,jcredit:0,values:{water:'mid',disaster:'mid',biodiversity:'mid'}});savePlans();renderPlanningBody();}
+function planRemoveRow(id){const p=currentPlan();p.rows=p.rows.filter(r=>r.id!==id);savePlans();renderPlanningBody();}
+function planSelect(id){planState.currentId=id;renderPlanningScreen();}
+function planDuplicate(){const p=currentPlan();const n=structuredClone(p);n.id='plan-'+Date.now();n.name=p.name+'（複製）';n.status='draft';n.rows.forEach(r=>r.id='r'+Date.now()+Math.random().toString(16).slice(2));planState.plans.push(n);planState.currentId=n.id;savePlans();renderPlanningScreen();}
+function planNew(){const n={id:'plan-'+Date.now(),name:'新しい計画案',status:'draft',region:'【デモ】青嶺町',project:'DEMO-JC-001',note:'',rows:[]};planState.plans.push(n);planState.currentId=n.id;savePlans();renderPlanningScreen();}
+function planRename(v){currentPlan().name=v;savePlans();}
+function planTotals(p){const t={cost:0,subsidy:0,timber:0,jcredit:0,area:0};p.rows.forEach(r=>{t.cost+=Number(r.cost||0);t.subsidy+=Number(r.subsidy||0);t.timber+=Number(r.timber||0);t.jcredit+=Number(r.jcredit||0);t.area+=Number(r.area||0)});t.need=t.cost-t.subsidy-t.timber-t.jcredit;return t;}
+function renderPlanningSummary(){const p=currentPlan(),t=planTotals(p),e=document.getElementById('planSummary');if(!e)return;e.innerHTML=[['施業・対象面積',ha(t.area)],['予定費用',yen(t.cost)],['補助金見込',yen(t.subsidy)],['木材＋Jクレ見込',yen(t.timber+t.jcredit)],['必要資金',yen(t.need)]].map(([k,v])=>`<div class="plan-kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');}
+function valuePills(r){const lab={water:'水源',disaster:'防災',biodiversity:'生物多様性'},txtv={high:'高',mid:'中',low:'低'};return `<div class="value-strip">${Object.entries(r.values||{}).map(([k,v])=>`<span class="value-pill ${v}">${lab[k]||k}：${txtv[v]||v}</span>`).join('')}<span class="value-pill">炭素：Jクレ見込 ${yen(r.jcredit)}</span></div>`}
+function renderPlanRows(p){if(!p.rows.length)return '<div class="empty-soft">まだ作業がありません。「作業を追加」から作成します。</div>';return `<div class="planrow header"><div>対象森林（複数可）</div><div>作業</div><div>年度</div><div>施業・担当</div><div>面積</div><div>予定費用</div><div>補助金</div><div>木材収入</div><div>Jクレ見込</div><div></div></div>`+p.rows.map(r=>`<div>${`<div class="planrow">${multiForestSelect(r)}<select onchange="planUpdate('${r.id}','work',this.value)">${planWorks.map(x=>`<option ${x===r.work?'selected':''}>${x}</option>`).join('')}</select><select onchange="planUpdate('${r.id}','year',this.value)">${['2027','2028','2029','2030','2031'].map(x=>`<option ${x===r.year?'selected':''}>${x}</option>`).join('')}</select><select onchange="planUpdate('${r.id}','operator',this.value)">${planOperators.map(x=>`<option ${x===r.operator?'selected':''}>${x}</option>`).join('')}</select><input type="number" min="0" step="0.1" value="${r.area}" onchange="planUpdate('${r.id}','area',this.value)"><input type="number" min="0" step="10000" value="${r.cost}" onchange="planUpdate('${r.id}','cost',this.value)"><input type="number" min="0" step="10000" value="${r.subsidy}" onchange="planUpdate('${r.id}','subsidy',this.value)"><input type="number" min="0" step="10000" value="${r.timber}" onchange="planUpdate('${r.id}','timber',this.value)"><input type="number" min="0" step="10000" value="${r.jcredit}" onchange="planUpdate('${r.id}','jcredit',this.value)"><button class="remove" type="button" onclick="planRemoveRow('${r.id}')">削除</button></div>${valuePills(r)}`}</div>`).join('')}
+function renderPlanningBody(){const p=currentPlan(),e=document.getElementById('planRows');if(e)e.innerHTML=renderPlanRows(p);renderPlanningSummary();}
+function planAdopt(){const p=currentPlan();if(!p.rows.length)return alert('作業がありません。');p.status='adopted';const existing=(()=>{try{return JSON.parse(localStorage.getItem(ADOPTED_KEY)||'[]')}catch(_){return[]}})();const rows=p.rows.map(r=>({...structuredClone(r),plan_id:p.id,plan_name:p.name,status:'planned',adopted_on:new Date().toISOString().slice(0,10)}));localStorage.setItem(ADOPTED_KEY,JSON.stringify(existing.filter(x=>x.plan_id!==p.id).concat(rows)));savePlans();renderPlanningScreen();alert('この計画案を確定し、作業予定へ入れました（画面操作デモ）。');}
+function renderPlanningScreen(){const p=currentPlan();cards([['保存計画',`${planState.plans.length}案`],['現在の状態',`<span class="plan-status ${p.status}">${p.status==='adopted'?'確定済':p.status==='comparing'?'比較中':'下書き'}</span>`],['対象地域',p.region],['対象PJ',p.project||'—']]);document.getElementById('content').innerHTML=`<section><h2>施業計画を組み立てる</h2><div class="plan-top"><div class="planfield"><label>保存した計画案</label><select onchange="planSelect(this.value)">${planState.plans.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="planfield"><label>地域</label><select onchange="currentPlan().region=this.value;savePlans()"><option selected>【デモ】青嶺町</option><option>【デモ】蒼谷村</option></select></div><div class="planfield"><label>関連PJ</label><select onchange="currentPlan().project=this.value;savePlans()"><option value="">なし</option><option value="DEMO-JC-001" ${p.project==='DEMO-JC-001'?'selected':''}>青嶺町 森林J-クレジットPJ</option><option value="DEMO-JC-PGM-001" ${p.project==='DEMO-JC-PGM-001'?'selected':''}>再造林J-クレジットプログラム</option></select></div><div class="planfield"><label>計画名</label><input value="${esc(p.name)}" onchange="planRename(this.value)"></div></div><div id="planSummary" class="plan-summary"></div><div class="plan-actions"><button class="primarybtn" type="button" onclick="savePlans();alert('保存しました（このブラウザ内の画面操作デモ）。')">保存</button><button type="button" onclick="planDuplicate()">別案として保存</button><button type="button" onclick="planNew()">新しい計画案</button><button type="button" onclick="planAddRow()">作業を追加</button><button type="button" onclick="planAdopt()">確定して作業予定へ</button></div><div id="planRows"></div><div class="plan-note"><b>検討と実作業を分離：</b>ここでは森林を複数選び、施業・年度・担当・予定費用・補助金・木材・Jクレ・炭素以外の価値を何度でも調整します。確定した作業だけが「作業予定」へ入る想定です。正式な森林経営計画やJ-クレジット申請は、この意思決定結果から別途つなぎます。</div></section>`;renderPlanningBody();}
+async function planning(){renderPlanningScreen();}
+
+/* ---------------- v24 作業予定 ---------------- */
+let workScheduleState={year:'*',operator:'*',work:'*'};
+function loadAdoptedWork(){try{return JSON.parse(localStorage.getItem(ADOPTED_KEY)||'[]')}catch(_){return[]}}
+async function workSchedule(){
+ const db=await q('demo_municipal_work_v22','select=*&order=work_code');const adopted=loadAdoptedWork();const rows=db.filter(x=>x.relevance_period!=='before_project').map(x=>({title:x.work_title,forests:[x.forest_name||'青嶺町有林・白峰団地'],work:x.work_title,year:String(x.planned_start_on||x.event_date||'').slice(0,4)||'—',operator:'【デモ】青嶺町森林組合',area:Number(x.planned_area_ha||x.actual_area_ha||0),status:x.work_status||'planned',source:'DB'})).concat(adopted.map(x=>({title:`${x.work}｜${x.forests.join('・')}`,forests:x.forests,work:x.work,year:x.year,operator:x.operator,area:x.area,status:'planned',source:'計画確定'})));
+ const years=uniq(rows.map(r=>r.year)),ops=uniq(rows.map(r=>r.operator)),works=uniq(rows.map(r=>r.work));const filtered=rows.filter(r=>(workScheduleState.year==='*'||r.year===workScheduleState.year)&&(workScheduleState.operator==='*'||r.operator===workScheduleState.operator)&&(workScheduleState.work==='*'||r.work===workScheduleState.work));
+ cards([['作業予定',`${filtered.length}件`],['予定面積',ha(filtered.reduce((s,x)=>s+Number(x.area||0),0))],['施業者',`${new Set(filtered.map(x=>x.operator)).size}主体`],['計画から確定',`${filtered.filter(x=>x.source==='計画確定').length}件`]]);
+ document.getElementById('content').innerHTML=`<section><h2>確定済みの作業予定</h2><div class="workfilter"><div><label>年度</label><select onchange="workScheduleState.year=this.value;workSchedule()">${optionHtml(years,'すべて')}</select></div><div><label>施業者・担当</label><select onchange="workScheduleState.operator=this.value;workSchedule()">${optionHtml(ops,'すべて')}</select></div><div><label>作業</label><select onchange="workScheduleState.work=this.value;workSchedule()">${optionHtml(works,'すべて')}</select></div></div><div class="tablewrap"><table><thead><tr><th>年度</th><th>作業</th><th>対象森林</th><th>担当</th><th>予定面積</th><th>状態</th><th>由来</th></tr></thead><tbody>${filtered.map(r=>`<tr><td>${esc(r.year)}</td><td>${esc(r.work)}</td><td>${r.forests.map(esc).join('<br>')}</td><td>${esc(r.operator)}</td><td>${ha(r.area)}</td><td><span class="tag">${esc(r.status)}</span></td><td>${esc(r.source)}</td></tr>`).join('')}</tbody></table></div><div class="map-note">未確定の計画案はここに出しません。「計画作成」で確定したものだけ作業予定へ移る想定です。</div></section>`;
+ const sels=document.querySelectorAll('.workfilter select');if(sels[0])sels[0].value=workScheduleState.year;if(sels[1])sels[1].value=workScheduleState.operator;if(sels[2])sels[2].value=workScheduleState.work;
+}
+
+const loaders={admin:adminConsole,municipality,forest_coop:forestCoop,forestry_company:forestryCompany,owner,accounting,jcredit:jcreditProject,pm,forest:forestView,town_map:townMap,planning,work_schedule:workSchedule};
 async function load(role){
  document.querySelectorAll('button[data-role]').forEach(b=>b.classList.toggle('active',b.dataset.role===role));
  document.getElementById('cards').innerHTML='';
@@ -1201,7 +1431,7 @@ async function load(role){
  catch(e){document.getElementById('notice').innerHTML=`<span class="warn">DB接続エラー：</span>${e.message}`;document.getElementById('content').innerHTML='<section><div class="empty">ネット接続またはSupabase側の公開設定を確認してください。</div></section>'}
 }
 document.querySelectorAll('button[data-role]').forEach(b=>b.addEventListener('click',()=>load(b.dataset.role)));
-load('municipality');
+load('admin');
 </script>
 </body>
 </html>
