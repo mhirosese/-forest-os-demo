@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v36統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、利用者スコープに応じて表示します。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v37統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、森林は小区画群をまとめた塊として表示し、台帳haと概ね対応させます。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -1095,8 +1095,89 @@ function displayWaterGeometry(f){
  };
  return g[code]||geoObj(f.geom_geojson);
 }
+
+const managedMosaicGeomCache=new Map();
+function geomBbox(gj){
+ const box={minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity};
+ const walk=(coords)=>{
+  if(!Array.isArray(coords))return;
+  if(typeof coords[0]==='number'&&typeof coords[1]==='number'){
+    const x=Number(coords[0]),y=Number(coords[1]);
+    if(!Number.isFinite(x)||!Number.isFinite(y))return;
+    if(x<box.minX)box.minX=x;if(x>box.maxX)box.maxX=x;if(y<box.minY)box.minY=y;if(y>box.maxY)box.maxY=y;
+    return;
+  }
+  coords.forEach(walk);
+ };
+ walk(gj.coordinates);
+ return Number.isFinite(box.minX)?box:null;
+}
+function pointInRing(pt,ring){
+ let inside=false;
+ for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+  const xi=Number(ring[i][0]), yi=Number(ring[i][1]), xj=Number(ring[j][0]), yj=Number(ring[j][1]);
+  const intersect=((yi>pt[1])!==(yj>pt[1])) && (pt[0] < (xj-xi)*(pt[1]-yi)/((yj-yi)||1e-12)+xi);
+  if(intersect)inside=!inside;
+ }
+ return inside;
+}
+function pointInPolygonGeom(pt,gj){
+ if(!gj||!gj.type)return false;
+ const inPoly=(poly)=>{
+   if(!Array.isArray(poly)||!poly.length)return false;
+   if(!pointInRing(pt,poly[0]))return false;
+   for(let i=1;i<poly.length;i++)if(pointInRing(pt,poly[i]))return false;
+   return true;
+ };
+ if(gj.type==='Polygon')return inPoly(gj.coordinates);
+ if(gj.type==='MultiPolygon')return gj.coordinates.some(inPoly);
+ return false;
+}
+function geomCentroid(gj){
+ const box=geomBbox(gj);if(!box)return [135.89,34.14];
+ return [(box.minX+box.maxX)/2,(box.minY+box.maxY)/2];
+}
+function squareRing(x0,y0,x1,y1){return [[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]];}
+function managedForestMosaicGeometry(f){
+ const key=`${f.feature_code||''}:${Number(f.area_ha||featureProps(f).area_ha||0)||0}`;
+ if(managedMosaicGeomCache.has(key))return managedMosaicGeomCache.get(key);
+ const gj=geoObj(f.geom_geojson);
+ if(!gj||!['Polygon','MultiPolygon'].includes(gj.type)){managedMosaicGeomCache.set(key,gj);return gj;}
+ const areaHa=Math.max(.8,Number(f.area_ha||featureProps(f).area_ha||0)||0);
+ const targetCells=Math.max(6,Math.min(180,Math.round(areaHa/0.75)));
+ const box=geomBbox(gj); if(!box){managedMosaicGeomCache.set(key,gj);return gj;}
+ const ctr=geomCentroid(gj), latMid=ctr[1]||((box.minY+box.maxY)/2), cosLat=Math.max(.25,Math.cos((latMid||34)*Math.PI/180));
+ let picked=[];
+ const scales=[1.0,0.88,0.76,0.66];
+ for(const scale of scales){
+   const cellAreaM2=(areaHa*10000/targetCells)*(scale*scale);
+   const cellSideM=Math.max(42,Math.sqrt(cellAreaM2));
+   const stepY=cellSideM/111320;
+   const stepX=cellSideM/(111320*cosLat);
+   const padX=stepX*.15,padY=stepY*.15;
+   const rows=[];
+   for(let y=box.minY;y<=box.maxY+1e-9;y+=stepY){
+     for(let x=box.minX;x<=box.maxX+1e-9;x+=stepX){
+       const cx=x+stepX/2, cy=y+stepY/2;
+       if(pointInPolygonGeom([cx,cy],gj)){
+         const d=((cx-ctr[0])**2)+((cy-ctr[1])**2);
+         rows.push({d,ring:squareRing(x+padX,y+padY,x+stepX-padX,y+stepY-padY)});
+       }
+     }
+   }
+   if(rows.length){picked=rows; if(rows.length>=Math.max(5,targetCells*0.68))break;}
+ }
+ if(!picked.length){managedMosaicGeomCache.set(key,gj);return gj;}
+ // 面積と描画量をある程度合わせるため、過剰に多い場合は中心優先で間引く。
+ const upper=Math.round(targetCells*1.25);
+ if(picked.length>upper)picked=picked.sort((a,b)=>a.d-b.d).slice(0,upper);
+ const mosaic={type:'MultiPolygon',coordinates:picked.map(c=>[c.ring])};
+ managedMosaicGeomCache.set(key,mosaic);
+ return mosaic;
+}
+
 function addFeatureGeoJSONToGroup(f,mode,group){
- const gj=mode==='water'?displayWaterGeometry(f):geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
+ const gj=(mode==='water')?displayWaterGeometry(f):((f.layer_code==='managed_forest'&&['details','credit','candidate','program','disaster'].includes(mode))?managedForestMosaicGeometry(f):geoObj(f.geom_geojson));if(!gj)return null;const color=layerColor(mode);
  const subtype=String(f.feature_subtype||'');
  const props=featureProps(f);
  const isWater=mode==='water';
@@ -1104,15 +1185,15 @@ function addFeatureGeoJSONToGroup(f,mode,group){
  // v20 視認性優先：町全体では内部境界を描かず、面の意味だけを残す。
  // 正本GISの細かさはDBに保持し、通常画面では地形とテーマが読めることを優先する。
  if(mode==='reference'){fillOpacity=.035;weight=0;opacity=0;smoothFactor=4.8;}
- if(mode==='details'){fillOpacity=.07;weight=1.15;opacity=.78;smoothFactor=2.8;}
+ if(mode==='details'){fillOpacity=.12;weight=.95;opacity=.82;smoothFactor=1.2;}
  if(mode==='municipal'){fillOpacity=0;weight=2.2;opacity=.96;dashArray='10 5';smoothFactor=3.8;}
  if(mode==='issues'){fillOpacity=.105;weight=0;opacity=0;smoothFactor=4.4;}
  if(mode==='owner_unknown'){fillOpacity=.055;weight=.45;opacity=.26;dashArray='3 7';smoothFactor=4.4;}
  if(mode==='boundary_unknown'){fillOpacity=0;weight=.72;opacity=.42;dashArray='7 8';smoothFactor=4.4;}
- if(mode==='credit'){fillOpacity=props.participation_stage==='initial'?.30:.22;weight=props.participation_stage==='initial'?1.9:1.55;opacity=.96;dashArray=props.participation_stage==='addition'?'2 3':null;smoothFactor=3.6;}
- if(mode==='candidate'){fillOpacity=.16;weight=2.0;opacity=.98;dashArray='7 5';smoothFactor=3.8;}
- if(mode==='program'){fillOpacity=.16;weight=1.55;opacity=.90;smoothFactor=3.0;}
- if(mode==='disaster'){fillOpacity=f.is_fictional ? .10 : .055;weight=f.is_fictional ? 1.15 : .7;opacity=.78;smoothFactor=3.2;}
+ if(mode==='credit'){fillOpacity=props.participation_stage==='initial'?.34:.25;weight=props.participation_stage==='initial'?1.35:1.15;opacity=.96;dashArray=props.participation_stage==='addition'?'2 3':null;smoothFactor=1.2;}
+ if(mode==='candidate'){fillOpacity=.22;weight=1.35;opacity=.98;dashArray='7 5';smoothFactor=1.2;}
+ if(mode==='program'){fillOpacity=.22;weight=1.15;opacity=.92;smoothFactor=1.2;}
+ if(mode==='disaster'){fillOpacity=f.is_fictional ? .12 : .065;weight=f.is_fictional ? 1.0 : .7;opacity=.78;smoothFactor=1.2;}
 
  // 水系は「青い線」ではなく、淡い河道＋芯線で河川らしく見せる。
  // DBの実データを使う本番でも同じ描画方式を流用できる。
@@ -1289,7 +1370,7 @@ function renderIssueOverviewDetail(f){
 }
 function renderForestBlockOverviewDetail(f){
  const p=featureProps(f),b=townBlocks.find(x=>x.block_code===p.block_code)||{};
- document.getElementById('mapDetail').innerHTML=`<h2>${esc(b.block_name||f.display_name||'森林ブロック')}</h2><div class="map-summary-note">町全体で直感的に判断するための概況ブロック表示です。林班・小班、100mメッシュ、個別境界はDB側に保持し、必要時に詳細表示します。</div><div class="detailgrid"><div class="detailitem"><div class="k">概算面積</div><div class="v">${ha(b.area_ha)}</div></div><div class="detailitem"><div class="k">所有概況</div><div class="v">${esc(b.ownership_summary||'未確認')}</div></div><div class="detailitem"><div class="k">境界</div><div class="v">${esc(b.boundary_status||'未確認')}</div></div><div class="detailitem"><div class="k">施業</div><div class="v">${esc(b.work_status||'未確認')}</div></div><div class="detailitem"><div class="k">Jクレ</div><div class="v">${esc(b.jcredit_status||'未評価')}</div></div><div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(b.next_action||'—')}</div></div></div>`;
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(b.block_name||f.display_name||'森林ブロック')}</h2><div class="map-summary-note">町全体で直感的に判断するための概況ブロック表示です。小区画群の塊として見せていますが、林班・小班、個別境界はDB側に保持し、必要時に詳細表示します。</div><div class="detailgrid"><div class="detailitem"><div class="k">概算面積</div><div class="v">${ha(b.area_ha)}</div></div><div class="detailitem"><div class="k">所有概況</div><div class="v">${esc(b.ownership_summary||'未確認')}</div></div><div class="detailitem"><div class="k">境界</div><div class="v">${esc(b.boundary_status||'未確認')}</div></div><div class="detailitem"><div class="k">施業</div><div class="v">${esc(b.work_status||'未確認')}</div></div><div class="detailitem"><div class="k">Jクレ</div><div class="v">${esc(b.jcredit_status||'未評価')}</div></div><div class="detailitem"><div class="k">次アクション</div><div class="v">${esc(b.next_action||'—')}</div></div></div>`;
 }
 
 function renderManagedProjectFeature(f){
@@ -1299,7 +1380,7 @@ function renderManagedProjectFeature(f){
  const stage=({initial:'初期実施地',addition:'追加済',candidate:'追加候補'})[p.participation_stage]||txt(p.participation_stage);
  const hasForest=townDetails.some(x=>x.forest_name===f.display_name);
  const forestBtn=hasForest?`<button type="button" class="secondarybtn" onclick='openForestFromMap(${JSON.stringify(f.display_name)})'>森林詳細を見る</button>`:'';
- document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">地図は管理・比較用の一般化形状です。台帳面積・権利・施業・J-クレジットの正本データと、閲覧用GIS形状は分離して管理します。</div><div class="detailgrid">
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">地図は管理・比較用に、小区画群をまとめた塊として一般化表示しています。台帳面積haと描画規模は概ね合わせます。権利・施業・J-クレジットの正本データと、閲覧用GIS形状は分離して管理します。</div><div class="detailgrid">
  <div class="detailitem"><div class="k">台帳面積</div><div class="v">${ha(f.area_ha)}</div></div>
  <div class="detailitem"><div class="k">PJ段階</div><div class="v">${esc(stage)}</div></div>
  <div class="detailitem"><div class="k">権利パターン</div><div class="v">${rx?`<span class="tag">${esc(rx.rights_pattern)}</span>`:'未確認'}</div></div>
@@ -1416,14 +1497,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v36 村自治体・自然形状</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v37 小区画群表示</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','関連森林','',true)+mk('municipal','町有林（関係時のみ）','',true))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v36表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の面、追加候補は橙の面、別PJ/認証前は青系で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>閲覧用に一般化した形状です。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v37表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の小区画群、追加候補は橙の小区画群、別PJ/認証前は青系の小区画群で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>森林は小区画群をまとめた塊として表示し、台帳面積haと描画規模を概ね合わせます。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
