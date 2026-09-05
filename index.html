@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Forest OS v25: multi-region admin / free aggregation / planning / work schedule -->
+<!-- Forest OS v27: multi-region map/admin/J-credit/planning/work schedule -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -96,6 +96,8 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .maparea{cursor:pointer;transition:opacity .15s,stroke-width .15s}.maparea:hover{opacity:.82;stroke-width:3}
 .detailarea{cursor:pointer;stroke-width:3}.detailarea:hover{stroke-width:5}
 .map-note{font-size:11px;color:var(--muted);padding:9px 12px;border-top:1px solid var(--line);background:#fafbfa}
+.map-region-notice{margin:8px 12px 0;padding:10px 12px;border:1px solid #d8e0dc;border-radius:10px;background:#f7faf8;font-size:13px;line-height:1.65}.map-region-notice strong{display:block;margin-bottom:2px}.map-region-notice.is-hidden{display:none}.map-region-notice .mini{color:#627168;font-size:12px}
+
 .statusline{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}.statuspill{font-size:10px;padding:2px 6px;border-radius:999px;background:var(--soft);border:1px solid var(--line)}
 
 .coveragebar{height:7px;background:#edf0ed;border-radius:999px;overflow:hidden;margin-top:5px}.coveragebar>span{display:block;height:100%;background:#6f8f72}.coveragegrid{display:flex;gap:4px;flex-wrap:wrap}.covchip{font-size:10px;padding:2px 6px;border-radius:999px;border:1px solid var(--line);background:#fff}.cov-confirmed{background:#e8f1e9;border-color:#aac0ad}.cov-partial{background:#f6f0df;border-color:#d9c58d}.cov-unknown,.cov-not_available{background:#f1f1f1;color:#69716b}.cov-not_applicable{background:#eef3f7;color:#536b7b}.smallnote{font-size:11px;color:var(--muted);line-height:1.5}.density{font-weight:700}.density-濃い{color:#2f6b45}.density-標準{color:#5e7245}.density-薄い{color:#8b6f47}.density-要整理{color:#8b4e4e}
@@ -216,7 +218,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v26統合デモ。青嶺町・蒼谷村・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v27統合デモ。青嶺町・蒼谷村・業務情報は架空。背景地形・森林分布・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -432,6 +434,7 @@ async function jcreditProject(){
    q('demo_municipal_work_v22','select=*&order=work_code'),
    q('demo_jcredit_forecast_v22','select=*&order=forecast_year')
  ]);
+ if(!j.some(x=>x.project_code==='DEMO-JC-SOUTANI-001'))j.push({project_code:'DEMO-JC-SOUTANI-001',name:'【デモ】蒼谷村 森林J-クレジットPJ',status:'active',stage_label:'稼働中',registration_type:'project',aggregation_model:'multi_owner',target_area_ha:49.7,target_forest_count:2,active_area_ha:49.7,candidate_area_ha:0,issued_quantity_t:0,available_quantity_t:0,risk_reserved_quantity_t:0,sold_quantity_t:0,project_owner_name:'【デモ】蒼谷村森林組合',implementing_party_name:'【デモ】蒼谷村森林組合',methodology_code:'FO-001',expected_first_certification_t:null,next_milestone:'モニタリング準備',next_due_on:null,external_contract_count:0});
  const contracts=allc.filter(x=>hasAudience(x,'jcredit')&&x.jcredit_project_id);
  const issued=j.reduce((s,x)=>s+Number(x.issued_quantity_t||0),0);
  const available=j.reduce((s,x)=>s+Number(x.available_quantity_t||0),0);
@@ -491,6 +494,7 @@ async function jcreditProject(){
  table('外部機関との契約',
  ['対象','契約','当事者','期間','状態','契約書'],
  contracts.map(x=>[txt(x.target_name),x.title,txt(x.parties_text),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')]))+
+ table('地域別J-クレジットPJ',['地域','PJ','対象森林','対象面積','運営主体'],[ ['【デモ】青嶺町','【デモ】青嶺町 森林J-クレジットPJ','複数森林',ha(main.active_area_ha||0),txt(main.project_owner_name||main.implementing_party_name)], ['【デモ】蒼谷村','【デモ】蒼谷村 森林J-クレジットPJ','2森林',ha(49.7),'【デモ】蒼谷村森林組合'] ])+
  jcreditDownstreamFlow()+
  table('発行済PJ：クレジット在庫・シリアル',
  ['ロット','シリアル開始','シリアル終了','数量','区分','状態'],
@@ -628,7 +632,7 @@ function workPassesMapFilters(w){
  if(!m)return townMapFilterState.region==='*'&&townMapFilterState.forest==='*'&&townMapFilterState.owner==='*'&&townMapFilterState.manager==='*'&&townMapFilterState.operator==='*'&&townMapFilterState.projects.size===0;
  return passesMapFilters({display_name:m.forest_name,properties:{forest_unit_id:m.forest_unit_id}});
 }
-function setTownMapFilter(kind,value){townMapFilterState[kind]=value;refreshLeafletLayers();}
+function setTownMapFilter(kind,value){townMapFilterState[kind]=value;refreshLeafletLayers();updateMapRegionContext();}
 function setProjectMapFilter(code,checked){if(checked)townMapFilterState.projects.add(code);else townMapFilterState.projects.delete(code);updateProjectFilterSummary();refreshLeafletLayers();}
 function clearProjectMapFilter(){townMapFilterState.projects.clear();document.querySelectorAll('.project-choice').forEach(x=>x.checked=false);updateProjectFilterSummary();refreshLeafletLayers();}
 function updateProjectFilterSummary(){const el=document.getElementById('projectFilterSummary');if(!el)return;const n=townMapFilterState.projects.size;el.textContent=n?`プロジェクト：${n}件選択`:'プロジェクト：すべて';}
@@ -654,6 +658,24 @@ function mapFilterHtml(){return `<div class="mapfilters">
  <div class="filterbox"><label>施業者</label><select id="mapOperatorFilter" onchange="setTownMapFilter('operator',this.value)">${filterOptions('work_operator_names',{array:true,includeNone:true})}</select></div>
  <div class="filterhint">各条件は独立。プロジェクトだけ複数選択でき、2PJだけ／全部などを切り替えられます。</div>
  </div>`;}
+function updateMapRegionContext(){
+ const title=document.getElementById('townMapTitle'),notice=document.getElementById('mapRegionNotice');
+ if(!title||!notice)return;
+ const r=townMapFilterState.region;
+ if(r==='【デモ】蒼谷村'){
+   title.textContent='蒼谷村 森林全体マップ';
+   notice.classList.remove('is-hidden');
+   notice.innerHTML='<strong>【デモ】蒼谷村も同じForest OSで管理</strong><div>森林2件 / 49.7ha / J-クレジットPJ 1件。山主Aの越境所有、蒼谷村森林組合の管理、青嶺町森林組合の応援間伐まで同じDBで参照できます。</div><div class="mini">現時点では蒼谷村のGISポリゴンが未投入のため、地図上の面表示だけ未反映です。一覧・自由集計・計画・作業予定・J-クレジットでは利用できます。</div>';
+ }else if(r==='【デモ】青嶺町'){
+   title.textContent='青嶺町 森林全体マップ';
+   notice.classList.add('is-hidden');notice.innerHTML='';
+ }else{
+   title.textContent='複数地域 森林全体マップ';
+   notice.classList.remove('is-hidden');
+   notice.innerHTML='<strong>複数地域を横断表示</strong><div>青嶺町と蒼谷村を同じ管理基盤で絞り込みできます。蒼谷村はGIS形状未投入のため、地図面表示は青嶺町中心です。</div>';
+ }
+}
+
 function coverageJP(v){return ({confirmed:'確認済',partial:'一部',unknown:'未確認',not_available:'データなし',not_applicable:'対象外'})[v]||'未確認';}
 function coverageChip(v,label){const c=v||'unknown';return `<span class="covchip cov-${esc(c)}">${esc(label)}：${esc(coverageJP(c))}</span>`;}
 
@@ -1062,7 +1084,7 @@ async function townMap(){
  townDetailFeatures=mapFeatures.filter(f=>f.layer_code==='managed_forest');
  const legacyProgram=townDetailFeatures.filter(f=>managedMatchesFeature(f,'program'));
  townMapFeatures=[...mapFeatures.filter(f=>f.layer_code!=='reference_forest'&&f.layer_code!=='managed_forest'),...legacyProgram,...projectMap,...refDisplay];
- townMapRelations=mapRelations;townWorkScopes=workScopes;townCoverage=coverage;townMapFilterMeta=filterMeta;townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
+ townMapRelations=mapRelations;townWorkScopes=workScopes;townCoverage=coverage;townMapFilterMeta=[...filterMeta];for(const r of neighborDemo.mapRows)if(!townMapFilterMeta.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))townMapFilterMeta.push(r);townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
  townMapLayers={reference:true,details:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
  const p=profile[0]||{};
  const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);
@@ -1091,7 +1113,7 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong>青嶺町 森林全体マップ</strong><span class="mapmodebadge">閲覧・全体把握</span></div>${mapFilterHtml()}<div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">複数地域 森林全体マップ</strong><span class="mapmodebadge">閲覧・全体把握</span></div>${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  <div class="layergroup"><span class="layergrouptitle">基本</span>${mk('reference','町全体森林（実データ）','reference-toggle',true)}${mk('details','詳細管理森林','',false)}</div>
  <div class="layergroup"><span class="layergrouptitle">所有</span>${mk('municipal','町有林（輪郭）','',true)}</div>
  <div class="layergroup"><span class="layergrouptitle">Jクレ</span>${mk('credit','PJ実施地','',true)}${mk('candidate','追加候補','',true)}${mk('program','別PJ/認証前')}</div>
@@ -1119,7 +1141,7 @@ async function townMap(){
   ['施業GIS',`${workScopes.length}件`,'計画・実績を地図連携','実測GISがあれば差替、無ければ代理範囲として明示'],
   ['実災害区域',`${realHazards.length}区域`,'参考表示','法的境界確定には使用しない']
  ]);
- setTimeout(()=>{initLeafletTownMap();setTimeout(()=>refreshLeafletLayers(),80);},0);
+ setTimeout(()=>{initLeafletTownMap();updateMapRegionContext();setTimeout(()=>refreshLeafletLayers(),80);},0);
 }
 
 
