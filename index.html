@@ -247,7 +247,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v43統合デモ。青嶺町に加えて蒼谷村の山主H/I/J、単独所有・共同所有・土地/立木分離・J-クレジット帰属分離、過去施業履歴なしの放置村有林を追加。地図UIは関連森林中心に整理し、森林はデモ地図専用の小区画群で近似表示します。権利・面積・位置はDB準拠のまま、表示用形状のみ別生成し、台帳haと描画規模を概ね合わせます。今回は行ごとの幅と開始位置をずらして不定形外形を作り、その内部を小区画で埋める方式に変更しています。同一森林のPJ色は同じ小区画群に重ねます。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと表示用一般化形状を分離しています。</div>
+<div class="footer">v44統合デモ。筆・森林・権利・GISをDB側で分離管理し、森林全体マップはDBの筆セルから描画します。飛び地は表示側で生成せず、DBに明示された場合だけ表示します。台帳haと描画面積も概ね一致するようDB側で補正しています。青嶺町・蒼谷村・業務情報は架空。背景地形・水系・土砂災害は出典明示した参照データ。正本データと閲覧用表示データを分離しています。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -824,7 +824,7 @@ async function forestView(){
 
 
 
-let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[],townMapPersonaScopes=[],townRightsMatrix=[];
+let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[],townMapPersonaScopes=[],townRightsMatrix=[],townParcelCells=[];
 let townMapAllowedForestIds=new Set();
 let leafletTownMap=null,leafletFeatureLayers={};
 let townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
@@ -1150,6 +1150,35 @@ function seeded01(seed){
  const x=Math.sin(seed*12.9898+78.233)*43758.5453123;
  return x-Math.floor(x);
 }
+function parcelCellsForForestId(forestId){
+ const id=String(forestId||'');
+ if(!id)return [];
+ return townParcelCells.filter(x=>String(x.forest_unit_id)===id);
+}
+function parcelCellGeometryForForestId(forestId){
+ const rows=parcelCellsForForestId(forestId);
+ if(!rows.length)return null;
+ const polys=[];
+ rows.forEach(r=>{
+   const g=geoObj(r.geom_geojson);
+   if(!g)return;
+   if(g.type==='Polygon')polys.push(g.coordinates);
+   else if(g.type==='MultiPolygon')polys.push(...g.coordinates);
+ });
+ return polys.length?{type:'MultiPolygon',coordinates:polys}:null;
+}
+function managedDisplayGeometry(f){
+ const p=featureProps(f);
+ const forestId=p.forest_unit_id || filterMetaForFeature(f)?.forest_unit_id;
+ return parcelCellGeometryForForestId(forestId) || managedForestMosaicGeometry(f);
+}
+function parcelSummaryForForestId(forestId){
+ const rows=parcelCellsForForestId(forestId);
+ const parcelIds=[...new Set(rows.map(x=>String(x.parcel_id)).filter(Boolean))];
+ const detachedIds=[...new Set(rows.filter(x=>x.is_detached===true||String(x.is_detached)==='true').map(x=>String(x.parcel_id)).filter(Boolean))];
+ const area=rows.reduce((s,x)=>s+Number(x.cell_area_ha||0),0);
+ return {cells:rows.length,parcels:parcelIds.length,detached:detachedIds.length,area};
+}
 function managedForestMosaicGeometry(f){
  const props=featureProps(f);
  const stableId=String(props.forest_unit_id||props.external_code||f.display_name||f.feature_code||'forest');
@@ -1344,7 +1373,7 @@ function managedForestMosaicGeometry(f){
 }
 
 function addFeatureGeoJSONToGroup(f,mode,group){
- const gj=(mode==='water')?displayWaterGeometry(f):((f.layer_code==='managed_forest'&&['details','credit','candidate','program','disaster'].includes(mode))?managedForestMosaicGeometry(f):geoObj(f.geom_geojson));if(!gj)return null;const color=layerColor(mode);
+ const gj=(mode==='water')?displayWaterGeometry(f):((f.layer_code==='managed_forest'&&['details','credit','candidate','program','disaster'].includes(mode))?managedDisplayGeometry(f):geoObj(f.geom_geojson));if(!gj)return null;const color=layerColor(mode);
  const subtype=String(f.feature_subtype||'');
  const props=featureProps(f);
  const isWater=mode==='water';
@@ -1458,7 +1487,7 @@ async function openJcreditTarget(targetId){
 }
 async function openProjectAreaOnMap(targetId){
  await load('town_map');
- setTimeout(()=>{const f=townMapFeatures.find(x=>String(featureProps(x).project_target_id||'')===String(targetId));if(!f)return;if(f.layer_code==='managed_forest'&&!passesMapFilters(f)){const d=document.getElementById('mapDetail');if(d)d.innerHTML='<h2>表示対象外</h2><div class="empty">現在の利用者には、この森林・PJ範囲は表示されません。</div>';return;}handleMapFeatureClick(f);const gj=geoObj(f.geom_geojson);if(gj&&leafletTownMap){const z=L.geoJSON(gj);leafletTownMap.fitBounds(z.getBounds(),{padding:[38,38],maxZoom:14});}},180);
+ setTimeout(()=>{const f=townMapFeatures.find(x=>String(featureProps(x).project_target_id||'')===String(targetId));if(!f)return;if(f.layer_code==='managed_forest'&&!passesMapFilters(f)){const d=document.getElementById('mapDetail');if(d)d.innerHTML='<h2>表示対象外</h2><div class="empty">現在の利用者には、この森林・PJ範囲は表示されません。</div>';return;}handleMapFeatureClick(f);const gj=f.layer_code==='managed_forest'?managedDisplayGeometry(f):geoObj(f.geom_geojson);if(gj&&leafletTownMap){const z=L.geoJSON(gj);leafletTownMap.fitBounds(z.getBounds(),{padding:[38,38],maxZoom:14});}},180);
 }
 function renderIssueDetail(id){
  const x=townIssues.find(v=>v.issue_area_id===id);if(!x)return;
@@ -1545,10 +1574,14 @@ function renderManagedProjectFeature(f){
  const m=filterMetaForFeature(f)||{};
  const rx=townRightsMatrix.find(z=>String(z.forest_unit_id)===String(m.forest_unit_id||p.forest_unit_id||''));
  const stage=({initial:'初期実施地',addition:'追加済',candidate:'追加候補'})[p.participation_stage]||txt(p.participation_stage);
+ const forestId=String(m.forest_unit_id||p.forest_unit_id||'');
+ const ps=parcelSummaryForForestId(forestId);
  const hasForest=townDetails.some(x=>x.forest_name===f.display_name);
  const forestBtn=hasForest?`<button type="button" class="secondarybtn" onclick='openForestFromMap(${JSON.stringify(f.display_name)})'>森林詳細を見る</button>`:'';
- document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">地図は管理・比較用に、小区画群をまとめた塊として一般化表示しています。台帳面積haと描画規模は概ね合わせます。権利・施業・J-クレジットの正本データと、閲覧用GIS形状は分離して管理します。</div><div class="detailgrid">
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name)}</h2><div class="map-summary-note">地図はDBに登録した筆・表示セルから描画しています。筆、森林、権利、施業、J-クレジットを別管理し、飛び地はDBに明示された場合だけ表示します。</div><div class="detailgrid">
  <div class="detailitem"><div class="k">台帳面積</div><div class="v">${ha(f.area_ha)}</div></div>
+ <div class="detailitem"><div class="k">筆</div><div class="v">${ps.parcels?`${ps.parcels}筆 / ${ps.cells}セル`:'未登録'}</div></div>
+ <div class="detailitem"><div class="k">飛び地</div><div class="v">${ps.detached?`${ps.detached}筆`:'なし'}</div></div>
  <div class="detailitem"><div class="k">PJ段階</div><div class="v">${esc(stage)}</div></div>
  <div class="detailitem"><div class="k">権利パターン</div><div class="v">${rx?`<span class="tag">${esc(rx.rights_pattern)}</span>`:'未確認'}</div></div>
  <div class="detailitem"><div class="k">土地所有者</div><div class="v">${rx?rightsHolderText(rx.land_owners):partyLinksHtml(normArr(m.owner_names).length?normArr(m.owner_names):[p.owner_name],'未確認')}</div></div>
@@ -1594,7 +1627,7 @@ function initLeafletTownMap(){
  if(added)fitTownMapRegion('*');else leafletTownMap.setView([34.14,135.89],11);
 }
 async function townMap(){
- const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes,rightsMatrix]=await Promise.all([
+ const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes,rightsMatrix,parcelCells]=await Promise.all([
   q('demo_town_profile','select=*'),
   q('demo_town_forest_block','select=*&order=sort_order'),
   q('demo_forest_decision_context','select=*'),
@@ -1610,7 +1643,8 @@ async function townMap(){
   q('demo_forest_data_coverage','select=*&order=forest_name'),
   q('demo_map_filter_v23','select=*&order=forest_name'),
   q('demo_party_forest_scope_v31','select=*&order=viewer_name,region_name,forest_name'),
-  q('demo_forest_rights_matrix_v33','select=*&order=region_name,forest_name')
+  q('demo_forest_rights_matrix_v33','select=*&order=region_name,forest_name'),
+  q('demo_parcel_cell_v44','select=*&order=forest_code,parcel_no,cell_no')
  ]);
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
  townDetailFeatures=mapFeatures.filter(f=>f.layer_code==='managed_forest');
@@ -1631,6 +1665,7 @@ async function townMap(){
  }
  townMapPersonaScopes=personaScopes;
  townRightsMatrix=rightsMatrix;
+ townParcelCells=parcelCells;
  const personaScopeRows=currentPersonaScopeRows();
  townMapAllowedForestIds=new Set(personaScopeRows.map(x=>String(x.forest_unit_id)));
  townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
@@ -1664,14 +1699,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v43 行幅ずらし不定形</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜関連森林マップ</strong><span class="mapmodebadge">v44 DB筆・飛び地連動</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','関連森林','',true)+mk('municipal','町有林（関係時のみ）','',true))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v43表示制御：</b>現在の利用者に関係する森林を中心に表示します。その上で地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。町有林は、その利用者の関係範囲に町有林がある場合だけ表示します。<br><b>閲覧専用：</b>この画面では状態を編集しません。J-クレジットの段階はJ-クレジットDB、施業は施業DB、森林属性は森林DBを読みます。<br><b>色の軸：</b>関連森林を土台に、町有林は青緑の輪郭、PJ実施地は緑の小区画群、追加候補は橙の小区画群、別PJ/認証前は青系の小区画群で分離します。所有とJクレ状態を同じ色軸にしません。<br><b>表示形状：</b>森林はデモ地図専用の小区画群で近似し、台帳面積haと描画規模を概ね合わせます。権利・位置・面積はDB準拠のまま、表示形状のみ別生成しています。行ごとの幅と開始位置をずらして不定形外形を作り、その内部を小区画で埋めます。長い直線や整いすぎた矩形を抑えます。同一森林のPJ色は同じ小区画群に重ねます。正本境界ではありません。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v44表示制御：</b>現在の利用者に関係する森林だけを表示し、地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。<br><b>DB基準：</b>森林表示は <b>筆 → 森林単位 → 権利</b> のDB関係から生成します。表示側で飛び地を追加しません。DBで別筆・飛び地として登録された場合だけ離れて表示します。<br><b>面積：</b>筆セルの合計面積は森林台帳haと概ね一致するようDB側で補正しています。<br><b>表示：</b>関連森林を土台に、PJ実施地は緑、追加候補は橙、別PJ/認証前は青系で同じ筆セルに重ねます。正本境界そのものではなく、デモ用の筆・表示セルです。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林・PJ・候補・水系をクリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
