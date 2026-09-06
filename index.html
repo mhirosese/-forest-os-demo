@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v33: complex forest rights demo (sole/co-ownership/standing timber/J-credit entitlement) -->
+<!-- Forest OS v55: PM portfolio/task/contract normalization + mobile-first PM UI -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v33</title>
+<title>Forest OS デモ｜管理コンソール v55</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -119,6 +119,18 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 @media(max-width:600px){.viewerbody{padding:8px}.docpaper{padding:28px 20px;min-height:620px}.docpaper h3{font-size:19px}}
 
 @media(max-width:600px){header{padding:14px 12px 10px}main{padding:10px}.cards{grid-template-columns:repeat(2,1fr)}.card .value{font-size:18px}}
+
+/* v55 PM mobile-first project/task/contract cards */
+.pmcardlist{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;padding:12px}
+.pmprojcard,.pmtaskcard,.pmcontractcard{border:1px solid var(--line);border-radius:10px;background:#fff;padding:12px;min-width:0}
+.pmprojhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
+.pmprojtitle{font-size:14px;font-weight:750;line-height:1.45;min-width:0}.pmprojcode{font-size:10px;color:var(--muted);margin-top:3px}
+.pmchips{display:flex;gap:5px;flex-wrap:wrap;margin:7px 0 10px}.pmchip{display:inline-block;padding:3px 7px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:10px;line-height:1.3}.pmchip.strong{background:#e5efe7;border-color:#bfd0c3;color:#28583a;font-weight:700}.pmchip.readonly{background:#f4f4f4;color:#687169}
+.pmkv{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #edf0ed}.pmkv>div{padding:8px 6px 7px 0;min-width:0}.pmkv .k{font-size:10px;color:var(--muted);margin-bottom:3px}.pmkv .v{font-size:12px;line-height:1.45;overflow-wrap:anywhere}.pmkv .wide{grid-column:1/-1}
+.pmtasktitle,.pmcontracttitle{font-size:13px;font-weight:700;line-height:1.45;margin-bottom:5px}.pmcardnote{font-size:11px;color:var(--muted);line-height:1.55;margin-top:7px}.pmduedate{font-weight:700}.pmduedate.overdue{color:var(--warn)}
+.pmempty{padding:14px;color:var(--muted);font-size:13px}
+@media(max-width:620px){.pmcardlist{grid-template-columns:1fr;padding:10px}.pmprojcard,.pmtaskcard,.pmcontractcard{padding:11px}.pmkv{grid-template-columns:1fr 1fr}}
+
 
 .river-permanent-label{background:rgba(255,255,255,.90)!important;border:0!important;box-shadow:none!important;color:#4f7f97!important;font-size:10px!important;font-weight:700!important;padding:1px 4px!important;border-radius:4px!important}
 .river-permanent-label:before{display:none!important}
@@ -247,7 +259,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">管理・集計画面では公開デモ用Viewを横断表示します。計画作成の保存・確定操作はブラウザ内デモです。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v54統合デモ。広域J-クレジットPJでは、広域PM会社が代表プロジェクト実施者・申請主体を兼務し、各地域の森林組合は森林管理・森林経営計画を担当する設定です。権限は固定ロールだけでなく、権利・委任・担当地域・担当PJ・担当施業等の対象関係から判定し、閲覧は関与範囲、入力・更新は具体的な担当範囲に限定します。広域J-クレジットPJでは全体担当・自地域・自森林・担当作業を分離表示します。森林全体マップはDBの森林管理ポリゴンを優先し、飛び地・筆境界もDB形状を使用します。デモ生成筆は「デモ専用仮想筆・概略位置・非正本」。青嶺町・蒼谷村・業務情報は架空です。</div>
+<div class="footer">v55統合デモ。広域J-クレジットPJでは、広域PM会社が代表プロジェクト実施者・申請主体を兼務し、各地域の森林組合は森林管理・森林経営計画を担当する設定です。権限は固定ロールだけでなく、権利・委任・担当地域・担当PJ・担当施業等の対象関係から判定し、閲覧は関与範囲、入力・更新は具体的な担当範囲に限定します。広域J-クレジットPJでは全体担当・自地域・自森林・担当作業を分離表示します。森林全体マップはDBの森林管理ポリゴンを優先し、飛び地・筆境界もDB形状を使用します。デモ生成筆は「デモ専用仮想筆・概略位置・非正本」。青嶺町・蒼谷村・業務情報は架空です。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -785,15 +797,15 @@ async function jcreditProject(){
 async function pm(){
  const viewer=personaScopePartyName();
  const vq=encodeURIComponent(viewer);
- const [items,allc,growth,fc,costs,wide,dashRows,projectScopes,forestScopes]=await Promise.all([
-   q('demo_pm_item','select=*'),
-   q('demo_contract_relation','select=*&order=contract_no'),
+ const [pmTasks,pmContracts,growth,fc,costs,wide,dashRows,projectScopes,forestScopes]=await Promise.all([
+   q('demo_pm_task_v55',`select=*&viewer_name=eq.${vq}&order=due_on,project_code`),
+   q('demo_pm_contract_scope_v55',`select=*&viewer_name=eq.${vq}&order=contract_no`),
    q('demo_jcredit_growth_v22','select=*&project_code=eq.DEMO-JC-001&order=area_version_no,forest_name'),
    q('demo_jcredit_forecast_v22','select=*&order=forecast_year'),
    q('demo_accounting_cost_detail_v22','select=*&order=forecast_year,parent_category,cost_category_code'),
    q('demo_wide_area_jcredit_v53','select=*'),
-   q('demo_pm_dashboard_v54',`select=*&viewer_name=eq.${vq}`),
-   q('demo_pm_project_portfolio_v54',`select=*&viewer_name=eq.${vq}&order=relationship_class,project_code`),
+   q('demo_pm_dashboard_v55',`select=*&viewer_name=eq.${vq}`),
+   q('demo_pm_project_portfolio_v55',`select=*&viewer_name=eq.${vq}&order=relationship_class,project_code`),
    q('demo_party_jcredit_forest_scope_v51',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`)
  ]);
  const dash=(dashRows||[])[0]||{};
@@ -802,47 +814,74 @@ async function pm(){
  const wideScope=scopeMap.get('DEMO-JC-WIDE-001');
  const direct=projectScopes.filter(x=>x.relationship_class==='direct_project_role');
  const related=projectScopes.filter(x=>x.relationship_class==='region_related_view');
- const accessLabel=v=>({full_project:'PJ全体',region_detail:'自地域',forest_detail:'担当森林',work_context:'担当作業に必要な範囲',forest_self:'自分の森林'})[v]||txt(v);
  const stage=v=>({active:'認証・発行済',registered:'登録済',pre_certification:'認証前・申請準備',planning:'計画中'}[v]||txt(v));
- const inputLabel=s=>s.can_input_project?'<span class="tag">PJ入力可</span>':'<span class="muted">閲覧のみ</span>';
- const c=allc.filter(x=>hasAudience(x,'pm'));
- items.sort((a,b)=>(a.due_on||'9999-12-31').localeCompare(b.due_on||'9999-12-31'));
+ const inputLabel=s=>s.can_input_project?'<span class="pmchip strong">PJ入力可</span>':'<span class="pmchip readonly">閲覧のみ</span>';
+ const contractRoleLabel=v=>({representative_implementer:'申請主体',pm_operator:'PM／事務局',program_manager:'プログラム管理',pm_contractor:'PM受託',ordering_party:'発注者',project_aggregator:'PJ取りまとめ'}[v]||txt(v));
+ const projectCardSection=(title,rows,isRelated=false)=>{
+   if(!rows.length)return `<section><h2>${title}</h2><div class="pmempty">該当データなし</div></section>`;
+   return `<section><h2>${title}</h2><div class="pmcardlist">${rows.map(s=>{
+     const high=Number(s.high_priority_task_count||0);
+     const open=Number(s.open_task_count||0);
+     return `<div class="pmprojcard">
+       <div class="pmprojhead"><div><div class="pmprojtitle">${esc(s.project_name)}</div><div class="pmprojcode">${esc(s.project_code)}</div></div>${inputLabel(s)}</div>
+       <div class="pmchips">
+         <span class="pmchip strong">${esc(s.relationship_label)}</span>
+         <span class="pmchip">${s.is_wide_project?'広域PJ・別森林':'町村単独PJ'}</span>
+         <span class="pmchip">${esc(stage(s.project_status))}</span>
+         ${isRelated?'<span class="pmchip readonly">直接担当ではない</span>':''}
+       </div>
+       <div class="pmkv">
+         <div class="wide"><div class="k">対象地域</div><div class="v">${esc(s.visible_region_names||'—')}</div></div>
+         <div><div class="k">申請主体</div><div class="v">${partyLink(s.representative_implementer)}</div></div>
+         <div><div class="k">森林管理</div><div class="v">${partyLinksHtml(String(s.forest_managers||'').split(',').map(v=>v.trim()).filter(Boolean),'—')}</div></div>
+         <div><div class="k">見える森林</div><div class="v">${num(s.visible_forest_count)}件 / ${ha(s.visible_area_ha)}</div></div>
+         <div><div class="k">契約</div><div class="v">${num(s.contract_count||0)}件</div></div>
+         <div><div class="k">未完了タスク</div><div class="v">${open}件${high?`（高優先 ${high}件）`:''}</div></div>
+         <div><div class="k">次期限</div><div class="v">${date(s.next_task_due)}</div></div>
+       </div>
+     </div>`;
+   }).join('')}</div></section>`;
+ };
+ const taskCardSection=(title,rows)=>{
+   if(!rows.length)return `<section><h2>${title}</h2><div class="pmempty">該当データなし</div></section>`;
+   return `<section><h2>${title}</h2><div class="pmcardlist">${rows.map(t=>`<div class="pmtaskcard">
+     <div class="pmtasktitle">${esc(t.title)}</div>
+     <div class="pmchips"><span class="pmchip">${esc(t.project_code)}</span><span class="pmchip">${esc(t.relationship_label||'担当PJ')}</span>${t.priority==='high'?'<span class="pmchip strong">高優先</span>':''}<span class="pmchip">${esc(t.status)}</span></div>
+     <div class="pmkv"><div><div class="k">期限</div><div class="v pmduedate ${t.is_overdue?'overdue':''}">${date(t.due_on)}</div></div><div><div class="k">開始</div><div class="v">${date(t.starts_on)}</div></div><div class="wide"><div class="k">PJ</div><div class="v">${esc(t.project_name)}</div></div></div>
+     ${t.description?`<div class="pmcardnote">${esc(t.description)}</div>`:''}
+   </div>`).join('')}</div></section>`;
+ };
+ const contractCardSection=(title,rows)=>{
+   if(!rows.length)return `<section><h2>${title}</h2><div class="pmempty">該当データなし</div></section>`;
+   return `<section><h2>${title}</h2><div class="pmcardlist">${rows.map(c=>`<div class="pmcontractcard">
+     <div class="pmcontracttitle">${esc(c.title)}</div><div class="pmprojcode">${esc(c.contract_no||'—')}</div>
+     <div class="pmchips"><span class="pmchip strong">${esc(c.scope_label)}</span>${c.pm_contract_role?`<span class="pmchip">PM側：${esc(String(c.pm_contract_role).split(' / ').map(contractRoleLabel).join(' / '))}</span>`:''}<span class="pmchip">${esc(c.status)}</span></div>
+     <div class="pmkv"><div class="wide"><div class="k">PJ</div><div class="v">${esc(c.project_names||'PJ外・横断契約')}</div></div><div class="wide"><div class="k">当事者</div><div class="v">${esc(c.parties_text||'—')}</div></div><div><div class="k">期間</div><div class="v">${date(c.starts_on)}〜${date(c.ends_on)}</div></div><div><div class="k">PM当事者</div><div class="v">${c.pm_is_contract_party?'はい':'いいえ（PJ管理対象）'}</div></div></div>
+   </div>`).join('')}</div></section>`;
+ };
  cards([
    ['直接担当JクレPJ',`${num(dash.direct_project_count||direct.length)}件`],
    ['関連閲覧',`${num(dash.related_view_count||related.length)}件`],
    ['申請主体',`${num(dash.applicant_project_count||direct.filter(x=>x.is_applicant).length)}件`],
    ['PM／事務局',`${num(dash.pm_operator_project_count||direct.filter(x=>x.is_pm_operator).length)}件`],
+   ['未完了PMタスク',`${num(dash.open_task_count||0)}件`],
+   ['高優先タスク',`${num(dash.high_priority_task_count||0)}件`],
    ['広域PJ申請主体',wideScope?partyLink(widePJ.representative_implementer):'—'],
    ['広域PJ森林',wideScope?`${num(widePJ.forest_count)}件 / ${ha(widePJ.target_area_ha)}`:'—']
  ]);
  let html=personaNoteHtml();
- html+=detailSection('PM権限の見方（v54）',[
-   ['直接担当PJ','PM会社が申請主体・PM／事務局・PJ取りまとめ等のPJロールを持つ案件。担当業務の入力・更新が可能。'],
-   ['関連閲覧PJ','担当地域に存在するため確認できる案件。PJロールが無い案件は「担当PJ」に数えず、原則閲覧のみ。'],
-   ['入力原則','閲覧できる情報すべてを編集できるわけではなく、PM会社自身に割り当てられたPJ・業務だけ入力・更新。']
+ html+=detailSection('PM権限の見方（v55）',[
+   ['直接担当PJ','PM会社が申請主体・PM／事務局・PJ取りまとめ等のPJロールを持つ案件。PJロールと割当業務の範囲で入力・更新。'],
+   ['関連閲覧PJ','担当地域に存在するため確認できる案件。直接PJロールが無い案件は担当件数に含めず、原則閲覧のみ。'],
+   ['タスク','tasks＋task_linksでPJと担当法人を紐付け。PM会社自身に割り当てられた業務だけをPMタスクとして表示。'],
+   ['契約','PM会社自身が当事者の契約と、直接担当PJとして管理対象になる契約を区別して表示。']
  ]);
- html+=table('PM｜直接担当しているJ-クレジットPJ',
-   ['PJ','PM会社の立場','区分','段階','対象地域','申請主体','森林管理','見える森林','入力'],
-   direct.map(s=>[
-     esc(s.project_name),
-     `<b>${esc(s.relationship_label)}</b>`,
-     s.is_wide_project?'<b>広域PJ（後発・別森林）</b>':'町村単独PJ',
-     `<span class="tag">${esc(stage(s.project_status))}</span>`,
-     esc(s.visible_region_names||'—'),partyLink(s.representative_implementer),partyLinksHtml(String(s.forest_managers||'').split(',').map(v=>v.trim()).filter(Boolean),'—'),
-     `${num(s.visible_forest_count)}件 / ${ha(s.visible_area_ha)}`,inputLabel(s)
-   ]));
- if(related.length){
-   html+=table('PM｜担当地域の関連PJ（直接担当ではない）',
-     ['PJ','立場','段階','地域','申請主体','森林管理','閲覧範囲','入力'],
-     related.map(s=>[
-       esc(s.project_name),esc(s.relationship_label),`<span class="tag">${esc(stage(s.project_status))}</span>`,
-       esc(s.visible_region_names||'—'),partyLink(s.representative_implementer),partyLinksHtml(String(s.forest_managers||'').split(',').map(v=>v.trim()).filter(Boolean),'—'),
-       `${esc(accessLabel(s.access_level))} / ${num(s.visible_forest_count)}件`,inputLabel(s)
-     ]));
- }
+ html+=projectCardSection('PM｜直接担当しているJ-クレジットPJ',direct,false);
+ if(related.length)html+=projectCardSection('PM｜担当地域の関連PJ（直接担当ではない）',related,true);
+ html+=taskCardSection('PM｜未完了タスク（正規化DB）',pmTasks.filter(x=>!['completed','closed','done','cancelled'].includes(x.status)));
  if(wideScope){
    const wf=forestScopes.filter(x=>x.project_code==='DEMO-JC-WIDE-001');
-   html+=detailSection('広域PJ｜主体と関係（v54）',[
+   html+=detailSection('広域PJ｜主体と関係（v55）',[
      ['PJ',esc(widePJ.project_name||wideScope.project_name)],
      ['申請者／代表プロジェクト実施者',partyLink(widePJ.representative_implementer)],
      ['広域PM／事務局',partyLink(widePJ.pm_operator)],
@@ -851,7 +890,8 @@ async function pm(){
      ['蒼谷村側の森林管理',partyLink('【デモ】蒼谷村森林組合')],
      ['森林経営計画',esc(widePJ.management_plan_names||'—')],
      ['申請設定','2027年に町村単独PJより後から、別PJ・別森林で新規申請'],
-     ['単独PJとの関係','合流なし・移行なし・対象森林の重複なし']
+     ['単独PJとの関係','合流なし・移行なし・対象森林の重複なし'],
+     ['権限根拠','DEMO-WIDE-PM-2027-01（広域J-クレジット申請・PM基本契約／デモ）']
    ]);
    html+=table('広域PJ｜専用の新規森林',
      ['地域','森林','面積','段階','単独PJとの重複'],
@@ -867,6 +907,8 @@ async function pm(){
      ['森林管理',partyLinksHtml(String(aomScope.forest_managers||'').split(',').map(v=>v.trim()).filter(Boolean),'—')],
      ['現PJ面積',ha(active.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],
      ['追加候補',ha(cand.reduce((s,x)=>s+Number(x.eligible_area_ha||0),0))],
+     ['PMタスク',`${num(aomScope.open_task_count||0)}件（高優先 ${num(aomScope.high_priority_task_count||0)}件）`],
+     ['次期限',date(aomScope.next_task_due)],
      ['注記','以下の予測・費用データは青嶺町単独PJのデモ。広域PJとは混ぜていません。']
    ]);
    html+=table('青嶺町単独PJ｜参加森林・追加候補',
@@ -879,12 +921,7 @@ async function pm(){
      ['年度','業者','費用項目','金額','契約'],
      costs.filter(x=>x.sourcing_type==='external').map(x=>[x.forecast_year,txt(x.vendor),x.cost_item,yen(x.amount_jpy),txt(x.contract_no)]));
  }
- html+=table('PM・事務局｜横断確認一覧',
-   ['期限','種別','森林','内容','担当','優先度','状態','メモ'],
-   items.map(x=>[date(x.due_on),x.item_type,txt(x.forest_name),x.title,txt(x.responsible),x.priority==='high'?`<span class="warn">high</span>`:txt(x.priority),x.status,txt(x.note)]));
- html+=table('PM・事務局｜契約管理',['契約','当事者','対象','期間','状態','契約書'],c.map(x=>[
-   x.title,txt(x.parties_text),txt(x.target_name),`${date(x.starts_on)}〜${date(x.ends_on)}`,txt(x.status),mockLink(x.mock_ref,'契約書を開く')
- ]));
+ html+=contractCardSection('PM・事務局｜契約管理（正規化DB）',pmContracts);
  document.getElementById('content').innerHTML=html;
 }
 
@@ -1898,14 +1935,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜閲覧対象森林マップ</strong><span class="mapmodebadge">v54 PM担当・関連閲覧分離＋広域PM申請モデル</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜閲覧対象森林マップ</strong><span class="mapmodebadge">v55 PM担当・関連閲覧分離＋タスク/契約正規化</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','閲覧対象森林','',true)+mk('parcel_boundary','筆境界')+mk('municipal','町有林（関係時のみ）','',true))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v54表示制御：</b>現在の利用者が閲覧対象とする森林だけを表示し、地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。<br><b>森林形状：</b>DBに森林管理ポリゴンがある森林はその形状を優先し、無い森林だけDBの筆表示ポリゴン合成を使います。J-クレジット等の色も同じ森林形状へ重ねます。<br><b>筆境界：</b>必要なときだけ「筆境界」をONにすると、DBに登録した筆表示ポリゴンを確認できます。表示側で境界や飛び地を生成しません。<br><b>データ区分：</b>現在のデモ生成筆は <b>デモ専用仮想筆／概略位置／非正本</b>。仮想地番は <b>DEMO-</b> で始まり、登記面積は未確認です。GISなしの手入力は未確認状態で登録し、外部資料取込→確認済みGIS・測量へ段階的に差し替えます。<br><b>表示：</b>閲覧対象森林を土台に、所有属性・町有林・PJ実施地・追加候補・別PJ/認証前を同じ森林形状へ重ねて表示します。町有林の一部がPJ実施地や追加候補である場合も、別の場所に描かず同じ形の上で重ねます。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林を土台に、所有・PJ・候補・水系などの状態を重ねて確認できます。クリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v55表示制御：</b>現在の利用者が閲覧対象とする森林だけを表示し、地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。<br><b>森林形状：</b>DBに森林管理ポリゴンがある森林はその形状を優先し、無い森林だけDBの筆表示ポリゴン合成を使います。J-クレジット等の色も同じ森林形状へ重ねます。<br><b>筆境界：</b>必要なときだけ「筆境界」をONにすると、DBに登録した筆表示ポリゴンを確認できます。表示側で境界や飛び地を生成しません。<br><b>データ区分：</b>現在のデモ生成筆は <b>デモ専用仮想筆／概略位置／非正本</b>。仮想地番は <b>DEMO-</b> で始まり、登記面積は未確認です。GISなしの手入力は未確認状態で登録し、外部資料取込→確認済みGIS・測量へ段階的に差し替えます。<br><b>表示：</b>閲覧対象森林を土台に、所有属性・町有林・PJ実施地・追加候補・別PJ/認証前を同じ森林形状へ重ねて表示します。町有林の一部がPJ実施地や追加候補である場合も、別の場所に描かず同じ形の上で重ねます。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林を土台に、所有・PJ・候補・水系などの状態を重ねて確認できます。クリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
