@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v59: persona-scoped navigation, plans, work, finance and delegation -->
+<!-- Forest OS v60: stable persona-scoped read layer for navigation, forests, plans, work, J-credit and finance -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v57</title>
+<title>Forest OS デモ｜管理コンソール v60</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -246,7 +246,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">利用者の立場・対象関係に応じて、必要な画面だけを表示します。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v59統合デモ。上部ナビは利用者の立場ごとに切り替わり、他の立場の専用画面は表示しません。表示範囲はDBの対象関係・担当・権利・委任に基づきます。計画・作業・契約・予実／収支・分配は用途別Read Only Viewから取得し、閲覧と入力・更新の可否を分離します。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。広域J-クレジットPJはPM会社が申請主体＋PM／事務局、各地域の森林組合は自地域の森林管理・森林経営計画を担当します。青嶺町・蒼谷村・業務情報は架空です。</div>
+<div class="footer">v60統合デモ。上部ナビは利用者の立場ごとに切り替わり、他の立場の専用画面は表示しません。表示範囲はDBの対象関係・担当・権利・委任に基づきます。森林・計画・作業・J-クレジット・契約・予実／収支・分配はv60の軽量Read層から取得し、閲覧と入力・更新の可否を分離します。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。広域J-クレジットPJはPM会社が申請主体＋PM／事務局、各地域の森林組合は自地域の森林管理・森林経営計画を担当します。青嶺町・蒼谷村・業務情報は架空です。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -345,7 +345,7 @@ function table(title,headers,rows){
 async function municipality(){
  const p=currentPersona();
  const [scopes,matrix,mapFeatures,j,t,allc]=await Promise.all([
-   q('demo_party_forest_scope_v31',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
+   q('demo_persona_forest_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
    q('demo_forest_rights_matrix_v33','select=*&order=region_name,forest_name'),
    q('demo_map_feature','select=*'),
    q('demo_jcredit_project_v22'),
@@ -408,13 +408,13 @@ async function forestCoop(){
  const viewer=personaScopePartyName();
  const vq=encodeURIComponent(viewer);
  const [dashRows,projects,plans,forests,works,tasks,contracts]=await Promise.all([
-   q('demo_forest_coop_dashboard_v56',`select=*&viewer_name=eq.${vq}`),
-   q('demo_forest_coop_project_portfolio_v56',`select=*&viewer_name=eq.${vq}&order=is_wide_project,project_code`),
-   q('demo_forest_coop_plan_v56',`select=*&viewer_name=eq.${vq}&order=starts_on,plan_code`),
-   q('demo_forest_coop_forest_v56',`select=*&viewer_name=eq.${vq}&order=management_period_status,region_name,forest_name`),
-   q('demo_forest_coop_work_v56',`select=*&viewer_name=eq.${vq}&order=planned_start_on,work_code`),
-   q('demo_forest_coop_task_v56',`select=*&viewer_name=eq.${vq}&order=due_on,title`),
-   q('demo_forest_coop_contract_v56',`select=*&viewer_name=eq.${vq}&order=starts_on,contract_no`)
+   q('demo_forest_coop_dashboard_v60',`select=*&viewer_name=eq.${vq}`),
+   q('demo_forest_coop_project_portfolio_v60',`select=*&viewer_name=eq.${vq}&order=is_wide_project,project_code`),
+   q('demo_forest_coop_plan_v60',`select=*&viewer_name=eq.${vq}&order=starts_on,plan_code`),
+   q('demo_forest_coop_forest_v60',`select=*&viewer_name=eq.${vq}&order=management_period_status,region_name,forest_name`),
+   q('demo_forest_coop_work_v60',`select=*&viewer_name=eq.${vq}&order=planned_start_on,work_code`),
+   q('demo_forest_coop_task_v60',`select=*&viewer_name=eq.${vq}&order=due_on,title`),
+   q('demo_forest_coop_contract_v60',`select=*&viewer_name=eq.${vq}&order=starts_on,contract_no`)
  ]);
  const dash=(dashRows||[])[0]||{};
  const stage=v=>({active:'運用中',registered:'登録済',pre_certification:'認証前・申請準備',planning:'計画中',approved:'承認済'}[v]||txt(v));
@@ -500,7 +500,7 @@ async function forestCoop(){
    ['次期限',date(dash.next_task_due)]
  ]);
  let html=personaNoteHtml();
- html+=detailSection('森林組合の役割・権限（v56）',[
+ html+=detailSection('森林組合の役割・権限（v60）',[
    ['森林管理','管理権限がDBで確認できる森林を「現在管理」「将来管理予定」に分けて表示。JクレPJの対象だから自動的に管理森林とはしません。'],
    ['町村単独JクレPJ','森林組合が申請主体／代表プロジェクト実施者を担う案件は、PJ全体の役割として表示。'],
    ['広域JクレPJ','申請主体は広域PM会社。森林組合は自地域の森林管理・森林経営計画のみを担当し、他地域の個別森林は扱いません。'],
@@ -568,7 +568,7 @@ async function ownerComplexRights(){
  const p=currentPersona();
  const [matrix,scopes]=await Promise.all([
    q('demo_forest_rights_matrix_v33','select=*&order=region_name,forest_name'),
-   q('demo_party_forest_scope_v31',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`)
+   q('demo_persona_forest_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`)
  ]);
  const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
  const rows=matrix.filter(x=>ids.has(String(x.forest_unit_id)));
@@ -763,9 +763,9 @@ async function jcreditProject(){
    q('demo_municipal_work_v22','select=*&order=work_code'),
    q('demo_jcredit_forecast_v22','select=*&order=forecast_year'),
    q('demo_wide_area_jcredit_v53','select=*'),
-   q('demo_party_jcredit_project_scope_v51',`select=*&viewer_name=eq.${vq}&order=project_code`),
-   q('demo_party_jcredit_forest_scope_v51',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
-   q('demo_party_jcredit_plan_scope_v51',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,plan_name`)
+   q('demo_persona_jcredit_project_scope_v60',`select=*&viewer_name=eq.${vq}&order=project_code`),
+   q('demo_persona_jcredit_forest_scope_v60',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
+   q('demo_persona_jcredit_plan_scope_v60',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,plan_name`)
  ]);
  const scopeMap=new Map(projectScopes.map(x=>[x.project_code,x]));
  const accessLabel=v=>({full_project:'PJ全体',region_detail:'自地域',forest_detail:'担当森林',work_context:'担当作業に必要な範囲',forest_self:'自分の森林'})[v]||txt(v);
@@ -927,7 +927,7 @@ async function pm(){
    q('demo_wide_area_jcredit_v53','select=*'),
    q('demo_pm_dashboard_v55',`select=*&viewer_name=eq.${vq}`),
    q('demo_pm_project_portfolio_v55',`select=*&viewer_name=eq.${vq}&order=relationship_class,project_code`),
-   q('demo_party_jcredit_forest_scope_v51',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
+   q('demo_persona_jcredit_forest_scope_v60',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
    q('demo_pm_accounting_portfolio_v57',`select=*&viewer_name=eq.${vq}&order=is_wide_project,project_code`)
  ]);
  const dash=(dashRows||[])[0]||{};
@@ -1116,7 +1116,7 @@ async function forestView(){
    q('demo_forest_detail','select=*&order=name'),
    q('demo_contract_relation','select=*&order=contract_no'),
    q('demo_work_evidence','select=*'),
-   q('demo_party_forest_scope_v31','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
+   q('demo_persona_forest_scope_v60','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
    q('demo_forest_rights_matrix_v33','select=*&order=region_name,forest_name')
  ]);
  const viewer=personaScopePartyName();
@@ -1151,7 +1151,7 @@ let townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*'
 let townMapLayers={reference:true,details:false,parcel_boundary:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
 const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
 
-/* ---------------- v31 地図の利用者スコープ連動 ---------------- */
+/* ---------------- v60 地図の利用者スコープ連動 ---------------- */
 function currentPersonaScopeRows(){
  const viewer=personaScopePartyName();
  return townMapPersonaScopes.filter(x=>x.viewer_name===viewer);
@@ -1193,7 +1193,7 @@ function matchesFilterValue(values,selected){if(selected==='*')return true;if(se
 function passesMapFilters(f){
  const m=filterMetaForFeature(f);
  const st=townMapFilterState;
- // v31: 業務レイヤーは、現在の利用者とDB上で関係する森林だけを通す。
+ // v60: 業務レイヤーは、現在の利用者とDB上で関係する森林だけを通す。
  if(!m||!mapScopeAllowsForestId(m.forest_unit_id))return false;
  if(st.region!=='*'&&m.region_name!==st.region)return false;
  if(st.forest!=='*'&&m.forest_unit_id!==st.forest)return false;
@@ -2004,7 +2004,7 @@ async function townMap(){
   q('demo_reference_forest_display_v12','select=*&order=feature_code'),
   q('demo_forest_data_coverage','select=*&order=forest_name'),
   q('demo_map_filter_v23','select=*&order=forest_name'),
-  q('demo_party_forest_scope_v31','select=*&order=viewer_name,region_name,forest_name'),
+  q('demo_persona_forest_scope_v60','select=*&order=viewer_name,region_name,forest_name'),
   q('demo_forest_rights_matrix_v33','select=*&order=region_name,forest_name'),
   q('demo_parcel_cell_v46','select=*&order=forest_code,parcel_no,cell_no'),
   q('demo_parcel_display_v47','select=*&order=forest_code,parcel_code'),
@@ -2065,14 +2065,14 @@ async function townMap(){
    c.forest_name,`<span class="density density-${esc(c.coverage_level)}">${esc(c.coverage_level)} ${num(c.coverage_pct)}%</span><div class="coveragebar"><span style="width:${Number(c.coverage_pct||0)}%"></span></div>`,
    coverageJP(c.geometry_status),coverageJP(c.register_status),coverageJP(c.ownership_status),coverageJP(c.boundary_status),coverageJP(c.work_status),coverageJP(c.jcredit_status),coverageJP(c.hazard_status)
  ]);
- document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜閲覧対象森林マップ</strong><span class="mapmodebadge">v59 立場別画面＋対象関係・権限をDBで分離</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
+ document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜閲覧対象森林マップ</strong><span class="mapmodebadge">v60 立場別画面＋軽量Read層で対象関係・権限を分離</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','閲覧対象森林','',true)+mk('parcel_boundary','筆境界')+mk('municipal','町有林（関係時のみ）','',true))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <div class="map-note"><b>v57表示制御：</b>現在の利用者が閲覧対象とする森林だけを表示し、地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。<br><b>森林形状：</b>DBに森林管理ポリゴンがある森林はその形状を優先し、無い森林だけDBの筆表示ポリゴン合成を使います。J-クレジット等の色も同じ森林形状へ重ねます。<br><b>筆境界：</b>必要なときだけ「筆境界」をONにすると、DBに登録した筆表示ポリゴンを確認できます。表示側で境界や飛び地を生成しません。<br><b>データ区分：</b>現在のデモ生成筆は <b>デモ専用仮想筆／概略位置／非正本</b>。仮想地番は <b>DEMO-</b> で始まり、登記面積は未確認です。GISなしの手入力は未確認状態で登録し、外部資料取込→確認済みGIS・測量へ段階的に差し替えます。<br><b>表示：</b>閲覧対象森林を土台に、所有属性・町有林・PJ実施地・追加候補・別PJ/認証前を同じ森林形状へ重ねて表示します。町有林の一部がPJ実施地や追加候補である場合も、別の場所に描かず同じ形の上で重ねます。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林を土台に、所有・PJ・候補・水系などの状態を重ねて確認できます。クリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <div class="map-note"><b>v60表示制御：</b>現在の利用者が閲覧対象とする森林だけを表示し、地域・PJ・森林・地権者・管理者・施業者で追加絞り込みします。<br><b>森林形状：</b>DBに森林管理ポリゴンがある森林はその形状を優先し、無い森林だけDBの筆表示ポリゴン合成を使います。J-クレジット等の色も同じ森林形状へ重ねます。<br><b>筆境界：</b>必要なときだけ「筆境界」をONにすると、DBに登録した筆表示ポリゴンを確認できます。表示側で境界や飛び地を生成しません。<br><b>データ区分：</b>現在のデモ生成筆は <b>デモ専用仮想筆／概略位置／非正本</b>。仮想地番は <b>DEMO-</b> で始まり、登記面積は未確認です。GISなしの手入力は未確認状態で登録し、外部資料取込→確認済みGIS・測量へ段階的に差し替えます。<br><b>表示：</b>閲覧対象森林を土台に、所有属性・町有林・PJ実施地・追加候補・別PJ/認証前を同じ森林形状へ重ねて表示します。町有林の一部がPJ実施地や追加候補である場合も、別の場所に描かず同じ形の上で重ねます。</div></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林を土台に、所有・PJ・候補・水系などの状態を重ねて確認できます。クリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
@@ -2585,13 +2585,13 @@ async function workSchedule(){
 }
 
 
-/* ---------------- v59 立場別ナビ・用途別View ---------------- */
+/* ---------------- v60 立場別ナビ・軽量Read層 ---------------- */
 let currentModuleCode='home';
 let roleModuleCache=new Map();
 async function roleModules(p=currentPersona()){
  const key=personaScopePartyName(p);
  if(roleModuleCache.has(key))return roleModuleCache.get(key);
- const rows=await q('demo_persona_module_scope_v59',`select=module_code,module_label,sort_order,access_mode&viewer_name=eq.${encodeURIComponent(key)}&order=sort_order`);
+ const rows=await q('demo_persona_module_scope_v60',`select=module_code,module_label,sort_order,access_mode&viewer_name=eq.${encodeURIComponent(key)}&order=sort_order`);
  roleModuleCache.set(key,rows);return rows;
 }
 async function renderRoleNav(){
@@ -2619,7 +2619,7 @@ function accessBadge(row){
 }
 async function personaPlanningScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
- const rows=await q('demo_persona_plan_scope_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`);
+ const rows=await q('demo_persona_plan_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`);
  const editable=rows.filter(x=>x.can_edit).length,reviewable=rows.filter(x=>x.can_review).length;
  cards([['対象計画',`${rows.length}件`],['編集可',`${editable}件`],['確認・承認対象',`${reviewable}件`],['対象面積',ha(rows.reduce((a,x)=>a+Number(x.target_area_ha||0),0))]]);
  const title=p.kind==='municipality'?'計画・承認':p.kind==='forest_coop'?'森林経営・施業計画':'計画';
@@ -2631,7 +2631,7 @@ async function personaPlanningScreen(){
 }
 async function personaWorkScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
- const rows=await q('demo_persona_work_scope_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`);
+ const rows=await q('demo_persona_work_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`);
  const editable=rows.filter(x=>x.can_update).length,recordable=rows.filter(x=>x.can_submit_work_record).length,coord=rows.filter(x=>x.can_coordinate).length;
  cards([['表示案件',`${rows.length}件`],['更新可',`${editable}件`],['実績入力可',`${recordable}件`],['調整可',`${coord}件`]]);
  const title=p.kind==='forestry_company'?'作業予定・実績':p.kind==='municipality'?'施業進捗':p.kind==='owner'?'施業予定・履歴':p.kind==='owner_proxy'?'作業・連絡':'作業・タスク';
@@ -2647,12 +2647,12 @@ function groupCosts(rows){
 async function personaFinanceScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
  const [dash,budgets,txs,costs,dists,contracts]=await Promise.all([
-  q('demo_persona_finance_dashboard_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
-  q('demo_persona_budget_scope_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=fiscal_year,context_code`),
-  q('demo_persona_transaction_scope_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
-  q('demo_persona_cost_scope_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
-  q('demo_persona_distribution_scope_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_payment_on`),
-  q('demo_persona_contract_scope_v59',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,contract_no`)
+  q('demo_persona_finance_dashboard_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
+  q('demo_persona_budget_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=fiscal_year,context_code`),
+  q('demo_persona_transaction_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
+  q('demo_persona_cost_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
+  q('demo_persona_distribution_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_payment_on`),
+  q('demo_persona_contract_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,contract_no`)
  ]);
  const d=dash[0]||{},label=d.finance_screen_label||'お金';
  const costGroups=groupCosts(costs);
@@ -2680,7 +2680,7 @@ async function personaFinanceScreen(){
 }
 async function accessAuditScreen(){
  const p=currentPersona();if(p.kind!=='admin')return personaHome();
- const [perms,health,mods]=await Promise.all([q('demo_access_role_permissions_v59','select=*&order=role_code,resource_type'),q('demo_database_health_v59','select=*'),q('demo_persona_module_scope_v59','select=*&order=persona_kind,sort_order')]);
+ const [perms,health,mods]=await Promise.all([q('demo_access_role_permissions_v60','select=*&order=role_code,resource_type'),q('demo_database_health_v60','select=*'),q('demo_persona_module_scope_v60','select=*&order=persona_kind,sort_order')]);
  const h=health[0]||{};
  cards([['DB状態',esc(h.status||'—')],['整合性エラー',num(h.integrity_issue_count||0)],['権限ルール',`${perms.length}件`],['立場別画面ルール',`${mods.length}件`]]);
  document.getElementById('content').innerHTML=personaNoteHtml()+table('アクセス権限ルール',['ロール','対象','範囲','操作','注記'],perms.map(x=>[esc(x.role_code),esc(x.resource_type),esc(x.scope_mode),esc((x.allowed_actions||[]).join(' / ')),esc(x.notes)]))+table('立場別画面',['立場','画面','アクセス方式'],mods.map(x=>[esc(x.persona_kind),esc(x.module_label),esc(x.access_mode)]));
