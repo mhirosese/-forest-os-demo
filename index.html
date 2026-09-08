@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v67 UI: v66 + PM/広域運営法人を一社に統合 -->
+<!-- Forest OS v68 UI: v67 + 統合PMの旧/新データを結合して非Jクレ画面を復元 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v67</title>
+<title>Forest OS デモ｜管理コンソール v68</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -273,7 +273,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">利用者の立場・対象関係に応じて、必要な画面だけを表示します。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v67統合デモ。山主以外は関与PJを選択し、面積・Jクレ・会計をPJ単位で分離表示します。町＝水源地整備、村＝放置森林再生、広域＝水源地＋再造林の3ストーリーをDBから取得し、未来金額・総事業費・版履歴を表示します。表示範囲はDBの対象関係・担当・権利・委任に基づきます。森林・計画・作業・契約はv60の軽量Read層、J-クレジットの町単体PJ固定森林・2年ごと認証・在庫販売・収益配賦・年度別予定はv62軽量Read層から取得し、閲覧と入力・更新の可否を分離します。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。広域J-クレジットPJは【デモ】広域森林マネジメント一般社団法人が代表実施・自前申請・PM・販売管理を担い、各地域の森林組合は自地域の森林管理・森林経営計画を担当します。青嶺町・蒼谷村・業務情報は架空です。</div>
+<div class="footer">v68統合デモ。山主以外は関与PJを選択し、面積・Jクレ・会計をPJ単位で分離表示します。町＝水源地整備、村＝放置森林再生、広域＝水源地＋再造林の3ストーリーをDBから取得し、未来金額・総事業費・版履歴を表示します。表示範囲はDBの対象関係・担当・権利・委任に基づきます。森林・計画・作業・契約はv60の軽量Read層、J-クレジットの町単体PJ固定森林・2年ごと認証・在庫販売・収益配賦・年度別予定はv62軽量Read層から取得し、閲覧と入力・更新の可否を分離します。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。広域J-クレジットPJは【デモ】広域森林マネジメント一般社団法人が代表実施・自前申請・PM・販売管理を担い、各地域の森林組合は自地域の森林管理・森林経営計画を担当します。青嶺町・蒼谷村・業務情報は架空です。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -289,7 +289,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <script>
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
-const PM_LEGACY_PARTY='【デモ】広域森林マネジメント一般社団法人';
+const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
 const PM_UNIFIED_PARTY='【デモ】広域森林マネジメント一般社団法人';
 const PM_QUERY_PARTIES=[PM_LEGACY_PARTY,PM_UNIFIED_PARTY];
 function normalizeDemoData(v){
@@ -312,8 +312,16 @@ async function q(view,params='select=*'){
    const rows=await fetchJson(params.replace(target,`viewer_name=eq.${encodeURIComponent(name)}`));
    merged.push(...rows);
   }
+  const normalized=normalizeDemoData(merged);
   const seen=new Set();
-  return normalizeDemoData(merged.filter(row=>{const key=JSON.stringify(row);if(seen.has(key))return false;seen.add(key);return true;}));
+  return normalized.filter(row=>{
+   const clone=(row&&typeof row==='object')?{...row}:row;
+   if(clone&&typeof clone==='object')delete clone.viewer_name;
+   const key=JSON.stringify(clone);
+   if(seen.has(key))return false;
+   seen.add(key);
+   return true;
+  });
  }
  return normalizeDemoData(await fetchJson(params));
 }
@@ -2563,7 +2571,7 @@ async function workSchedule(){
 }
 
 
-/* ---------------- v67 立場別ナビ・複数PJ選択・3ストーリー ---------------- */
+/* ---------------- v68 立場別ナビ・複数PJ選択・3ストーリー ---------------- */
 let currentModuleCode='home';
 let roleModuleCache=new Map();
 async function roleModules(p=currentPersona()){
@@ -2571,13 +2579,13 @@ async function roleModules(p=currentPersona()){
  if(roleModuleCache.has(key))return roleModuleCache.get(key);
  let rows=await q('demo_persona_module_scope_v62',`select=module_code,module_label,sort_order,access_mode&viewer_name=eq.${encodeURIComponent(key)}&order=sort_order`);
  if(!rows.length&&p.kind==='pm')rows=[
-  {module_code:'home',module_label:'ホーム',sort_order:1,access_mode:'role'},
-  {module_code:'map',module_label:'地図',sort_order:2,access_mode:'role'},
-  {module_code:'forest',module_label:'森林',sort_order:3,access_mode:'role'},
-  {module_code:'planning',module_label:'計画',sort_order:4,access_mode:'role'},
-  {module_code:'work',module_label:'作業',sort_order:5,access_mode:'role'},
-  {module_code:'jcredit',module_label:'J-クレジット',sort_order:6,access_mode:'role'},
-  {module_code:'finance',module_label:'会計・収支',sort_order:7,access_mode:'role'}
+  {module_code:'home',module_label:'ホーム',sort_order:10,access_mode:'view'},
+  {module_code:'map',module_label:'森林マップ',sort_order:20,access_mode:'view'},
+  {module_code:'forest',module_label:'森林',sort_order:30,access_mode:'view'},
+  {module_code:'planning',module_label:'計画',sort_order:40,access_mode:'assigned'},
+  {module_code:'work',module_label:'作業・タスク',sort_order:50,access_mode:'assigned'},
+  {module_code:'jcredit',module_label:'JクレPJ',sort_order:60,access_mode:'assigned'},
+  {module_code:'finance',module_label:'予実・収支',sort_order:70,access_mode:'assigned'}
  ];
  roleModuleCache.set(key,rows);return rows;
 }
@@ -2721,7 +2729,7 @@ async function accessAuditScreen(){
  document.getElementById('content').innerHTML=personaNoteHtml()+table('アクセス権限ルール',['ロール','対象','範囲','操作','注記'],perms.map(x=>[esc(x.role_code),esc(x.resource_type),esc(x.scope_mode),esc((x.allowed_actions||[]).join(' / ')),esc(x.notes)]))+table('立場別画面',['立場','画面','アクセス方式'],mods.map(x=>[esc(x.persona_kind),esc(x.module_label),esc(x.access_mode)]));
 }
 
-/* ---------------- v67 PJ選択・3ストーリー・未来会計・デモ入力 ---------------- */
+/* ---------------- v68 PJ選択・3ストーリー・未来会計・デモ入力 ---------------- */
 const PROJECT_DRAFT_KEY='forest_os_v65_project_drafts';
 const FINANCE_DRAFT_KEY='forest_os_v65_finance_drafts';
 function loadJsonStore(key){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch(_){return {}}}
