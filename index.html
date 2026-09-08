@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v66 UI: v65 + PJ選択同期 + 山主横断森林/分配整合 + 表示コード日本語化 -->
+<!-- Forest OS v67 UI: v66 + PM/広域運営法人を一社に統合 -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v66</title>
+<title>Forest OS デモ｜管理コンソール v67</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -273,7 +273,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">利用者の立場・対象関係に応じて、必要な画面だけを表示します。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v66統合デモ。山主以外は関与PJを選択し、面積・Jクレ・会計をPJ単位で分離表示します。町＝水源地整備、村＝放置森林再生、広域＝水源地＋再造林の3ストーリーをDBから取得し、未来金額・総事業費・版履歴を表示します。表示範囲はDBの対象関係・担当・権利・委任に基づきます。森林・計画・作業・契約はv60の軽量Read層、J-クレジットの町単体PJ固定森林・2年ごと認証・在庫販売・収益配賦・年度別予定はv62軽量Read層から取得し、閲覧と入力・更新の可否を分離します。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。広域J-クレジットPJは【デモ】広域森林マネジメント一般社団法人が代表実施・自前申請・PM・販売管理を担い、各地域の森林組合は自地域の森林管理・森林経営計画を担当します。青嶺町・蒼谷村・業務情報は架空です。</div>
+<div class="footer">v67統合デモ。山主以外は関与PJを選択し、面積・Jクレ・会計をPJ単位で分離表示します。町＝水源地整備、村＝放置森林再生、広域＝水源地＋再造林の3ストーリーをDBから取得し、未来金額・総事業費・版履歴を表示します。表示範囲はDBの対象関係・担当・権利・委任に基づきます。森林・計画・作業・契約はv60の軽量Read層、J-クレジットの町単体PJ固定森林・2年ごと認証・在庫販売・収益配賦・年度別予定はv62軽量Read層から取得し、閲覧と入力・更新の可否を分離します。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。広域J-クレジットPJは【デモ】広域森林マネジメント一般社団法人が代表実施・自前申請・PM・販売管理を担い、各地域の森林組合は自地域の森林管理・森林経営計画を担当します。青嶺町・蒼谷村・業務情報は架空です。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -289,10 +289,33 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <script>
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
+const PM_LEGACY_PARTY='【デモ】広域森林マネジメント一般社団法人';
+const PM_UNIFIED_PARTY='【デモ】広域森林マネジメント一般社団法人';
+const PM_QUERY_PARTIES=[PM_LEGACY_PARTY,PM_UNIFIED_PARTY];
+function normalizeDemoData(v){
+ if(Array.isArray(v))return v.map(normalizeDemoData);
+ if(v&&typeof v==='object'){const o={};for(const [k,val] of Object.entries(v))o[k]=normalizeDemoData(val);return o;}
+ if(typeof v==='string')return v.split(PM_LEGACY_PARTY).join(PM_UNIFIED_PARTY);
+ return v;
+}
 async function q(view,params='select=*'){
- const r=await fetch(`${SB_URL}/rest/v1/${view}?${params}`,{headers:{apikey:SB_KEY}});
- if(!r.ok)throw new Error(`${view}: ${r.status}`);
- return r.json();
+ const fetchJson=async qp=>{
+  const r=await fetch(`${SB_URL}/rest/v1/${view}?${qp}`,{headers:{apikey:SB_KEY}});
+  if(!r.ok)throw new Error(`${view}: ${r.status}`);
+  return r.json();
+ };
+ const currentPm=(typeof currentPersona==='function')?currentPersona():null;
+ const target=`viewer_name=eq.${encodeURIComponent(PM_UNIFIED_PARTY)}`;
+ if(currentPm?.id==='pm_integrated'&&typeof params==='string'&&params.includes(target)){
+  const merged=[];
+  for(const name of PM_QUERY_PARTIES){
+   const rows=await fetchJson(params.replace(target,`viewer_name=eq.${encodeURIComponent(name)}`));
+   merged.push(...rows);
+  }
+  const seen=new Set();
+  return normalizeDemoData(merged.filter(row=>{const key=JSON.stringify(row);if(seen.has(key))return false;seen.add(key);return true;}));
+ }
+ return normalizeDemoData(await fetchJson(params));
 }
 const yen=n=>n==null?'—':new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(n));
 const num=n=>n==null?'—':new Intl.NumberFormat('ja-JP').format(Number(n));
@@ -316,8 +339,7 @@ const DEMO_PERSONAS=[
  {id:'coop_aomine',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】青嶺町森林組合',scope:'自組合が管理・施業・PJ運営等で関係する森林',startRole:'forest_coop'},
  {id:'coop_soutani',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】蒼谷村森林組合',scope:'自組合が管理・PJ運営等で関係する蒼谷村森林',startRole:'forest_coop'},
  {id:'forestry_kitamine',kind:'forestry_company',roleLabel:'林業会社',party:'【デモ】北峰林業株式会社',scope:'自社が受託・実施する施業案件と対象森林',startRole:'forestry_company'},
- {id:'pm_aomine',kind:'pm',roleLabel:'広域PM',party:'【デモ】青嶺森林PM合同会社',scope:'担当する複数地域・PJ・調整案件',startRole:'pm'},
- {id:'association_wide',kind:'pm',roleLabel:'広域運営法人',party:'【デモ】広域森林マネジメント一般社団法人',scope:'広域PJ全体＋蒼谷村単体PJのPM支援',startRole:'pm'},
+ {id:'pm_integrated',kind:'pm',roleLabel:'PM／広域運営法人',party:PM_UNIFIED_PARTY,scope:'青嶺町PJ・蒼谷村PJ・広域PJの運営／支援／調整案件',startRole:'pm'},
  {id:'owner_a',kind:'owner',roleLabel:'山主本人',party:'山主A（デモ）',scope:'本人が権利を持つ森林・分配・関係契約',startRole:'owner'},
  {id:'owner_e',kind:'owner',roleLabel:'山主本人',party:'山主E（デモ）',scope:'単独所有・共同所有・立木所有をまたぐ本人の権利森林',startRole:'owner',complexRights:true},
  {id:'owner_f',kind:'owner',roleLabel:'山主本人',party:'山主F（デモ）',scope:'共同所有・土地所有・クレジット配分に関係する森林',startRole:'owner',complexRights:true},
@@ -328,6 +350,7 @@ const DEMO_PERSONAS=[
  {id:'owner_proxy_a',kind:'owner_proxy',roleLabel:'山主代理',party:'山主Aの子（管理代理・デモ）',principal:'山主A（デモ）',scope:'親から管理を委任された森林（所有権は親のまま）',startRole:'owner'}
 ];
 let demoPersonaId=localStorage.getItem('forest_os_demo_persona_v30')||'platform_admin';
+if(['pm_aomine','association_wide'].includes(demoPersonaId))demoPersonaId='pm_integrated';
 function currentPersona(){return DEMO_PERSONAS.find(x=>x.id===demoPersonaId)||DEMO_PERSONAS[0]}
 function personaScopePartyName(p=currentPersona()){return p.scopeParty||p.party}
 function personaOptionLabel(p){return `${p.roleLabel}｜${p.party}`}
@@ -351,7 +374,7 @@ function projectSelectionMap(){try{return JSON.parse(localStorage.getItem(PROJEC
 function storedProjectCode(p=currentPersona()){return projectSelectionMap()[p.id]||''}
 function saveSelectedProjectCode(code,p=currentPersona()){const m=projectSelectionMap();m[p.id]=code;localStorage.setItem(PROJECT_SELECTION_KEY,JSON.stringify(m));}
 function preferredProjectCode(p,rows){
- const pref={platform_admin:'DEMO-JC-001',municipality_aomine:'DEMO-JC-001',municipality_soutani:'DEMO-JC-SOUTANI-001',coop_aomine:'DEMO-JC-001',coop_soutani:'DEMO-JC-SOUTANI-001',forestry_kitamine:'DEMO-JC-WIDE-001',pm_aomine:'DEMO-JC-001',association_wide:'DEMO-JC-WIDE-001'}[p.id];
+ const pref={platform_admin:'DEMO-JC-001',municipality_aomine:'DEMO-JC-001',municipality_soutani:'DEMO-JC-SOUTANI-001',coop_aomine:'DEMO-JC-001',coop_soutani:'DEMO-JC-SOUTANI-001',forestry_kitamine:'DEMO-JC-WIDE-001',pm_integrated:'DEMO-JC-WIDE-001'}[p.id];
  return rows.some(x=>x.project_code===pref)?pref:(rows[0]?.project_code||'');
 }
 async function personaProjectPortfolio(p=currentPersona(),force=false){
@@ -404,7 +427,7 @@ function rolePersonaFallback(role){
  if(role==='municipality'&&p.kind!=='municipality')return 'municipality_aomine';
  if(role==='forest_coop'&&p.kind!=='forest_coop')return 'coop_aomine';
  if(role==='forestry_company'&&p.kind!=='forestry_company')return 'forestry_kitamine';
- if(role==='pm'&&p.kind!=='pm')return 'pm_aomine';
+ if(role==='pm'&&p.kind!=='pm')return 'pm_integrated';
  if(role==='owner'&&!['owner','owner_proxy'].includes(p.kind))return 'owner_a';
  return null;
 }
@@ -575,7 +598,7 @@ async function forestCoop(){
  html+=detailSection('森林組合の役割・権限（v60）',[
    ['森林管理','管理権限がDBで確認できる森林を「現在管理」「将来管理予定」に分けて表示。JクレPJの対象だから自動的に管理森林とはしません。'],
    ['町村単独JクレPJ','森林組合が申請主体／代表プロジェクト実施者を担う案件は、PJ全体の役割として表示。'],
-   ['広域JクレPJ','申請主体は広域PM会社。森林組合は自地域の森林管理・森林経営計画のみを担当し、他地域の個別森林は扱いません。'],
+   ['広域JクレPJ','申請主体は広域運営法人。森林組合は自地域の森林管理・森林経営計画のみを担当し、他地域の個別森林は扱いません。'],
    ['施業・タスク','自組合が責任主体として割り当てられた作業・タスクのみ入力対象。管理権限と施業担当は別関係として保持。']
  ]);
  html+=`<section><h2>J-クレジットPJ｜自組合の立場</h2>${projectCards(projects||[])}</section>`;
@@ -848,7 +871,7 @@ async function jcreditProject(){
    html+=table('広域PJ｜稼働中の森林',['地域','森林','段階','面積','閲覧範囲'],wf.map(x=>[esc(x.region_name),esc(x.forest_name),`<span class="tag">${pstage(x.participation_stage)}</span>`,ha(x.eligible_area_ha),esc(accessLabel(x.access_level))]));
    if((full||p.kind==='pm')&&wideCandidates.length)html+=table('広域PJ｜森林データから引き継いだ候補',['地域','森林','面積','権利確認','合意','理由'],wideCandidates.map(x=>[esc(x.region_name),esc(x.forest_name),ha(x.eligible_area_ha),esc(x.right_clearance_status),esc(x.agreement_status),esc(x.inclusion_reason)]));
    if(full&&widePJ.project_code)html+=detailSection('広域PJの主体・分離ルール（v62）',[
-     ['申請者／代表プロジェクト実施者',partyLink(widePJ.representative_implementer||'—')],['広域PM／事務局',partyLink(widePJ.pm_operator||'—')],['地域森林管理','青嶺町側＝青嶺町森林組合 / 蒼谷村側＝蒼谷村森林組合'],['町単体PJとの関係','既に町単体PJに入っている森林は移行・合流しない'],['新しい森林','町単体PJへ途中追加せず、森林データがあれば広域PJ候補として審査']
+     ['申請者／代表プロジェクト実施者',partyLink(widePJ.representative_implementer||'—')],['PM／広域運営法人',partyLink(widePJ.pm_operator||'—')],['地域森林管理','青嶺町側＝青嶺町森林組合 / 蒼谷村側＝蒼谷村森林組合'],['町単体PJとの関係','既に町単体PJに入っている森林は移行・合流しない'],['新しい森林','町単体PJへ途中追加せず、森林データがあれば広域PJ候補として審査']
    ]);
  }
 
@@ -977,7 +1000,7 @@ async function pm(){
    html+=detailSection('広域PJ｜主体と関係（v62）',[
      ['PJ',esc(widePJ.project_name||wideScope.project_name)],
      ['申請者／代表プロジェクト実施者',partyLink(widePJ.representative_implementer)],
-     ['広域PM／事務局',partyLink(widePJ.pm_operator)],
+     ['PM／広域運営法人',partyLink(widePJ.pm_operator)],
      ['申請者とPM',widePJ.applicant_is_pm?'同一法人（PM会社が申請者を兼務）':'別法人'],
      ['青嶺町側の森林管理',partyLink('【デモ】青嶺町森林組合')],
      ['蒼谷村側の森林管理',partyLink('【デモ】蒼谷村森林組合')],
@@ -2072,7 +2095,7 @@ const contractMocks={
  'contract-owner-pm':{
    title:'東山森林経営支援・PM委託契約書',
    meta:'契約番号 DEMO-C-2026-03　締結日 2026年4月20日',
-   parties:'委託者：山主A（デモ）　／　受託者：【デモ】青嶺森林PM合同会社',
+   parties:'委託者：山主A（デモ）　／　受託者：【デモ】広域森林マネジメント一般社団法人',
    object:'森林経営に関する制度対応、関係者調整、進捗管理及び情報整理',
    term:'2026年4月20日から2027年3月31日まで',
    amount:'業務範囲・報酬は個別条件表による（デモ）'
@@ -2080,7 +2103,7 @@ const contractMocks={
  'contract-municipality-pm':{
    title:'青嶺町森林事業PM業務委託契約書',
    meta:'契約番号 DEMO-C-2026-04　締結日 2026年4月1日',
-   parties:'委託者：【デモ】青嶺町　／　受託者：【デモ】青嶺森林PM合同会社',
+   parties:'委託者：【デモ】青嶺町　／　受託者：【デモ】広域森林マネジメント一般社団法人',
    object:'地域森林管理事業の事業設計、進捗管理、関係者調整及び上申資料整備',
    term:'2026年4月1日から2027年3月31日まで',
    amount:'契約金額はデモ表示のため省略'
@@ -2088,7 +2111,7 @@ const contractMocks={
  'contract-three-party':{
    title:'青嶺町地域森林事業 三者協定書',
    meta:'協定番号 DEMO-C-2026-05　締結日 2026年4月5日',
-   parties:'【デモ】青嶺町　／　【デモ】青嶺森林PM合同会社　／　【デモ】青嶺町森林組合',
+   parties:'【デモ】青嶺町　／　【デモ】広域森林マネジメント一般社団法人　／　【デモ】青嶺町森林組合',
    object:'地域森林事業における役割分担、情報連携、進捗共有及び責任範囲',
    term:'2026年4月5日から2029年3月31日まで',
    amount:'協定のため金額条項なし（個別委託契約で規定）'
@@ -2096,7 +2119,7 @@ const contractMocks={
  'jcredit-validation-existing':{
    title:'森林J-クレジット 妥当性確認・検証業務契約書',
    meta:'契約番号 DEMO-JC-C-01　締結日 2026年4月10日',
-   parties:'委託者：【デモ】青嶺森林PM合同会社　／　受託者：【デモ】森環境第三者審査機構',
+   parties:'委託者：【デモ】広域森林マネジメント一般社団法人　／　受託者：【デモ】森環境第三者審査機構',
    object:'既存森林J-クレジットPJの妥当性確認、モニタリング結果の検証及び審査対応',
    term:'2026年4月10日から2027年3月31日まで',
    amount:'審査費用は個別見積による（デモ）'
@@ -2104,7 +2127,7 @@ const contractMocks={
  'jcredit-sales-broker':{
    title:'J-クレジット販売仲介基本契約書',
    meta:'契約番号 DEMO-JC-C-02　締結日 2026年6月1日',
-   parties:'委託者：【デモ】青嶺森林PM合同会社　／　仲介者：【デモ】東浜環境商事株式会社',
+   parties:'委託者：【デモ】広域森林マネジメント一般社団法人　／　仲介者：【デモ】東浜環境商事株式会社',
    object:'クレジットの販売先探索、条件調整、売買手続及び取引連絡の支援',
    term:'2026年6月1日から2029年5月31日まで',
    amount:'仲介条件・手数料は取引条件表による（デモ）'
@@ -2112,7 +2135,7 @@ const contractMocks={
  'jcredit-program-validation':{
    title:'再造林プログラム 妥当性確認・検証業務契約書',
    meta:'契約番号 DEMO-JC-C-03　締結日 2026年3月15日',
-   parties:'委託者：【デモ】青嶺森林PM合同会社　／　受託者：【デモ】森環境第三者審査機構',
+   parties:'委託者：【デモ】広域森林マネジメント一般社団法人　／　受託者：【デモ】森環境第三者審査機構',
    object:'FO-003再造林プログラムの登録、参加活動の確認及びクレジット認証に係る検証業務',
    term:'2026年3月15日から2028年3月31日まで',
    amount:'審査費用は各認証回の条件表による（デモ）'
@@ -2120,7 +2143,7 @@ const contractMocks={
  'jcredit-monitoring-support':{
    title:'再造林モニタリング・森林計測支援契約書',
    meta:'契約番号 DEMO-JC-C-04　締結日 2026年4月1日',
-   parties:'委託者：【デモ】青嶺森林PM合同会社　／　受託者：【デモ】森林計測ラボ株式会社',
+   parties:'委託者：【デモ】広域森林マネジメント一般社団法人　／　受託者：【デモ】森林計測ラボ株式会社',
    object:'再造林面積、植栽本数、生存率、成長状況等の現地計測及びモニタリングデータ整備',
    term:'2026年4月1日から2029年3月31日まで',
    amount:'年度別業務仕様書・見積書による（デモ）'
@@ -2482,7 +2505,7 @@ const PLAN_KEY='forest_os_v25_plans';const ADOPTED_KEY='forest_os_v25_adopted_wo
 const defaultPlans=[
  {id:'plan-a',name:'計画案A｜2027重点施業',status:'draft',region:'【デモ】青嶺町',project:'DEMO-JC-001',note:'費用と防災・水源価値を見ながら優先森林を調整',rows:[
   {id:'a1',forests:['東山101林班1小班','西谷共有林102林班2小班'],work:'間伐',year:'2027',operator:'【デモ】青嶺町森林組合',area:28.0,cost:5200000,subsidy:3000000,timber:900000,jcredit:450000,values:{water:'high',disaster:'high',biodiversity:'mid'}},
-  {id:'a2',forests:['北谷103林班1小班（相続整理中）'],work:'権利整理',year:'2027',operator:'【デモ】青嶺森林PM合同会社',area:9.6,cost:350000,subsidy:0,timber:0,jcredit:0,values:{water:'mid',disaster:'mid',biodiversity:'mid'}}]},
+  {id:'a2',forests:['北谷103林班1小班（相続整理中）'],work:'権利整理',year:'2027',operator:'【デモ】広域森林マネジメント一般社団法人',area:9.6,cost:350000,subsidy:0,timber:0,jcredit:0,values:{water:'mid',disaster:'mid',biodiversity:'mid'}}]},
  {id:'plan-b',name:'計画案B｜施業分散',status:'comparing',region:'【デモ】青嶺町',project:'DEMO-JC-001',note:'2027年の資金需要を抑え、2028年へ一部延期',rows:[
   {id:'b1',forests:['東山101林班1小班'],work:'間伐',year:'2027',operator:'【デモ】北峰林業株式会社',area:10.0,cost:2400000,subsidy:1400000,timber:450000,jcredit:200000,values:{water:'high',disaster:'high',biodiversity:'mid'}},
   {id:'b2',forests:['西谷共有林102林班2小班'],work:'間伐',year:'2028',operator:'【デモ】青嶺町森林組合',area:18.0,cost:3300000,subsidy:1900000,timber:600000,jcredit:300000,values:{water:'high',disaster:'mid',biodiversity:'high'}}]}
@@ -2500,8 +2523,8 @@ const planProjectsByRegion={
  '【デモ】蒼谷村':[['','なし'],['DEMO-JC-SOUTANI-001','蒼谷村 森林J-クレジットPJ']]
 };
 const planOperatorsByRegion={
- '【デモ】青嶺町':['【デモ】青嶺町森林組合','【デモ】北峰林業株式会社','【デモ】青嶺森林PM合同会社'],
- '【デモ】蒼谷村':['【デモ】蒼谷村森林組合','【デモ】青嶺町森林組合','【デモ】青嶺森林PM合同会社']
+ '【デモ】青嶺町':['【デモ】青嶺町森林組合','【デモ】北峰林業株式会社','【デモ】広域森林マネジメント一般社団法人'],
+ '【デモ】蒼谷村':['【デモ】蒼谷村森林組合','【デモ】青嶺町森林組合','【デモ】広域森林マネジメント一般社団法人']
 };
 const planWorks=['間伐','主伐','植栽','下刈','巡視','測量・境界','作業道整備','権利整理','保全・モニタリング'];
 function planForests(){return planForestsByRegion[currentPlan().region]||[]}
@@ -2540,7 +2563,7 @@ async function workSchedule(){
 }
 
 
-/* ---------------- v65 立場別ナビ・複数PJ選択・3ストーリー ---------------- */
+/* ---------------- v67 立場別ナビ・複数PJ選択・3ストーリー ---------------- */
 let currentModuleCode='home';
 let roleModuleCache=new Map();
 async function roleModules(p=currentPersona()){
@@ -2698,7 +2721,7 @@ async function accessAuditScreen(){
  document.getElementById('content').innerHTML=personaNoteHtml()+table('アクセス権限ルール',['ロール','対象','範囲','操作','注記'],perms.map(x=>[esc(x.role_code),esc(x.resource_type),esc(x.scope_mode),esc((x.allowed_actions||[]).join(' / ')),esc(x.notes)]))+table('立場別画面',['立場','画面','アクセス方式'],mods.map(x=>[esc(x.persona_kind),esc(x.module_label),esc(x.access_mode)]));
 }
 
-/* ---------------- v65 PJ選択・3ストーリー・未来会計・デモ入力 ---------------- */
+/* ---------------- v67 PJ選択・3ストーリー・未来会計・デモ入力 ---------------- */
 const PROJECT_DRAFT_KEY='forest_os_v65_project_drafts';
 const FINANCE_DRAFT_KEY='forest_os_v65_finance_drafts';
 function loadJsonStore(key){try{return JSON.parse(localStorage.getItem(key)||'{}')}catch(_){return {}}}
@@ -2755,7 +2778,7 @@ function financeDraftForm(code){
   <div><label>区分</label><select id="ff_category"><option>森林整備費</option><option>審査・認証費</option><option>PM・外部コンサル</option><option>公費</option><option>Jクレ収入</option><option>所有者配賦</option><option>その他</option></select></div>
   <div><label>金額（円）</label><input id="ff_amount" type="number" min="0" step="10000" placeholder="例 1200000"></div>
   <div><label>金額段階</label><select id="ff_stage"><option value="provisional">仮置き</option><option value="estimating">積算中</option><option value="estimated">積算確定</option><option value="contracted">契約</option><option value="actual">実績</option><option value="settled">精算</option></select></div>
- </div><div style="margin-top:10px"><label>変更理由・根拠</label><textarea id="ff_reason" placeholder="仮単価、見積根拠、変更理由など"></textarea></div><div class="demo-form-actions"><button class="primarybtn" style="width:auto" type="button" onclick="saveFinanceDraft('${esc(code)}')">仮値を追加</button><button type="button" onclick="clearFinanceDrafts('${esc(code)}')">デモ入力をクリア</button></div><div class="demo-form-note">既存のv65会計版は変更せず、デモ下書きを別表示します。OS利用費は会計表示上「その他」です。</div></div></section>`;
+ </div><div style="margin-top:10px"><label>変更理由・根拠</label><textarea id="ff_reason" placeholder="仮単価、見積根拠、変更理由など"></textarea></div><div class="demo-form-actions"><button class="primarybtn" style="width:auto" type="button" onclick="saveFinanceDraft('${esc(code)}')">仮値を追加</button><button type="button" onclick="clearFinanceDrafts('${esc(code)}')">デモ入力をクリア</button></div><div class="demo-form-note">既存の会計版は変更せず、デモ下書きを別表示します。OS利用費は会計表示上「その他」です。</div></div></section>`;
 }
 function saveFinanceDraft(code){const year=Number(document.getElementById('ff_year')?.value),amount=Number(document.getElementById('ff_amount')?.value);if(!year||!amount)return alert('年度と金額を入力してください。');const all=loadJsonStore(FINANCE_DRAFT_KEY);const arr=all[code]||[];arr.push({id:Date.now(),fiscal_year:year,category:document.getElementById('ff_category')?.value||'その他',amount,stage:document.getElementById('ff_stage')?.value||'provisional',reason:document.getElementById('ff_reason')?.value||'',saved_at:new Date().toISOString()});all[code]=arr;localStorage.setItem(FINANCE_DRAFT_KEY,JSON.stringify(all));load('finance')}
 function clearFinanceDrafts(code){const all=loadJsonStore(FINANCE_DRAFT_KEY);delete all[code];localStorage.setItem(FINANCE_DRAFT_KEY,JSON.stringify(all));load('finance')}
