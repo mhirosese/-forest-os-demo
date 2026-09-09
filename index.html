@@ -287,6 +287,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// Forest OS frontend v73: canonical read-view PM dedupe fix
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
@@ -306,7 +307,10 @@ async function q(view,params='select=*'){
  };
  const currentPm=(typeof currentPersona==='function')?currentPersona():null;
  const target=`viewer_name=eq.${encodeURIComponent(PM_UNIFIED_PARTY)}`;
- if(currentPm?.id==='pm_integrated'&&typeof params==='string'&&params.includes(target)){
+ // Stable/current read views are already canonicalized to the unified PM party.
+ // Legacy-name fallback is only for old demo snapshot tables/views that still retain the former PM name.
+ const canonicalRead=String(view||'').startsWith('forest_os_ui_')||String(view||'').startsWith('forest_os_current_')||String(view||'').startsWith('forest_os_canonical_');
+ if(!canonicalRead&&currentPm?.id==='pm_integrated'&&typeof params==='string'&&params.includes(target)){
   const merged=[];
   for(const name of PM_QUERY_PARTIES){
    const rows=await fetchJson(params.replace(target,`viewer_name=eq.${encodeURIComponent(name)}`));
@@ -394,9 +398,16 @@ async function personaProjectPortfolio(p=currentPersona(),force=false){
  }else{
   rows=await q('forest_os_ui_project_portfolio',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=project_code`);
  }
- // v63の中核3ストーリーを優先。旧検証PJは現在の事業ストーリー画面では混在させない。
+ // 中核3ストーリーだけを現在の事業画面に出し、project_code単位で必ず1件に正規化する。
  const core=new Set(['DEMO-JC-001','DEMO-JC-SOUTANI-001','DEMO-JC-WIDE-001']);
  const coreRows=rows.filter(x=>core.has(x.project_code)); if(coreRows.length)rows=coreRows;
+ const byProject=new Map();
+ for(const row of rows){
+  const code=row?.project_code||'';
+  if(!code)continue;
+  if(!byProject.has(code))byProject.set(code,row);
+ }
+ rows=[...byProject.values()].sort((a,b)=>String(a.project_code).localeCompare(String(b.project_code)));
  projectPortfolioCache.set(key,rows);return rows;
 }
 async function currentProjectRow(p=currentPersona()){
