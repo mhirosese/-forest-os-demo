@@ -287,7 +287,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Forest OS frontend v73: canonical read-view PM dedupe fix
+// Forest OS frontend v74: stable read aliases for all versioned frontend reads
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
@@ -459,7 +459,7 @@ function table(title,headers,rows){
 async function municipality(){
  const p=currentPersona();
  const [scopes,matrix,mapFeatures,j,t,allc]=await Promise.all([
-   q('demo_persona_forest_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
+   q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
    q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
    q('demo_map_feature','select=*'),
    q('forest_os_ui_jcredit_project'),
@@ -522,13 +522,13 @@ async function forestCoop(){
  const viewer=personaScopePartyName();
  const vq=encodeURIComponent(viewer);
  const [dashRows,projects,plans,forests,works,tasks,contracts]=await Promise.all([
-   q('demo_forest_coop_dashboard_v60',`select=*&viewer_name=eq.${vq}`),
-   q('demo_forest_coop_project_portfolio_v60',`select=*&viewer_name=eq.${vq}&order=is_wide_project,project_code`),
-   q('demo_forest_coop_plan_v60',`select=*&viewer_name=eq.${vq}&order=starts_on,plan_code`),
-   q('demo_forest_coop_forest_v60',`select=*&viewer_name=eq.${vq}&order=management_period_status,region_name,forest_name`),
-   q('demo_forest_coop_work_v60',`select=*&viewer_name=eq.${vq}&order=planned_start_on,work_code`),
-   q('demo_forest_coop_task_v60',`select=*&viewer_name=eq.${vq}&order=due_on,title`),
-   q('demo_forest_coop_contract_v60',`select=*&viewer_name=eq.${vq}&order=starts_on,contract_no`)
+   q('forest_os_ui_forest_coop_dashboard',`select=*&viewer_name=eq.${vq}`),
+   q('forest_os_ui_forest_coop_project_portfolio',`select=*&viewer_name=eq.${vq}&order=is_wide_project,project_code`),
+   q('forest_os_ui_forest_coop_plan',`select=*&viewer_name=eq.${vq}&order=starts_on,plan_code`),
+   q('forest_os_ui_forest_coop_forest',`select=*&viewer_name=eq.${vq}&order=management_period_status,region_name,forest_name`),
+   q('forest_os_ui_forest_coop_work',`select=*&viewer_name=eq.${vq}&order=planned_start_on,work_code`),
+   q('forest_os_ui_forest_coop_task',`select=*&viewer_name=eq.${vq}&order=due_on,title`),
+   q('forest_os_ui_forest_coop_contract',`select=*&viewer_name=eq.${vq}&order=starts_on,contract_no`)
  ]);
  const dash=(dashRows||[])[0]||{};
  const stage=v=>({active:'運用中',registered:'登録済',pre_certification:'認証前・申請準備',planning:'計画中',approved:'承認済'}[v]||txt(v));
@@ -682,7 +682,7 @@ async function ownerComplexRights(){
  const p=currentPersona();
  const [matrix,scopes]=await Promise.all([
    q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
-   q('demo_persona_forest_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`)
+   q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`)
  ]);
  const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
  const rows=matrix.filter(x=>ids.has(String(x.forest_unit_id)));
@@ -718,7 +718,7 @@ async function owner(){
    q('demo_owner_forest',`select=*&owner_name=eq.${encodeURIComponent(ownerName)}&order=name`),
    q('demo_contract_relation','select=*&order=contract_no'),
    q('demo_work_evidence','select=*'),
-   q('demo_persona_jcredit_forest_scope_v62',`select=*&viewer_name=eq.${encodeURIComponent(ownerName)}&order=region_name,forest_name,project_code`)
+   q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(ownerName)}&order=region_name,forest_name,project_code`)
  ]);
  const c=allc.filter(x=>hasAudience(x,'owner'));
  const e=alle.filter(x=>hasAudience(x,'owner'));
@@ -765,14 +765,14 @@ async function accounting(){
    return;
  }
  const [dash,txs,story,annual,certs,inventory,sales,wideCandidates]=await Promise.all([
-   q('demo_persona_finance_dashboard_v62',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
-   q('demo_persona_transaction_scope_v61',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
-   q('demo_town_jcredit_finance_story_v62','select=*&order=fiscal_year'),
-   q('demo_town_jcredit_annual_plan_v62','select=*&order=calendar_year'),
-   q('demo_town_jcredit_certification_schedule_v62','select=*&order=certification_round'),
-   q('demo_town_jcredit_inventory_v62','select=*&order=sale_priority,lot_code'),
-   q('demo_town_jcredit_sales_v62','select=*&order=sale_date'),
-   q('demo_wide_candidate_forests_v62','select=*&order=region_name,forest_name')
+   q('forest_os_ui_persona_finance_dashboard',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
+   q('forest_os_ui_persona_transaction_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
+   q('forest_os_ui_town_jcredit_finance_story','select=*&order=fiscal_year'),
+   q('forest_os_ui_town_jcredit_annual_plan','select=*&order=calendar_year'),
+   q('forest_os_ui_town_jcredit_certification_schedule','select=*&order=certification_round'),
+   q('forest_os_ui_town_jcredit_inventory','select=*&order=sale_priority,lot_code'),
+   q('forest_os_ui_town_jcredit_sales','select=*&order=sale_date'),
+   q('forest_os_ui_wide_candidate_forests','select=*&order=region_name,forest_name')
  ]);
  const d=dash[0]||{},y26=story.find(x=>Number(x.fiscal_year)===2026)||{};
  cards([
@@ -849,17 +849,17 @@ async function jcreditProject(){
    q('demo_jcredit_project','select=*'),
    q('demo_jcredit_program_activity','select=*&order=activity_code'),
    q('demo_contract_relation','select=*&order=contract_no'),
-   q('demo_jcredit_growth_v62','select=*&order=project_code,area_version_no,forest_name'),
+   q('forest_os_ui_jcredit_growth','select=*&order=project_code,area_version_no,forest_name'),
    q('forest_os_ui_municipal_work','select=*&order=work_code'),
    q('forest_os_ui_wide_area_jcredit','select=*'),
-   q('demo_persona_jcredit_project_scope_v62',`select=*&viewer_name=eq.${vq}&order=project_code`),
-   q('demo_persona_jcredit_forest_scope_v62',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
-   q('demo_persona_jcredit_plan_scope_v60',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,plan_name`),
-   q('demo_town_jcredit_certification_schedule_v62','select=*&order=certification_round'),
-   q('demo_town_jcredit_inventory_v62','select=*&order=sale_priority,lot_code'),
-   q('demo_town_jcredit_sales_v62','select=*&order=sale_date'),
-   q('demo_town_jcredit_annual_plan_v62','select=*&order=calendar_year'),
-   q('demo_wide_candidate_forests_v62','select=*&order=region_name,forest_name')
+   q('forest_os_ui_persona_jcredit_project_scope',`select=*&viewer_name=eq.${vq}&order=project_code`),
+   q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
+   q('forest_os_ui_persona_jcredit_plan_scope',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,plan_name`),
+   q('forest_os_ui_town_jcredit_certification_schedule','select=*&order=certification_round'),
+   q('forest_os_ui_town_jcredit_inventory','select=*&order=sale_priority,lot_code'),
+   q('forest_os_ui_town_jcredit_sales','select=*&order=sale_date'),
+   q('forest_os_ui_town_jcredit_annual_plan','select=*&order=calendar_year'),
+   q('forest_os_ui_wide_candidate_forests','select=*&order=region_name,forest_name')
  ]);
  const scopeMap=new Map(projectScopes.map(x=>[x.project_code,x]));
  const accessLabel=v=>({full_project:'PJ全体',region_detail:'自地域',forest_detail:'担当森林',work_context:'担当作業に必要な範囲',forest_self:'自分の森林'})[v]||txt(v);
@@ -925,16 +925,16 @@ async function pm(){
  const [pmTasks,pmContracts,growth,fc,costs,wide,dashRows,projectScopes,forestScopes,accountingRows]=await Promise.all([
    q('forest_os_ui_pm_task',`select=*&viewer_name=eq.${vq}&order=due_on,project_code`),
    q('forest_os_ui_pm_contract_scope',`select=*&viewer_name=eq.${vq}&order=contract_no`),
-   q('demo_jcredit_growth_v62','select=*&project_code=eq.DEMO-JC-001&order=area_version_no,forest_name'),
-   q('demo_town_jcredit_annual_plan_v62','select=*&order=calendar_year'),
-   q('demo_town_jcredit_finance_story_v62','select=*&order=fiscal_year'),
+   q('forest_os_ui_jcredit_growth','select=*&project_code=eq.DEMO-JC-001&order=area_version_no,forest_name'),
+   q('forest_os_ui_town_jcredit_annual_plan','select=*&order=calendar_year'),
+   q('forest_os_ui_town_jcredit_finance_story','select=*&order=fiscal_year'),
    q('forest_os_ui_wide_area_jcredit','select=*'),
    q('forest_os_ui_pm_dashboard',`select=*&viewer_name=eq.${vq}`),
    q('forest_os_ui_pm_project_portfolio',`select=*&viewer_name=eq.${vq}&order=relationship_class,project_code`),
-   q('demo_persona_jcredit_forest_scope_v62',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
+   q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
    Promise.resolve([])
  ]);
- const [pmCertSchedule,pmWideCandidates]=await Promise.all([q('demo_town_jcredit_certification_schedule_v62','select=*&order=certification_round'),q('demo_wide_candidate_forests_v62','select=*&order=region_name,forest_name')]);
+ const [pmCertSchedule,pmWideCandidates]=await Promise.all([q('forest_os_ui_town_jcredit_certification_schedule','select=*&order=certification_round'),q('forest_os_ui_wide_candidate_forests','select=*&order=region_name,forest_name')]);
  const coreProjectCodes=new Set(['DEMO-JC-001','DEMO-JC-SOUTANI-001','DEMO-JC-WIDE-001']);
  projectScopes.splice(0,projectScopes.length,...projectScopes.filter(x=>coreProjectCodes.has(x.project_code)));
  const dash=(dashRows||[])[0]||{};
@@ -1115,7 +1115,7 @@ async function forestView(){
    q('demo_forest_detail','select=*&order=name'),
    q('demo_contract_relation','select=*&order=contract_no'),
    q('demo_work_evidence','select=*'),
-   q('demo_persona_forest_scope_v60','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
+   q('forest_os_ui_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
    q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name')
  ]);
  const viewer=personaScopePartyName();
@@ -1993,19 +1993,19 @@ async function townMap(){
   q('demo_town_forest_block','select=*&order=sort_order'),
   q('demo_forest_decision_context','select=*'),
   q('demo_town_forest_issue_area','select=*&order=issue_area_id'),
-  q('demo_issue_forest_display_v12','select=*&order=feature_code'),
+  q('forest_os_ui_issue_forest_display','select=*&order=feature_code'),
   q('demo_water_asset','select=*&order=asset_id'),
   q('demo_map_feature','select=*'),
   q('forest_os_ui_project_map','select=*'),
   q('demo_map_feature_relation','select=*'),
   q('demo_map_dataset_catalog','select=*'),
   q('demo_work_spatial_scope','select=*&order=work_code'),
-  q('demo_reference_forest_display_v12','select=*&order=feature_code'),
+  q('forest_os_ui_reference_forest_display','select=*&order=feature_code'),
   q('demo_forest_data_coverage','select=*&order=forest_name'),
-  q('demo_map_filter_v23','select=*&order=forest_name'),
-  q('demo_persona_forest_scope_v60','select=*&order=viewer_name,region_name,forest_name'),
+  q('forest_os_ui_map_filter','select=*&order=forest_name'),
+  q('forest_os_ui_persona_forest_scope','select=*&order=viewer_name,region_name,forest_name'),
   q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
-  q('demo_parcel_cell_v46','select=*&order=forest_code,parcel_no,cell_no'),
+  q('forest_os_ui_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
   q('forest_os_ui_parcel_display','select=*&order=forest_code,parcel_code'),
   q('forest_os_ui_forest_display','select=*&order=region_name,forest_name')
  ]);
@@ -2410,7 +2410,7 @@ function adminRender(){
 }
 async function adminConsole(rebuild=false){
  if(!adminData||rebuild){
-  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([q('demo_map_filter_v23','select=*&order=forest_name'),q('forest_os_ui_jcredit_project','select=*&order=project_code'),q('demo_forestry_company_work','select=*&order=title'),q('demo_accounting_cost_detail_v62','select=*&order=forecast_year,parent_category,cost_category_code'),q('demo_jcredit_growth_v62','select=*&order=area_version_no,forest_name'),q('demo_jcredit_program_activity','select=*&order=activity_code'),q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')]);
+  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([q('forest_os_ui_map_filter','select=*&order=forest_name'),q('forest_os_ui_jcredit_project','select=*&order=project_code'),q('demo_forestry_company_work','select=*&order=title'),q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),q('demo_jcredit_program_activity','select=*&order=activity_code'),q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')]);
   const mapRows=[...baseMapRows];for(const r of neighborDemo.mapRows)if(!mapRows.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))mapRows.push(r);
   const projects=[...baseProjects];for(const p of neighborDemo.projects)if(!projects.some(x=>x.project_code===p.project_code))projects.push(p);
   const works=[...baseWorks];for(const w of neighborDemo.works)if(!works.some(x=>x.title===w.title))works.push(w);
@@ -2430,11 +2430,11 @@ async function adminConsole(rebuild=false){
 async function ensurePartyData(){
  if(adminData)return adminData;
  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([
-  q('demo_map_filter_v23','select=*&order=forest_name'),
+  q('forest_os_ui_map_filter','select=*&order=forest_name'),
   q('forest_os_ui_jcredit_project','select=*&order=project_code'),
   q('demo_forestry_company_work','select=*&order=title'),
-  q('demo_accounting_cost_detail_v62','select=*&order=forecast_year,parent_category,cost_category_code'),
-  q('demo_jcredit_growth_v62','select=*&order=area_version_no,forest_name'),
+  q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),
+  q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),
   q('demo_jcredit_program_activity','select=*&order=activity_code'),
   q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')
  ]);
@@ -2590,7 +2590,7 @@ let roleModuleCache=new Map();
 async function roleModules(p=currentPersona()){
  const key=personaScopePartyName(p);
  if(roleModuleCache.has(key))return roleModuleCache.get(key);
- let rows=await q('demo_persona_module_scope_v62',`select=module_code,module_label,sort_order,access_mode&viewer_name=eq.${encodeURIComponent(key)}&order=sort_order`);
+ let rows=await q('forest_os_ui_persona_module_scope',`select=module_code,module_label,sort_order,access_mode&viewer_name=eq.${encodeURIComponent(key)}&order=sort_order`);
  if(!rows.length&&p.kind==='pm')rows=[
   {module_code:'home',module_label:'ホーム',sort_order:10,access_mode:'view'},
   {module_code:'map',module_label:'森林マップ',sort_order:20,access_mode:'view'},
@@ -2627,7 +2627,7 @@ function accessBadge(row){
 }
 async function personaPlanningScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
- const rows=await q('demo_persona_plan_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`);
+ const rows=await q('forest_os_ui_persona_plan_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`);
  const editable=rows.filter(x=>x.can_edit).length,reviewable=rows.filter(x=>x.can_review).length;
  cards([['対象計画',`${rows.length}件`],['編集可',`${editable}件`],['確認・承認対象',`${reviewable}件`],['対象面積',ha(rows.reduce((a,x)=>a+Number(x.target_area_ha||0),0))]]);
  const title=p.kind==='municipality'?'計画・承認':p.kind==='forest_coop'?'森林経営・施業計画':'計画';
@@ -2639,7 +2639,7 @@ async function personaPlanningScreen(){
 }
 async function personaWorkScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
- const rows=await q('demo_persona_work_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`);
+ const rows=await q('forest_os_ui_persona_work_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`);
  const editable=rows.filter(x=>x.can_update).length,recordable=rows.filter(x=>x.can_submit_work_record).length,coord=rows.filter(x=>x.can_coordinate).length;
  cards([['表示案件',`${rows.length}件`],['更新可',`${editable}件`],['実績入力可',`${recordable}件`],['調整可',`${coord}件`]]);
  const title=p.kind==='forestry_company'?'作業予定・実績':p.kind==='municipality'?'施業進捗':p.kind==='owner'?'施業予定・履歴':p.kind==='owner_proxy'?'作業・連絡':'作業・タスク';
@@ -2694,7 +2694,7 @@ function ownOrgFinanceSection(p,d){
 }
 async function accessAuditScreen(){
  const p=currentPersona();if(p.kind!=='admin')return personaHome();
- const [perms,health,mods]=await Promise.all([q('demo_access_role_permissions_v60','select=*&order=role_code,resource_type'),q('demo_database_health_v60','select=*'),q('demo_persona_module_scope_v62','select=*&order=persona_kind,sort_order')]);
+ const [perms,health,mods]=await Promise.all([q('forest_os_ui_access_role_permissions','select=*&order=role_code,resource_type'),q('forest_os_ui_database_health','select=*'),q('forest_os_ui_persona_module_scope','select=*&order=persona_kind,sort_order')]);
  const h=health[0]||{};
  cards([['DB状態',esc(h.status||'—')],['整合性エラー',num(h.integrity_issue_count||0)],['権限ルール',`${perms.length}件`],['立場別画面ルール',`${mods.length}件`]]);
  document.getElementById('content').innerHTML=personaNoteHtml()+table('アクセス権限ルール',['ロール','対象','範囲','操作','注記'],perms.map(x=>[esc(x.role_code),esc(x.resource_type),esc(x.scope_mode),esc((x.allowed_actions||[]).join(' / ')),esc(x.notes)]))+table('立場別画面',['立場','画面','アクセス方式'],mods.map(x=>[esc(x.persona_kind),esc(x.module_label),esc(x.access_mode)]));
@@ -2821,7 +2821,7 @@ async function personaFinanceScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
  if(['owner','owner_proxy'].includes(p.kind)){
   const ownerTargetName=p.kind==='owner_proxy'?(p.principal||''):p.party;
-  const ownerAnnual=ownerTargetName?await q('demo_owner_annual_cashflow_v62',`select=*&owner_name=eq.${encodeURIComponent(ownerTargetName)}&order=fiscal_year`):[];
+  const ownerAnnual=ownerTargetName?await q('forest_os_ui_owner_annual_cashflow',`select=*&owner_name=eq.${encodeURIComponent(ownerTargetName)}&order=fiscal_year`):[];
   cards([['年度数',`${ownerAnnual.length}年`],['累計Jクレ配賦',ownerAnnual.length?yen(ownerAnnual[ownerAnnual.length-1].cumulative_distribution_jpy):'—'],['表示','自分の森林・収支'],'PJ在庫','非表示']);
   document.getElementById('content').innerHTML=personaNoteHtml()+table('年度別の森林収支',['年度','状態','整備費精算率（対象時）','整備費精算見込','立木等手取り','Jクレ収益配賦','年度差引','累計Jクレ配賦'],ownerAnnual.map(x=>[esc(x.fiscal_year),`<span class="tag">${esc(x.plan_status)}</span>`,ownerShareRateDisplay(x),moneyRange(x.owner_contribution_min_jpy,null,x.owner_contribution_max_jpy,'未確定'),x.timber_net_to_owner_jpy==null?'—':yen(x.timber_net_to_owner_jpy),ownerDistributionDisplay(x),ownerNetDisplay(x),yen(x.cumulative_distribution_jpy)]))+`<section><div class="delegation-note"><b>山主表示：</b>クレジット在庫・Vintage・販売先は表示せず、自分の森林から生じる負担・立木収入・Jクレ収益配賦を年度別に確認します。</div></section>`;return;
  }
@@ -2830,13 +2830,13 @@ async function personaFinanceScreen(){
 
  if(cur.can_view_project_finance===false){
   const promises=[
-   q('demo_persona_transaction_scope_v61',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
-   q('demo_persona_cost_scope_v62',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
-   q('demo_persona_contract_scope_v60',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,contract_no`)
+   q('forest_os_ui_persona_transaction_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
+   q('forest_os_ui_persona_cost_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
+   q('forest_os_ui_persona_contract_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,contract_no`)
   ];
   if(p.kind==='municipality'){
-   promises.push(q('demo_persona_budget_scope_v61',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=fiscal_year,context_code`));
-   promises.push(q('demo_persona_distribution_scope_v62',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_payment_on`));
+   promises.push(q('forest_os_ui_persona_budget_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=fiscal_year,context_code`));
+   promises.push(q('forest_os_ui_persona_distribution_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_payment_on`));
   }
   const res=await Promise.all(promises);
   const txs=selectedProjectTransactionRows(p,code,res[0]),costs=selectedProjectCostRows(code,res[1]),contracts=selectedProjectContractRows(p,code,res[2]);
@@ -2861,7 +2861,7 @@ async function personaFinanceScreen(){
  }
 
  const extraPromises=[];
- if(p.kind==='forest_coop')extraPromises.push(q('demo_persona_finance_dashboard_v62',`select=*&viewer_name=eq.${encodeURIComponent(name)}`));
+ if(p.kind==='forest_coop')extraPromises.push(q('forest_os_ui_persona_finance_dashboard',`select=*&viewer_name=eq.${encodeURIComponent(name)}`));
  if(p.kind==='pm')extraPromises.push(q('forest_os_ui_wide_operator_business','select=*'));
  const [hzs,futs,lines,hist,...extras]=await Promise.all([
   q('forest_os_ui_project_finance_horizon',`select=*&project_code=eq.${encodeURIComponent(code)}`),
