@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v72 UI: stable UI read layer + legacy view isolation -->
+<!-- Forest OS v75 UI: canonical project reads + stable UI layer -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v72</title>
+<title>Forest OS デモ｜管理コンソール v75</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -287,7 +287,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Forest OS frontend v74: stable read aliases for all versioned frontend reads
+// Forest OS frontend v75: canonical current project reads + stable UI aliases
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
@@ -481,11 +481,10 @@ async function municipality(){
  const neglected=forests.filter(x=>String(x.props?.work_status||'').includes('長期未整備')||String(x.props?.management_status||'')==='neglected');
  const jcForests=forests.filter(x=>Array.isArray(x.rights?.jcredit_projects)&&x.rights.jcredit_projects.length);
  let projects=[];
- if(p.region==='【デモ】蒼谷村'){
-   projects=[{project_code:'DEMO-JC-SOUTANI-001',name:'【デモ】蒼谷村 森林J-クレジットPJ',target_area_ha:67.0,target_forest_count:3,active_area_ha:49.7,candidate_area_ha:17.3,issued_quantity_t:0,available_quantity_t:0,risk_reserved_quantity_t:0,sold_quantity_t:0,sales_amount_in_tax:0,open_compensation_cases:0,linked_fund_balance:0,project_owner_name:'【デモ】蒼谷村森林組合'}];
- }else{
-   projects=j.filter(x=>!String(x.name||'').includes('蒼谷村'));
- }
+ const regionProjectCodes=p.region==='【デモ】蒼谷村'
+   ?new Set(['DEMO-JC-SOUTANI-001','DEMO-JC-WIDE-001'])
+   :new Set(['DEMO-JC-001','DEMO-JC-WIDE-001']);
+ projects=j.filter(x=>regionProjectCodes.has(x.project_code));
  const c=allc.filter(x=>hasAudience(x,'municipality')&&(!x.parties_text||String(x.parties_text).includes(p.party)));
  const area=forests.reduce((sum,x)=>sum+Number(x.area_ha||0),0);
  cards([
@@ -2540,8 +2539,8 @@ const planForestsByRegion={
  '【デモ】蒼谷村':['蒼谷301林班1小班（山主A）','蒼谷村有林・北峰団地']
 };
 const planProjectsByRegion={
- '【デモ】青嶺町':[['','なし'],['DEMO-JC-001','青嶺町 森林J-クレジットPJ'],['DEMO-JC-PGM-001','再造林J-クレジットプログラム'],['DEMO-JC-002','南峰森林J-クレジットPJ（認証前）']],
- '【デモ】蒼谷村':[['','なし'],['DEMO-JC-SOUTANI-001','蒼谷村 森林J-クレジットPJ']]
+ '【デモ】青嶺町':[['','なし'],['DEMO-JC-001','青嶺町 森林J-クレジットPJ'],['DEMO-JC-WIDE-001','青嶺・蒼谷 広域森林J-クレジットPJ']],
+ '【デモ】蒼谷村':[['','なし'],['DEMO-JC-SOUTANI-001','蒼谷村 森林J-クレジットPJ'],['DEMO-JC-WIDE-001','青嶺・蒼谷 広域森林J-クレジットPJ']]
 };
 const planOperatorsByRegion={
  '【デモ】青嶺町':['【デモ】青嶺町森林組合','【デモ】北峰林業株式会社','【デモ】広域森林マネジメント一般社団法人'],
