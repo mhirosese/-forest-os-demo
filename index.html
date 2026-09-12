@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v75 UI: canonical project reads + stable UI layer -->
+<!-- Forest OS v76 UI: all frontend DB reads routed through stable public UI names -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v75</title>
+<title>Forest OS デモ｜管理コンソール v76</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -287,7 +287,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Forest OS frontend v75: canonical current project reads + stable UI aliases
+// Forest OS frontend v76: all frontend DB reads use stable public UI aliases
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
@@ -461,10 +461,10 @@ async function municipality(){
  const [scopes,matrix,mapFeatures,j,t,allc]=await Promise.all([
    q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
    q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
-   q('demo_map_feature','select=*'),
+   q('forest_os_ui_map_feature','select=*'),
    q('forest_os_ui_jcredit_project'),
-   q('demo_role_task',`select=*&role_code=eq.municipality&assigned_to=eq.${encodeURIComponent(p.party)}&order=due_on`),
-   q('demo_contract_relation','select=*&order=contract_no')
+   q('forest_os_ui_role_task',`select=*&role_code=eq.municipality&assigned_to=eq.${encodeURIComponent(p.party)}&order=due_on`),
+   q('forest_os_ui_contract_relation','select=*&order=contract_no')
  ]);
  const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
  const byId=new Map(matrix.filter(x=>ids.has(String(x.forest_unit_id))).map(x=>[String(x.forest_unit_id),x]));
@@ -630,10 +630,10 @@ async function forestCoop(){
 }
 async function forestryCompany(){
  const [w,allc,alle,wc]=await Promise.all([
-   q('demo_forestry_company_work','select=*&order=title'),
-   q('demo_contract_relation','select=*&order=contract_no'),
-   q('demo_work_evidence','select=*'),
-   q('demo_work_credit_context','select=*')
+   q('forest_os_ui_forestry_company_work','select=*&order=title'),
+   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
+   q('forest_os_ui_work_evidence','select=*'),
+   q('forest_os_ui_work_credit_context','select=*')
  ]);
  const c=allc.filter(x=>hasAudience(x,'forestry_company'));
  const e=alle.filter(x=>hasAudience(x,'forestry_company'));
@@ -652,8 +652,8 @@ async function ownerProxy(){
  const p=currentPersona();
  const [delegations,allc,alle]=await Promise.all([
    q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name'),
-   q('demo_contract_relation','select=*&order=contract_no'),
-   q('demo_work_evidence','select=*')
+   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
+   q('forest_os_ui_work_evidence','select=*')
  ]);
  const d=delegations.filter(x=>x.delegate_name===p.party);
  const c=allc.filter(x=>hasAudience(x,'owner'));const e=alle.filter(x=>hasAudience(x,'owner'));
@@ -714,9 +714,9 @@ async function owner(){
  if(currentPersona().complexRights)return ownerComplexRights();
  const p=currentPersona(), ownerName=p.party;
  const [f,allc,alle,pjScope]=await Promise.all([
-   q('demo_owner_forest',`select=*&owner_name=eq.${encodeURIComponent(ownerName)}&order=name`),
-   q('demo_contract_relation','select=*&order=contract_no'),
-   q('demo_work_evidence','select=*'),
+   q('forest_os_ui_owner_forest',`select=*&owner_name=eq.${encodeURIComponent(ownerName)}&order=name`),
+   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
+   q('forest_os_ui_work_evidence','select=*'),
    q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(ownerName)}&order=region_name,forest_name,project_code`)
  ]);
  const c=allc.filter(x=>hasAudience(x,'owner'));
@@ -845,9 +845,9 @@ async function jcreditProject(){
  const p=currentPersona();
  const viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
  const [j,a,allc,growth,muniWork,wide,projectScopes,forestScopes,planScopes,certSchedule,inventory,sales,annualPlan,wideCandidates]=await Promise.all([
-   q('demo_jcredit_project','select=*'),
-   q('demo_jcredit_program_activity','select=*&order=activity_code'),
-   q('demo_contract_relation','select=*&order=contract_no'),
+   q('forest_os_ui_jcredit_project_legacy_detail','select=*'),
+   q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code'),
+   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
    q('forest_os_ui_jcredit_growth','select=*&order=project_code,area_version_no,forest_name'),
    q('forest_os_ui_municipal_work','select=*&order=work_code'),
    q('forest_os_ui_wide_area_jcredit','select=*'),
@@ -1111,9 +1111,9 @@ function renderForestDetail(id){
 }
 async function forestView(){
  const [allForests,allContracts,allEvidence,personaScopes,rightsMatrix]=await Promise.all([
-   q('demo_forest_detail','select=*&order=name'),
-   q('demo_contract_relation','select=*&order=contract_no'),
-   q('demo_work_evidence','select=*'),
+   q('forest_os_ui_forest_detail','select=*&order=name'),
+   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
+   q('forest_os_ui_work_evidence','select=*'),
    q('forest_os_ui_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
    q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name')
  ]);
@@ -1988,19 +1988,19 @@ function initLeafletTownMap(){
 }
 async function townMap(){
  const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes,rightsMatrix,parcelCells,parcelDisplays,forestDisplays]=await Promise.all([
-  q('demo_town_profile','select=*'),
-  q('demo_town_forest_block','select=*&order=sort_order'),
-  q('demo_forest_decision_context','select=*'),
-  q('demo_town_forest_issue_area','select=*&order=issue_area_id'),
+  q('forest_os_ui_town_profile','select=*'),
+  q('forest_os_ui_town_forest_block','select=*&order=sort_order'),
+  q('forest_os_ui_forest_decision_context','select=*'),
+  q('forest_os_ui_town_forest_issue_area','select=*&order=issue_area_id'),
   q('forest_os_ui_issue_forest_display','select=*&order=feature_code'),
-  q('demo_water_asset','select=*&order=asset_id'),
-  q('demo_map_feature','select=*'),
+  q('forest_os_ui_water_asset','select=*&order=asset_id'),
+  q('forest_os_ui_map_feature','select=*'),
   q('forest_os_ui_project_map','select=*'),
-  q('demo_map_feature_relation','select=*'),
-  q('demo_map_dataset_catalog','select=*'),
-  q('demo_work_spatial_scope','select=*&order=work_code'),
+  q('forest_os_ui_map_feature_relation','select=*'),
+  q('forest_os_ui_map_dataset_catalog','select=*'),
+  q('forest_os_ui_work_spatial_scope','select=*&order=work_code'),
   q('forest_os_ui_reference_forest_display','select=*&order=feature_code'),
-  q('demo_forest_data_coverage','select=*&order=forest_name'),
+  q('forest_os_ui_forest_data_coverage','select=*&order=forest_name'),
   q('forest_os_ui_map_filter','select=*&order=forest_name'),
   q('forest_os_ui_persona_forest_scope','select=*&order=viewer_name,region_name,forest_name'),
   q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
@@ -2409,7 +2409,7 @@ function adminRender(){
 }
 async function adminConsole(rebuild=false){
  if(!adminData||rebuild){
-  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([q('forest_os_ui_map_filter','select=*&order=forest_name'),q('forest_os_ui_jcredit_project','select=*&order=project_code'),q('demo_forestry_company_work','select=*&order=title'),q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),q('demo_jcredit_program_activity','select=*&order=activity_code'),q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')]);
+  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([q('forest_os_ui_map_filter','select=*&order=forest_name'),q('forest_os_ui_jcredit_project','select=*&order=project_code'),q('forest_os_ui_forestry_company_work','select=*&order=title'),q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code'),q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')]);
   const mapRows=[...baseMapRows];for(const r of neighborDemo.mapRows)if(!mapRows.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))mapRows.push(r);
   const projects=[...baseProjects];for(const p of neighborDemo.projects)if(!projects.some(x=>x.project_code===p.project_code))projects.push(p);
   const works=[...baseWorks];for(const w of neighborDemo.works)if(!works.some(x=>x.title===w.title))works.push(w);
@@ -2431,10 +2431,10 @@ async function ensurePartyData(){
  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([
   q('forest_os_ui_map_filter','select=*&order=forest_name'),
   q('forest_os_ui_jcredit_project','select=*&order=project_code'),
-  q('demo_forestry_company_work','select=*&order=title'),
+  q('forest_os_ui_forestry_company_work','select=*&order=title'),
   q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),
   q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),
-  q('demo_jcredit_program_activity','select=*&order=activity_code'),
+  q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code'),
   q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')
  ]);
  const mapRows=[...baseMapRows];for(const r of neighborDemo.mapRows)if(!mapRows.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))mapRows.push(r);
