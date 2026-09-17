@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v77 UI: v76 stable UI reads + private-forest aggregation project module -->
+<!-- Forest OS v78 UI: v77 aggregation module + unified project navigation -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v77</title>
+<title>Forest OS デモ｜管理コンソール v78</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -262,7 +262,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 
 
 
-/* v77 私有林集約プロジェクト */
+/* v78 私有林集約プロジェクト / プロジェクト統合ナビ */
 .agg-separate-note{margin-bottom:14px;padding:11px 13px;border:1px solid #d7e0d8;border-radius:9px;background:#f7faf7;font-size:12px;line-height:1.65}
 .agg-separate-note b{color:var(--accent)}
 .agg-pipeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
@@ -285,6 +285,13 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 @media(max-width:900px){.agg-pipeline{grid-template-columns:1fr 1fr}.agg-pipe:after{display:none}.agg-layout{grid-template-columns:1fr}.agg-issuegrid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.agg-pipeline{grid-template-columns:1fr 1fr}.agg-parcelgrid{grid-auto-rows:27px}.agg-cell{min-width:27px}.agg-kv{grid-template-columns:1fr}.agg-issuegrid{grid-template-columns:1fr}.agg-progressrow{grid-template-columns:48px 1fr 72px 72px;gap:5px}.agg-pv{font-size:10px}}
 
+/* v78 project hub */
+.projecthub-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.projecthub-tabs button{font-size:12px;padding:8px 12px}
+.projecthub-tabs button.active{background:#425f4b;color:#fff;border-color:#425f4b}
+.projecthub-note{font-size:11px;color:var(--muted);margin:-3px 0 12px 2px;line-height:1.55}
+@media(max-width:520px){.projecthub-tabs{display:grid;grid-template-columns:1fr 1fr}.projecthub-tabs button{width:100%;padding:8px 7px}}
+
 </style>
 </head>
 <body>
@@ -298,7 +305,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">利用者の立場・対象関係に応じて、必要な画面だけを表示します。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v77統合デモ。私有林の集約プロジェクトをJ-クレジットとは別の森林管理業務として追加。山主以外は関与PJを選択し、面積・Jクレ・会計をPJ単位で分離表示します。町＝水源地整備、村＝放置森林再生、広域＝水源地＋再造林の3ストーリーをDBから取得します。画面はバージョン番号なしの安定UI Read層を参照し、旧vNN Viewはlegacy領域へ分離しています。表示範囲はDBの対象関係・担当・権利・委任に基づきます。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。青嶺町・蒼谷村・業務情報は架空です。</div>
+<div class="footer">v78統合デモ。上段ナビの「プロジェクト」に私有林集約と森林J-クレジットを整理し、集約デモは青嶺町72筆・180ha／蒼谷村48筆・120haへ非対称化。山主以外は関与PJを選択し、面積・Jクレ・会計をPJ単位で分離表示します。町＝水源地整備、村＝放置森林再生、広域＝水源地＋再造林の3ストーリーをDBから取得します。画面はバージョン番号なしの安定UI Read層を参照し、旧vNN Viewはlegacy領域へ分離しています。表示範囲はDBの対象関係・担当・権利・委任に基づきます。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。青嶺町・蒼谷村・業務情報は架空です。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -312,7 +319,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Forest OS frontend v77: stable public UI aliases + role-scoped aggregation module
+// Forest OS frontend v78: stable public UI aliases + unified project hub + role-scoped aggregation
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
@@ -394,8 +401,11 @@ function personaOptionLabel(p){return `${p.roleLabel}｜${p.party}`}
 function renderDemoContextBar(){
  const p=currentPersona(),el=document.getElementById('demoContextBar');if(!el)return;
  const badge=p.kind==='owner_proxy'?'<span class="ctxdelegate">代理管理</span>':'<span class="ctxbadge">デモ視点</span>';
+ const aggregationContext=(typeof currentModuleCode!=='undefined'&&currentModuleCode==='projects'&&typeof projectHubType!=='undefined'&&projectHubType==='aggregation');
  const projectField=['owner','owner_proxy'].includes(p.kind)?
   `<div class="ctxfield"><label>プロジェクト</label><div class="ctxvalue">山主画面はPJ選択を前面に出さず、森林・年度・収支から確認</div></div>`:
+  aggregationContext?
+  `<div class="ctxfield"><label>現在のPJ</label><div class="ctxvalue"><strong>私有林集約｜青嶺町・蒼谷村</strong><div class="context-inline-note">J-クレジットとは別の森林管理・施業集約プロジェクト</div></div></div>`:
   `<div class="ctxfield"><label>現在のPJ</label><div id="demoProjectField" class="ctxvalue"><span class="project-context-loading">PJを読み込み中...</span></div></div>`;
  el.innerHTML=`<div class="demo-context">
   <div class="ctxfield"><label>誰の目線で見る？</label><select id="demoPersonaSelect" onchange="setDemoPersona(this.value)">${DEMO_PERSONAS.map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(personaOptionLabel(x))}</option>`).join('')}</select><div class="context-inline-note">実運用ではログイン所属・対象関係・機密度で権限判定</div></div>
@@ -403,7 +413,7 @@ function renderDemoContextBar(){
   ${projectField}
   <div class="ctxfield"><label>主な表示範囲</label><div class="ctxvalue">${esc(p.scope)}${p.principal?`<br><span class="mini">権利者：${esc(p.principal)}</span>`:''}</div></div>
  </div>`;
- if(!['owner','owner_proxy'].includes(p.kind))hydrateProjectContext();
+ if(!['owner','owner_proxy'].includes(p.kind)&&!aggregationContext)hydrateProjectContext();
 }
 const PROJECT_SELECTION_KEY='forest_os_v65_project_selection';
 let projectPortfolioCache=new Map();
@@ -2709,9 +2719,24 @@ async function aggregationProject(){
 }
 
 
-/* ---------------- v70 立場別ナビ・複数PJ選択・3ストーリー ---------------- */
+/* ---------------- v78 立場別ナビ・プロジェクト統合 ---------------- */
 let currentModuleCode='home';
+let projectHubType=localStorage.getItem('forest_os_project_hub_v78')||'aggregation';
 let roleModuleCache=new Map();
+function projectHubTabsHtml(children){
+ const labels={aggregation:'私有林集約',jcredit:'森林J-クレジット'};
+ return `<div class="projecthub-tabs">${children.map(c=>`<button type="button" class="${c===projectHubType?'active':''}" onclick="switchProjectHub('${esc(c)}')">${esc(labels[c]||c)}</button>`).join('')}</div><div class="projecthub-note">同じ「プロジェクト」内でも、私有林集約とJ-クレジットは目的・対象・会計を混ぜずに別管理します。</div>`;
+}
+async function switchProjectHub(type){projectHubType=type;localStorage.setItem('forest_os_project_hub_v78',type);renderDemoContextBar();await projectHub();}
+async function projectHub(){
+ const pm=(await roleModules()).find(x=>x.module_code==='projects');
+ const children=Array.isArray(pm?.project_children)?pm.project_children:[];
+ if(!children.length){cards([['プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者に表示できるプロジェクト画面はありません。</div></section>';return;}
+ if(!children.includes(projectHubType))projectHubType=children.includes('aggregation')?'aggregation':children[0];
+ if(projectHubType==='aggregation')await aggregationProject();else await jcreditProject();
+ const content=document.getElementById('content');if(content)content.insertAdjacentHTML('afterbegin',projectHubTabsHtml(children));
+ renderDemoContextBar();
+}
 async function roleModules(p=currentPersona()){
  const key=personaScopePartyName(p);
  if(roleModuleCache.has(key))return roleModuleCache.get(key);
@@ -2725,10 +2750,15 @@ async function roleModules(p=currentPersona()){
   {module_code:'jcredit',module_label:'JクレPJ',sort_order:60,access_mode:'assigned'},
   {module_code:'finance',module_label:'予実・収支',sort_order:70,access_mode:'assigned'}
  ];
- try{
-  const aggAccess=await q('forest_os_ui_aggregation_access_scope',`select=access_mode&viewer_name=eq.${encodeURIComponent(key)}&limit=1`);
-  if(aggAccess.length&&!rows.some(x=>x.module_code==='aggregation'))rows.push({module_code:'aggregation',module_label:'集約プロジェクト',sort_order:25,access_mode:aggAccess[0].access_mode||'view'});
- }catch(_){/* 集約PJ対象外またはView未配置時は既存ナビを維持 */}
+ const hasJcredit=rows.some(x=>x.module_code==='jcredit');
+ let aggAccess=[];
+ try{aggAccess=await q('forest_os_ui_aggregation_access_scope',`select=access_mode&viewer_name=eq.${encodeURIComponent(key)}&limit=1`);}catch(_){aggAccess=[];}
+ const hasAggregation=aggAccess.length>0;
+ rows=rows.filter(x=>!['jcredit','aggregation','projects'].includes(x.module_code));
+ if(hasJcredit||hasAggregation){
+  const children=[];if(hasAggregation)children.push('aggregation');if(hasJcredit)children.push('jcredit');
+  rows.push({module_code:'projects',module_label:'プロジェクト',sort_order:25,access_mode:hasAggregation?(aggAccess[0].access_mode||'view'):'assigned',project_children:children});
+ }
  rows.sort((a,b)=>Number(a.sort_order||999)-Number(b.sort_order||999));
  roleModuleCache.set(key,rows);return rows;
 }
@@ -3042,8 +3072,10 @@ async function personaHome(){
  ]);
 }
 
-const loaders={home:personaHome,map:townMap,aggregation:aggregationProject,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,jcredit:jcreditProject,finance:personaFinanceScreen,access:accessAuditScreen};
+const loaders={home:personaHome,map:townMap,projects:projectHub,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,finance:personaFinanceScreen,access:accessAuditScreen};
 async function load(moduleCode){
+ if(moduleCode==='aggregation'){projectHubType='aggregation';moduleCode='projects';}
+ if(moduleCode==='jcredit'){projectHubType='jcredit';moduleCode='projects';}
  currentModuleCode=moduleCode||'home';
  document.querySelectorAll('button[data-module]').forEach(b=>b.classList.toggle('active',b.dataset.module===currentModuleCode));
  document.getElementById('cards').innerHTML='';
