@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- Forest OS v78 UI: v77 aggregation module + unified project navigation -->
+<!-- Forest OS v79 UI: regional forest portfolio + forest recovery + retained aggregation + unified project navigation -->
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forest OS デモ｜管理コンソール v78</title>
+<title>Forest OS デモ｜管理コンソール v79</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--bg:#f6f7f5;--panel:#fff;--line:#dfe3df;--text:#1f2922;--muted:#66736a;--accent:#2f5d40;--soft:#eef3ef;--warn:#8b5a13}
@@ -262,7 +262,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 
 
 
-/* v78 私有林集約プロジェクト / プロジェクト統合ナビ */
+/* v79 私有林集約プロジェクト / 地域ポートフォリオ統合ナビ */
 .agg-separate-note{margin-bottom:14px;padding:11px 13px;border:1px solid #d7e0d8;border-radius:9px;background:#f7faf7;font-size:12px;line-height:1.65}
 .agg-separate-note b{color:var(--accent)}
 .agg-pipeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
@@ -285,7 +285,22 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 @media(max-width:900px){.agg-pipeline{grid-template-columns:1fr 1fr}.agg-pipe:after{display:none}.agg-layout{grid-template-columns:1fr}.agg-issuegrid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.agg-pipeline{grid-template-columns:1fr 1fr}.agg-parcelgrid{grid-auto-rows:27px}.agg-cell{min-width:27px}.agg-kv{grid-template-columns:1fr}.agg-issuegrid{grid-template-columns:1fr}.agg-progressrow{grid-template-columns:48px 1fr 72px 72px;gap:5px}.agg-pv{font-size:10px}}
 
-/* v78 project hub */
+/* v79 地域森林ポートフォリオ / 森林復帰 */
+.portfolio-note{margin-bottom:14px;padding:12px 14px;border:1px solid #cfdccf;border-radius:10px;background:#f4f8f4;font-size:12px;line-height:1.7}
+.portfolio-note b{color:var(--accent)}
+.recovery-flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.recovery-step{position:relative;background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px 12px;min-width:0}
+.recovery-step:not(:last-child):after{content:'→';position:absolute;right:-15px;top:50%;transform:translateY(-50%);z-index:2;color:#869289;font-weight:700}
+.recovery-step .t{font-size:10px;color:var(--muted)}.recovery-step .v{font-size:19px;font-weight:750;margin-top:3px}.recovery-step .d{font-size:10px;color:var(--muted);line-height:1.45;margin-top:3px}
+.portfolio-actions{display:flex;gap:8px;flex-wrap:wrap;padding:11px 12px;border-top:1px solid var(--line)}
+.portfolio-actions button{font-size:12px}.portfolio-actions .go{background:#f5f9f6;border-color:#adc1b1;color:#28583a;font-weight:700}
+.recovery-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px}
+.recovery-status{border:1px solid #e4e9e4;border-radius:8px;padding:10px;background:#fff}.recovery-status .n{font-size:18px;font-weight:750}.recovery-status .t{font-size:10px;color:var(--muted);margin-top:2px}.recovery-status .d{font-size:10px;color:#69756d;margin-top:5px;line-height:1.45}
+.finance-snapshot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px}.finance-snapshot>div{border:1px solid #e4e9e4;border-radius:8px;padding:10px;background:#fff}.finance-snapshot .k{font-size:10px;color:var(--muted)}.finance-snapshot .v{font-size:15px;font-weight:700;margin-top:3px}.finance-disclaimer{padding:9px 12px;border-top:1px solid #edf0ed;background:#fafbfa;font-size:11px;line-height:1.6;color:var(--muted)}
+@media(max-width:900px){.recovery-flow{grid-template-columns:1fr 1fr}.recovery-step:after{display:none}.finance-snapshot{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.recovery-flow{grid-template-columns:1fr 1fr}.recovery-status-grid{grid-template-columns:1fr 1fr}.finance-snapshot{grid-template-columns:1fr 1fr}}
+
+/* v79 project hub */
 .projecthub-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
 .projecthub-tabs button{font-size:12px;padding:8px 12px}
 .projecthub-tabs button.active{background:#425f4b;color:#fff;border-color:#425f4b}
@@ -305,7 +320,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <div id="notice" class="notice">利用者の立場・対象関係に応じて、必要な画面だけを表示します。</div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
-<div class="footer">v78統合デモ。上段ナビの「プロジェクト」に私有林集約と森林J-クレジットを整理し、集約デモは青嶺町72筆・180ha／蒼谷村48筆・120haへ非対称化。山主以外は関与PJを選択し、面積・Jクレ・会計をPJ単位で分離表示します。町＝水源地整備、村＝放置森林再生、広域＝水源地＋再造林の3ストーリーをDBから取得します。画面はバージョン番号なしの安定UI Read層を参照し、旧vNN Viewはlegacy領域へ分離しています。表示範囲はDBの対象関係・担当・権利・委任に基づきます。山主代理は本人とは別主体として扱い、委任された森林・業務と支払予定概要のみを表示し、銀行口座等の高度機密情報は表示しません。青嶺町・蒼谷村・業務情報は架空です。</div>
+<div class="footer">v79統合デモ。上段ナビの「プロジェクト」を、地域森林ポートフォリオ→私有林集約→森林J-クレジットの3層で表示します。森林復帰は所有者意向・権利・境界等を整理し、集約・事業単位形成を経て林業／公的管理／治山／維持管理／J-クレジット等の出口判断につなぐ上位管理レイヤーです。私有林集約は独立した中核工程として維持し、青嶺町72筆・180ha／蒼谷村48筆・120haの非対称デモを継続します。森林復帰プールとJ-クレジットPJ会計は別管理し、未確定の地域配賦・固定率は置きません。画面はバージョン番号なしの安定UI Read層を参照し、表示範囲はDBの対象関係・担当・権利・委任に基づきます。青嶺町・蒼谷村・業務情報は架空です。</div>
 </main>
 
 <div id="viewer" class="modal" aria-hidden="true">
@@ -319,7 +334,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Forest OS frontend v78: stable public UI aliases + unified project hub + role-scoped aggregation
+// Forest OS frontend v79: regional forest portfolio + forest recovery + retained aggregation + project-scoped finance
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
@@ -401,11 +416,15 @@ function personaOptionLabel(p){return `${p.roleLabel}｜${p.party}`}
 function renderDemoContextBar(){
  const p=currentPersona(),el=document.getElementById('demoContextBar');if(!el)return;
  const badge=p.kind==='owner_proxy'?'<span class="ctxdelegate">代理管理</span>':'<span class="ctxbadge">デモ視点</span>';
- const aggregationContext=(typeof currentModuleCode!=='undefined'&&currentModuleCode==='projects'&&typeof projectHubType!=='undefined'&&projectHubType==='aggregation');
+ const projectContext=(typeof currentModuleCode!=='undefined'&&currentModuleCode==='projects'&&typeof projectHubType!=='undefined');
+ const portfolioContext=projectContext&&projectHubType==='portfolio';
+ const aggregationContext=projectContext&&projectHubType==='aggregation';
  const projectField=['owner','owner_proxy'].includes(p.kind)?
   `<div class="ctxfield"><label>プロジェクト</label><div class="ctxvalue">山主画面はPJ選択を前面に出さず、森林・年度・収支から確認</div></div>`:
+  portfolioContext?
+  `<div class="ctxfield"><label>現在の対象</label><div class="ctxvalue"><strong>地域森林ポートフォリオ｜森林復帰</strong><div class="context-inline-note">地域森林全体を見て、集約・出口判断・継続管理へつなぐ上位レイヤー</div></div></div>`:
   aggregationContext?
-  `<div class="ctxfield"><label>現在のPJ</label><div class="ctxvalue"><strong>私有林集約｜青嶺町・蒼谷村</strong><div class="context-inline-note">J-クレジットとは別の森林管理・施業集約プロジェクト</div></div></div>`:
+  `<div class="ctxfield"><label>現在のPJ</label><div class="ctxvalue"><strong>私有林集約｜青嶺町・蒼谷村</strong><div class="context-inline-note">森林復帰の中核工程。所有者・権利・境界を整理し事業単位を形成</div></div></div>`:
   `<div class="ctxfield"><label>現在のPJ</label><div id="demoProjectField" class="ctxvalue"><span class="project-context-loading">PJを読み込み中...</span></div></div>`;
  el.innerHTML=`<div class="demo-context">
   <div class="ctxfield"><label>誰の目線で見る？</label><select id="demoPersonaSelect" onchange="setDemoPersona(this.value)">${DEMO_PERSONAS.map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(personaOptionLabel(x))}</option>`).join('')}</select><div class="context-inline-note">実運用ではログイン所属・対象関係・機密度で権限判定</div></div>
@@ -413,7 +432,7 @@ function renderDemoContextBar(){
   ${projectField}
   <div class="ctxfield"><label>主な表示範囲</label><div class="ctxvalue">${esc(p.scope)}${p.principal?`<br><span class="mini">権利者：${esc(p.principal)}</span>`:''}</div></div>
  </div>`;
- if(!['owner','owner_proxy'].includes(p.kind)&&!aggregationContext)hydrateProjectContext();
+ if(!['owner','owner_proxy'].includes(p.kind)&&!aggregationContext&&!portfolioContext)hydrateProjectContext();
 }
 const PROJECT_SELECTION_KEY='forest_os_v65_project_selection';
 let projectPortfolioCache=new Map();
@@ -2636,7 +2655,8 @@ function aggStatusLabel(v,kind){
   rights:{clear:'整理済',conditional:'条件あり',unresolved:'未解決',not_checked:'未確認'},
   boundary:{clear:'確認済',needs_review:'追加確認',unresolved:'未解決',not_checked:'未確認'},
   readiness:{ready:'施業候補',conditional:'条件調整',blocked:'要整理',not_assessed:'未評価'},
-  plan:{candidate:'候補',not_started:'未着手',included:'計画内',approved:'承認済'}
+  plan:{candidate:'候補',not_started:'未着手',included:'計画内',approved:'承認済'},
+  aggregation:{candidate:'候補',contacting:'所有者連絡中',rights_review:'権利確認中',consent_review:'意向・同意確認中',management_ready:'施業準備済',aggregated:'集約済',on_hold:'保留',rejected:'現時点で対象外'}
  };
  return maps[kind]?.[v]||txt(v);
 }
@@ -2644,7 +2664,7 @@ function aggPill(t,em=false,warn=false){return `<span class="agg-pill ${em?'em':
 function aggScopeNote(summary){
  const p=currentPersona(),visible=Number(summary.visible_area_ha||0),project=Number(summary.project_target_area_ha||0);
  const scope=summary.all_regions?'広域全体':`${p.party}の対象地域`;
- return `<div class="agg-separate-note"><b>森林管理・施業集約の画面です。J-クレジットPJとは別管理です。</b><br>${esc(scope)}として ${ha(visible)} を表示しています${visible!==project?`（広域全体 ${ha(project)}）`:''}。所有者探索、参加意向、相続・共有、境界・現地条件を整理し、施業できるまとまりを作る業務を追跡します。集約後の森林が将来J-クレジット候補になることはありますが、この画面ではクレジット判定・認証・販売を扱いません。</div>`;
+ return `<div class="agg-separate-note"><b>森林復帰の中核となる私有林集約の画面です。J-クレジットPJとは別管理です。</b><br>${esc(scope)}として ${ha(visible)} を表示しています${visible!==project?`（広域全体 ${ha(project)}）`:''}。所有者探索、参加意向、相続・共有、境界・現地条件を整理し、施業できるまとまりを作る業務を追跡します。集約で事業単位を形成した後は、地域森林ポートフォリオ側で林業・公的管理・治山・維持管理・J-クレジット等の出口を判断します。この画面ではクレジット判定・認証・販売を扱いません。</div>`;
 }
 function aggRenderPipeline(s){
  return `<div class="agg-pipeline">${[
@@ -2719,21 +2739,85 @@ async function aggregationProject(){
 }
 
 
-/* ---------------- v78 立場別ナビ・プロジェクト統合 ---------------- */
+/* ---------------- v79 地域森林ポートフォリオ / 森林復帰 ---------------- */
+function recoveryStageLabel(v){return ({untracked:'未把握',forest_identified:'森林把握',owner_identification:'所有者確認',owner_intent:'所有者意向',rights_boundary:'権利・境界整理',field_assessment:'現況確認',aggregation_candidate:'集約候補',business_assessment:'事業性・出口判断',route_decision:'出口決定',managed:'継続管理'})[v]||txt(v);}
+function recoveryStateLabel(v){return ({managed:'管理復帰',on_hold:'保留',route_decision_pending:'出口判断待ち',route_selected:'出口決定済',recovery_in_progress:'森林復帰中'})[v]||txt(v);}
+function recoveryBlockerLabel(v){return ({owner_declined:'所有者意向・不同意',rights_unresolved:'権利未整理',boundary_unresolved:'境界未整理',boundary_review_required:'境界追加確認',work_readiness_blocked:'施業準備条件未充足'})[v]||txt(v);}
+function recoveryArea(rows,pred){return rows.filter(pred).reduce((z,x)=>z+Number(x.area_ha||0),0);}
+function recoveryFlowHtml(rows,totalArea){
+ const owner=recoveryArea(rows,x=>x.recovery_case_status==='active'&&x.recovery_stage==='owner_intent');
+ const rights=recoveryArea(rows,x=>x.recovery_case_status==='active'&&x.recovery_stage==='rights_boundary');
+ const business=recoveryArea(rows,x=>x.recovery_case_status==='active'&&x.recovery_stage==='business_assessment');
+ const managed=recoveryArea(rows,x=>x.portfolio_state==='managed');
+ return `<div class="recovery-flow">${[
+  ['対象森林',totalArea,'地域ポートフォリオの現在範囲'],
+  ['所有者意向',owner,'参加意向・連絡状況を整理'],
+  ['権利・境界',rights,'相続・共有・境界等を整理'],
+  ['事業性・出口判断',business,'集約後も含め最適な管理経路を判断'],
+  ['継続管理',managed,'管理ラインへ復帰した森林']
+ ].map(x=>`<div class="recovery-step"><div class="t">${esc(x[0])}</div><div class="v">${ha(x[1])}</div><div class="d">${esc(x[2])}</div></div>`).join('')}</div>`;
+}
+function recoveryFinanceSection(fin){
+ if(!fin)return '';
+ if(fin.finance_access_level==='not_available')return `<section><h2>森林復帰プール</h2><div class="empty">${esc(fin.display_note||'この立場では森林復帰プールの財務を表示しません。')}</div></section>`;
+ if(fin.finance_access_level==='regional_allocation_pending')return `<section><h2>森林復帰プール</h2><div class="empty">${esc(fin.display_note||'地域別配賦ルールが未確定のため金額は表示しません。')}</div></section>`;
+ return `<section><h2>森林復帰プール</h2><div class="finance-snapshot"><div><div class="k">確定入金</div><div class="v">${yen(fin.confirmed_inflow)}</div></div><div><div class="k">確定支出</div><div class="v">${yen(fin.confirmed_outflow)}</div></div><div><div class="k">現在残高</div><div class="v">${yen(fin.confirmed_balance)}</div></div><div><div class="k">確定移動</div><div class="v">${num(fin.confirmed_movement_count||0)}件</div></div></div><div class="finance-disclaimer">${esc(fin.display_note||'森林復帰費の受け皿。J-クレジットPJ会計とは別管理です。')}</div></section>`;
+}
+function projectFinanceSnapshotHtml(x){
+ if(!x)return `<section><h2>選択中PJ｜予実・資金・分配</h2><div class="empty">このPJの会計スナップショットはまだありません。</div></section>`;
+ if(x.finance_applicable===false||x.project_finance_access_level==='not_applicable')return `<section><h2>選択中PJ｜予実・資金・分配</h2><div class="empty">${esc(x.display_note||'この対象ではJ-クレジットPJ会計を使用しません。')}</div></section>`;
+ const val=v=>v==null?'—':yen(v);
+ return `<section><h2>選択中PJ｜予実・資金・分配</h2><div class="finance-snapshot"><div><div class="k">予算</div><div class="v">${val(x.budget_total)}</div></div><div><div class="k">計画費用</div><div class="v">${val(x.planned_cost_total)}</div></div><div><div class="k">確定・精算済費用</div><div class="v">${val(x.settled_cost_total)}</div></div><div><div class="k">その他費用</div><div class="v">${val(x.other_cost_total)}</div></div><div><div class="k">入金記録</div><div class="v">${val(x.recorded_inflow_total)}</div></div><div><div class="k">出金記録</div><div class="v">${val(x.recorded_outflow_total)}</div></div><div><div class="k">分配予定</div><div class="v">${val(x.distribution_pending_total)}</div></div><div><div class="k">分配済</div><div class="v">${val(x.distribution_paid_total)}</div></div></div><div class="finance-disclaimer"><b>損益表示ではありません。</b> ${esc(x.display_note||'予算・費用・入出金記録・分配は別台帳です。入出金にはPJ内の資金移動を含むため、差額を利益・損失として扱いません。')}</div></section>`;
+}
+async function forestPortfolio(){
+ const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
+ const [summaries,rows,finance,aggSummaries]=await Promise.all([
+  q('forest_os_ui_persona_forest_recovery_summary',`select=*&viewer_name=eq.${vq}&limit=1`),
+  q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${vq}&order=region_name,forest_name`),
+  q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`),
+  q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${vq}&limit=1`)
+ ]);
+ const s=summaries[0],fin=finance[0],aggS=aggSummaries[0];
+ if(!s){cards([['地域森林ポートフォリオ','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者には地域森林ポートフォリオを表示できません。</div></section>';return;}
+ const total=Number(s.total_area_ha||0),managed=Math.max(0,total-Number(s.recovery_in_progress_area_ha||0)-Number(s.route_decision_pending_area_ha||0)-Number(s.on_hold_area_ha||0));
+ cards([
+  ['対象森林',`${num(s.forest_count)}筆 / ${ha(total)}`],
+  ['森林復帰中',ha(s.recovery_in_progress_area_ha)],
+  ['出口判断待ち',ha(s.route_decision_pending_area_ha)],
+  ['保留',ha(s.on_hold_area_ha)],
+  ['管理復帰',ha(managed)],
+  ['事業単位候補',aggS?ha(aggS.visible_business_unit_area_ha):'—']
+ ]);
+ const blockerMap=new Map();
+ rows.filter(x=>x.recovery_case_status==='on_hold').forEach(x=>{const k=x.primary_blocker_code||'other';const z=blockerMap.get(k)||{area:0,count:0};z.area+=Number(x.area_ha||0);z.count++;blockerMap.set(k,z);});
+ const candidate=rows.filter(x=>x.portfolio_state==='route_decision_pending');
+ const creditScreen=rows.filter(x=>x.jcredit_technical_status||x.jcredit_business_decision);
+ let html=personaNoteHtml()+`<div class="portfolio-note"><b>地域森林ポートフォリオは、集約を置き換える画面ではありません。</b><br>管理から外れた森林を把握し、所有者意向・権利・境界等を整理したうえで、必要な森林は私有林集約で事業単位を形成し、その後に林業・公的管理・権利整理・治山・維持管理・J-クレジット等の出口を判断します。</div>`;
+ html+=recoveryFlowHtml(rows,total);
+ if(aggS)html+=`<section><h2>私有林集約｜森林復帰の中核工程</h2><div class="agg-body">${aggRenderPipeline(aggS)}<div class="smallnote">この集約ファネルは残します。${ha(aggS.visible_area_ha)} → 状況把握 ${ha(aggS.visible_known_area_ha)} → 施業候補 ${ha(aggS.visible_ready_area_ha)} → 事業単位候補 ${ha(aggS.visible_business_unit_area_ha)}。事業単位に入らない施業候補 ${ha(aggS.visible_scattered_ready_area_ha)} も管理対象のまま残します。</div></div><div class="portfolio-actions"><button type="button" class="go" onclick="switchProjectHub('aggregation')">集約Map・筆詳細を開く</button></div></section>`;
+ html+=`<section><h2>森林復帰と集約の関係</h2><div class="detailgrid"><div class="detailitem"><div class="k">森林復帰</div><div class="v">地域森林全体を対象に、管理ラインへ戻すための上位管理。集約が不要な森林も含みます。</div></div><div class="detailitem"><div class="k">私有林集約</div><div class="v">小規模・分散所有等で単独事業化しにくい森林を、所有者・権利・境界を整理しながら施業・事業単位へまとめる中核工程。</div></div><div class="detailitem"><div class="k">出口判断</div><div class="v">集約できたことをゴールにせず、林業・公的管理・治山・維持管理・J-クレジット等の適切な管理経路を選びます。</div></div></div><div class="portfolio-actions"><button type="button" class="go" onclick="switchProjectHub('aggregation')">私有林集約を見る</button><button type="button" onclick="switchProjectHub('jcredit')">森林J-クレジットを見る</button></div></section>`;
+ if(blockerMap.size)html+=`<section><h2>保留・停止理由</h2><div class="recovery-status-grid">${[...blockerMap.entries()].map(([k,z])=>`<div class="recovery-status"><div class="n">${ha(z.area)}</div><div class="t">${esc(recoveryBlockerLabel(k))}｜${num(z.count)}筆</div><div class="d">森林を削除せず、理由を残したまま次回確認へ引き継ぎます。</div></div>`).join('')}</div></section>`;
+ if(candidate.length)html+=table('事業性・出口判断待ちの森林',['地域','森林','面積','集約状態','施業準備','出口'],candidate.map(x=>[esc(x.region_name||'—'),esc(x.forest_name||'—'),ha(x.area_ha),esc(aggStatusLabel(x.aggregation_status,'aggregation')),esc(aggStatusLabel(x.work_readiness_status,'readiness')),'未決定']));
+ if(creditScreen.length)html+=table('出口判定に使えるJ-クレジット事前情報',['地域','森林','技術判定','事業判断','理由','再評価'],creditScreen.map(x=>[esc(x.region_name||'—'),esc(x.forest_name||'—'),esc(x.jcredit_technical_status||'—'),esc(x.jcredit_business_decision||'—'),esc(x.jcredit_decision_reason||'—'),date(x.jcredit_reassess_on)]));
+ html+=recoveryFinanceSection(fin);
+ document.getElementById('content').innerHTML=html;
+}
+
+/* ---------------- v79 立場別ナビ・プロジェクト統合 ---------------- */
 let currentModuleCode='home';
-let projectHubType=localStorage.getItem('forest_os_project_hub_v78')||'aggregation';
+let projectHubType=localStorage.getItem('forest_os_project_hub_v79')||'portfolio';
 let roleModuleCache=new Map();
 function projectHubTabsHtml(children){
- const labels={aggregation:'私有林集約',jcredit:'森林J-クレジット'};
- return `<div class="projecthub-tabs">${children.map(c=>`<button type="button" class="${c===projectHubType?'active':''}" onclick="switchProjectHub('${esc(c)}')">${esc(labels[c]||c)}</button>`).join('')}</div><div class="projecthub-note">同じ「プロジェクト」内でも、私有林集約とJ-クレジットは目的・対象・会計を混ぜずに別管理します。</div>`;
+ const labels={portfolio:'地域森林ポートフォリオ',aggregation:'私有林集約',jcredit:'森林J-クレジット'};
+ return `<div class="projecthub-tabs">${children.map(c=>`<button type="button" class="${c===projectHubType?'active':''}" onclick="switchProjectHub('${esc(c)}')">${esc(labels[c]||c)}</button>`).join('')}</div><div class="projecthub-note">地域森林ポートフォリオが全体を管理し、私有林集約は事業単位形成の中核工程、J-クレジットは出口の一つとして別管理します。</div>`;
 }
-async function switchProjectHub(type){projectHubType=type;localStorage.setItem('forest_os_project_hub_v78',type);renderDemoContextBar();await projectHub();}
+async function switchProjectHub(type){projectHubType=type;localStorage.setItem('forest_os_project_hub_v79',type);renderDemoContextBar();await projectHub();}
 async function projectHub(){
  const pm=(await roleModules()).find(x=>x.module_code==='projects');
  const children=Array.isArray(pm?.project_children)?pm.project_children:[];
  if(!children.length){cards([['プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者に表示できるプロジェクト画面はありません。</div></section>';return;}
- if(!children.includes(projectHubType))projectHubType=children.includes('aggregation')?'aggregation':children[0];
- if(projectHubType==='aggregation')await aggregationProject();else await jcreditProject();
+ if(!children.includes(projectHubType))projectHubType=children.includes('portfolio')?'portfolio':(children.includes('aggregation')?'aggregation':children[0]);
+ if(projectHubType==='portfolio')await forestPortfolio();else if(projectHubType==='aggregation')await aggregationProject();else await jcreditProject();
  const content=document.getElementById('content');if(content)content.insertAdjacentHTML('afterbegin',projectHubTabsHtml(children));
  renderDemoContextBar();
 }
@@ -2751,13 +2835,14 @@ async function roleModules(p=currentPersona()){
   {module_code:'finance',module_label:'予実・収支',sort_order:70,access_mode:'assigned'}
  ];
  const hasJcredit=rows.some(x=>x.module_code==='jcredit');
- let aggAccess=[];
+ let aggAccess=[],portfolioAccess=[];
  try{aggAccess=await q('forest_os_ui_aggregation_access_scope',`select=access_mode&viewer_name=eq.${encodeURIComponent(key)}&limit=1`);}catch(_){aggAccess=[];}
- const hasAggregation=aggAccess.length>0;
- rows=rows.filter(x=>!['jcredit','aggregation','projects'].includes(x.module_code));
- if(hasJcredit||hasAggregation){
-  const children=[];if(hasAggregation)children.push('aggregation');if(hasJcredit)children.push('jcredit');
-  rows.push({module_code:'projects',module_label:'プロジェクト',sort_order:25,access_mode:hasAggregation?(aggAccess[0].access_mode||'view'):'assigned',project_children:children});
+ try{portfolioAccess=await q('forest_os_ui_persona_forest_portfolio_scope',`select=portfolio_access_level,access_mode&viewer_name=eq.${encodeURIComponent(key)}&limit=1`);}catch(_){portfolioAccess=[];}
+ const hasAggregation=aggAccess.length>0,hasPortfolio=portfolioAccess.length>0;
+ rows=rows.filter(x=>!['jcredit','aggregation','portfolio','projects'].includes(x.module_code));
+ if(hasJcredit||hasAggregation||hasPortfolio){
+  const children=[];if(hasPortfolio)children.push('portfolio');if(hasAggregation)children.push('aggregation');if(hasJcredit)children.push('jcredit');
+  rows.push({module_code:'projects',module_label:'プロジェクト',sort_order:25,access_mode:hasPortfolio?(portfolioAccess[0].access_mode||'view'):(hasAggregation?(aggAccess[0].access_mode||'view'):'assigned'),project_children:children});
  }
  rows.sort((a,b)=>Number(a.sort_order||999)-Number(b.sort_order||999));
  roleModuleCache.set(key,rows);return rows;
@@ -2987,6 +3072,8 @@ async function personaFinanceScreen(){
  }
  const rows=await personaProjectPortfolio(p),cur=await currentProjectRow(p);if(!cur){document.getElementById('content').innerHTML=personaNoteHtml()+'<div class="empty">関与PJがありません。</div>';return;}
  const code=cur.project_code;
+ let financeSnapshot=null;
+ try{const fs=await q('forest_os_ui_persona_project_finance_display',`select=*&viewer_name=eq.${encodeURIComponent(name)}&project_code=eq.${encodeURIComponent(code)}&limit=1`);financeSnapshot=fs[0]||null;}catch(_){financeSnapshot=null;}
 
  if(cur.can_view_project_finance===false){
   const promises=[
@@ -3005,7 +3092,7 @@ async function personaFinanceScreen(){
   const ownBudget=budgets.reduce((a,x)=>a+Number(x.total_amount||0),0),ownDist=dists.reduce((a,x)=>a+Number(x.planned_amount||0),0);
   if(p.kind==='municipality')cards([['現在のPJ',esc(cur.story_label||'—')],['自地域の予算・執行枠',budgets.length?yen(ownBudget):'未積算'],['自治体への配賦予定',dists.length?yen(ownDist):'未確定'],['自組織の入出金',`${txs.length}件`],['関係契約',`${contracts.length}件`],['PJ全体財務','非表示']]);
   else cards([['現在のPJ',esc(cur.story_label||'—')],['PJ全体財務','非表示'],['このPJの自組織取引',`${txs.length}件`],['このPJの費用明細',`${costs.length}件`],['このPJの関係契約',`${contracts.length}件`]]);
-  let scoped=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur);
+  let scoped=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+projectFinanceSnapshotHtml(financeSnapshot);
   if(p.kind==='municipality'){
    scoped+=`<section><h2>自治体自身の会計</h2><div class="map-summary-note"><b>選択中PJについて、自地域の予算・公費支出と自治体所有林への配賦だけを表示します。</b> 他主体の原価・販売条件などPJ全体の内部財務は表示しません。</div></section>`;
    if(budgets.length)scoped+=table('自地域の予算・執行枠',['年度','内容','金額','状態'],budgets.map(x=>[esc(x.fiscal_year),esc(x.context_name),yen(x.total_amount),esc(x.status)]));
@@ -3032,7 +3119,7 @@ async function personaFinanceScreen(){
  const hz=hzs[0]||{},drafts=financeDraftList(code);
  const currentCost=moneyRange(hz.known_project_cost_min_jpy,hz.known_project_cost_base_jpy,hz.known_project_cost_max_jpy);
  cards([['現在のPJ',esc(cur.story_label||'—')],['総事業費（現在把握分）',currentCost],['総額状態',esc(hz.total_cost_status||'—')],['計画期間',hz.plan_start_year?`${hz.plan_start_year}〜${hz.plan_end_year||'未設定'}`:'—'],['対象規模',ha(hz.target_area_ha??cur.final_target_area_ha)],['現在版',hist[0]?`v${num(hist[0].version_no)} ${esc(hist[0].version_stage)}`:'—']]);
- let html=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur);
+ let html=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+projectFinanceSnapshotHtml(financeSnapshot);
  if(p.kind==='forest_coop'&&extras[0]?.length)html+=ownOrgFinanceSection(p,extras[0][0]);
  if(p.kind==='pm'){
   const b=(extras[0]||[])[0];
@@ -3074,6 +3161,7 @@ async function personaHome(){
 
 const loaders={home:personaHome,map:townMap,projects:projectHub,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,finance:personaFinanceScreen,access:accessAuditScreen};
 async function load(moduleCode){
+ if(moduleCode==='portfolio'){projectHubType='portfolio';moduleCode='projects';}
  if(moduleCode==='aggregation'){projectHubType='aggregation';moduleCode='projects';}
  if(moduleCode==='jcredit'){projectHubType='jcredit';moduleCode='projects';}
  currentModuleCode=moduleCode||'home';
