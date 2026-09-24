@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>森林OS｜制度・案件トレース デモ</title>
+<style>
+:root{--bg:#f5f7f5;--card:#fff;--ink:#17211d;--muted:#5b6d64;--line:#d8e1dc;--forest:#245b45;--forest2:#e8f1ec;--warn:#9a5d10;--bad:#8f3f39;--blue:#315f78;--shadow:0 6px 24px rgba(22,43,34,.08)}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Yu Gothic","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink)}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.head{max-width:1320px;margin:auto;padding:12px 18px;display:flex;gap:18px;align-items:center;justify-content:space-between}
+.brand b{font-size:18px;color:var(--forest)} .brand small{display:block;color:var(--muted);margin-top:2px}
+.badges{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:11px;padding:5px 8px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted)}
+.wrap{max-width:1320px;margin:0 auto;padding:18px}
+.hero{background:linear-gradient(135deg,#fff,#edf4f0);border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);margin-bottom:14px}
+.hero h1{font-size:24px;margin:0 0 7px;color:var(--forest)} .hero p{margin:4px 0;color:var(--muted);line-height:1.7}
+.four{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.four .s{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px} .s b{display:block;color:var(--forest);margin-bottom:4px} .s span{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:7px;overflow:auto;padding:2px 0 10px}
+.tab{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 12px;white-space:nowrap;cursor:pointer;font-weight:650}
+.tab.active{background:var(--forest);color:white;border-color:var(--forest)}
+.casehead{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin:6px 0 13px}
+.casehead h2{margin:0 0 5px;font-size:21px} .casehead p{margin:0;color:var(--muted);line-height:1.55}
+.kind{padding:5px 8px;border-radius:8px;background:var(--forest2);color:var(--forest);font-size:11px;font-weight:700;white-space:nowrap}
+.grid3{display:grid;grid-template-columns:.9fr 1.25fr 1fr;gap:12px;align-items:start}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+.card h3{margin:0;padding:12px 14px;border-bottom:1px solid var(--line);font-size:14px;background:#fbfcfb}
+.body{padding:13px 14px}
+.kv{width:100%;border-collapse:collapse;font-size:12px} .kv td{padding:7px 4px;border-bottom:1px solid #edf1ef;vertical-align:top} .kv td:first-child{color:var(--muted);width:38%}
+.step{display:grid;grid-template-columns:34px 1fr;gap:8px;padding:9px 0;border-bottom:1px solid #edf1ef} .num{width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--forest2);color:var(--forest);font-weight:800;font-size:11px}
+.step b{font-size:12px} .step code{display:block;margin:3px 0;font-size:10px;color:var(--blue);white-space:normal} .step p{font-size:11px;color:var(--muted);margin:0;line-height:1.5}
+.output{border-left:4px solid var(--forest);padding-left:10px;margin:9px 0} .output b{display:block;font-size:11px;color:var(--muted)} .output span{font-size:13px;font-weight:650}
+.mapbox{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.schematic{display:grid;grid-template-columns:repeat(12,1fr);grid-auto-rows:62px;gap:5px;background:#eef2ef;padding:7px;border-radius:12px}
+.parcel{border:2px solid #fff;border-radius:8px;padding:7px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.08);font-size:11px;transition:.15s}
+.parcel:hover,.parcel.selected{transform:translateY(-1px);outline:3px solid rgba(36,91,69,.18)}
+.ready{background:#dfeee5} .succession{background:#f1e9d4} .unknown{background:#f3dfdc} .nonconsent{background:#eadbd8} .boundary{background:#dfe9ef}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-top:7px}
+.dot{width:9px;height:9px;display:inline-block;border-radius:2px;margin-right:4px}
+.drawer{margin-top:10px;padding:11px;border:1px dashed var(--line);border-radius:10px;background:#fafcfb;font-size:12px}
+.drawer h4{margin:0 0 6px;color:var(--forest)} .drawer p{margin:4px 0;line-height:1.5}
+.obj{display:inline-block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;background:#edf2f5;padding:3px 5px;border-radius:5px;margin:2px}
+.note{margin-top:14px;background:#fff8e9;border:1px solid #ead7a9;border-radius:12px;padding:11px 13px;color:#674b17;font-size:11px;line-height:1.6}
+@media(max-width:900px){.grid3{grid-template-columns:1fr}.four{grid-template-columns:1fr 1fr}.head{align-items:flex-start}}
+@media(max-width:520px){.four{grid-template-columns:1fr}.wrap{padding:12px}.hero h1{font-size:20px}.casehead{display:block}.kind{display:inline-block;margin-top:8px}}
+@media print{header{position:static}body{background:#fff}.tab{display:none}.card,.hero{box-shadow:none}}
+</style>
+</head>
+<body>
+<header><div class="head">
+  <div class="brand"><b>森林OS</b><small>制度・案件トレース｜技術レビュー用デモ</small></div>
+  <div class="badges"><span class="badge">公開実案件＋設計確認用ケース</span><span class="badge">静的再生デモ</span><span class="badge">本番運用ログではありません</span></div>
+</div></header>
+<div class="wrap">
+<section class="hero">
+  <h1>森林を見る → 止まる理由を見る → 今走る処理を見る → 次に何をするかを見る</h1>
+  <p>技官レビューでは、DBのテーブル数ではなく「森林を入れたら何が分解され、何の案件が走り、結果として何が見えるか」を追います。</p>
+  <div class="four">
+    <div class="s"><b>1｜森林を見る</b><span>林班・小班・筆・施業範囲・権利者を同一視しない</span></div>
+    <div class="s"><b>2｜止まる理由</b><span>相続、不明、不同意、境界などを対象単位で把握</span></div>
+    <div class="s"><b>3｜今走る処理</b><span>必要な制度workflow・タスクだけを並行起動</span></div>
+    <div class="s"><b>4｜次に何をする</b><span>計画・施業へ戻し、ボトルネックと次工程を表示</span></div>
+  </div>
+</section>
+
+<div class="tabs" id="tabs"></div>
+<div id="app"></div>
+
+<div class="note">
+<b>読み方：</b> 「再走行結果」は、現行Forest OSの実DB schema・workflow定義に対して公開事実を説明用データとしてトランザクション内投入し、工程を通した確認結果です。実自治体の本番データを投入した運用実証ではありません。公開資料にない個人情報・内部決裁等は補完していません。公開3案件は改正前の案件であり、当時のworkflow versionで扱います。
+</div>
+</div>
+<script>
+const DATA = {"sample": {"title": "設計確認用・異常系サンプル", "subtitle": "林班12・小班3｜18.4ha｜5筆が別々の理由で止まる", "kind": "illustrative", "summary": "同じ林班・小班の中でも、筆・権利者・施業範囲は一致しない。Forest OSは『林班12が未処理』と一括表示せず、止まっている単位と理由を分けて管理する。", "facts": [["林班・小班", "林班12／小班3（設計確認用の架空ケース）"], ["全体面積", "18.4ha"], ["施業候補", "A・B・Cをまたぐ7.8ha"], ["現在の主ボトルネック", "C筆：共有者1名不明"]], "parcels": [{"id": "A", "label": "A筆", "area": "4.1ha", "status": "ready", "statusLabel": "問題なし", "detail": "所有・権利確認済み。施業候補に含められる。", "next": "施業計画へ接続", "workflow": "通常ルート", "objects": ["forest/parcel", "rights", "plan_target", "work_target"]}, {"id": "B", "label": "B筆", "area": "3.6ha", "status": "succession", "statusLabel": "相続未了", "detail": "相続人・権利承継の整理が完了していない。", "next": "相続確認タスク／権利承継整理", "workflow": "法定特例ではなく相続整理タスク", "objects": ["parcel", "rights", "succession_case", "tasks", "documents"]}, {"id": "C", "label": "C筆", "area": "0.2ha", "status": "unknown", "statusLabel": "共有者1名不明", "detail": "共有者4名のうち3名同意、1名不明。施業候補7.8haのボトルネック。", "next": "共有者不明森林特例の工程を進める", "workflow": "共有者不明森林特例", "objects": ["parcel", "right_holders", "consents", "regulatory_case", "workflow_instance", "plan_target"]}, {"id": "D", "label": "D筆", "area": "6.0ha", "status": "nonconsent", "statusLabel": "所有者不同意", "detail": "所有者は確知しているが同意が得られていない。", "next": "不同意ルートの要件確認", "workflow": "確知所有者不同意森林の特例", "objects": ["parcel", "right_holders", "regulatory_case", "workflow_instance", "documents"]}, {"id": "E", "label": "E筆", "area": "4.5ha", "status": "boundary", "statusLabel": "境界確認中", "detail": "森林管理上の境界と登記・地籍上の境界を同一視しない。", "next": "境界確認・現地条件確認", "workflow": "境界確認タスク", "objects": ["parcel", "spatial_feature", "documents", "tasks"]}], "steps": [["1", "森林・筆を分ける", "forest_units / land_parcels", "林班・小班・筆・施業範囲を同じ単位にしない"], ["2", "止まる理由を特定", "rights / right_holders / recovery", "相続・不明・不同意・境界等を対象単位で保持"], ["3", "必要な処理だけ起動", "regulatory_case / workflow", "C筆とD筆は別の制度workflow、B/Eは別タスク"], ["4", "計画へ戻す", "plans / plan_targets", "解消した対象だけ計画へ収束"], ["5", "施業へ接続", "work_cases / work_targets", "動かせる範囲と残るボトルネックを同時表示"]], "outputs": [["現在地", "権利・境界整理中"], ["動かせる対象", "A筆は即時。B・Cは条件解消後に7.8ha施業候補へ"], ["止めている理由", "C筆の共有者不明が7.8ha候補の主要ボトルネック"], ["今走っている処理", "C筆：共有者不明workflow／D筆：不同意workflow／B・E：個別整理タスク"], ["次アクション", "C筆の制度工程、B筆の相続整理、E筆の境界確認を並行"]]}, "nakanojo": {"title": "公開案件｜群馬県中之条町", "subtitle": "0.05haの所有者不明森林が、周辺19.23haの一体施業を左右", "kind": "public", "summary": "小面積の法定手続対象と、より大きい施業単位を別オブジェクトとして持ち、依存関係でつなぐケース。", "facts": [["対象地区", "約19.23ha"], ["所有者不明森林", "約0.05ha"], ["公開工程", "意向調査→宛先不明→登記・戸籍関係照会→聞き込み→所有者不明判断→旧制度公告→裁定申請"], ["バックテストの焦点", "0.05haの制度処理を19.23haの一体施業へつなげられるか"]], "steps": [["1", "対象森林を切り出す", "forest_unit / regulatory_case_target", "0.05haを法定手続の主対象として持つ"], ["2", "探索履歴を保持", "communications / documents / tasks", "宛先不明、登記、戸籍関係照会、聞き込みを履歴化"], ["3", "所有者不明workflow", "workflow_instance v1", "公開案件当時の旧制度workflowを通す"], ["4", "公告・出現確認", "workflow_step_instances", "旧制度6か月公告→所有者出現なし"], ["5", "裁定申請・裁定", "regulatory_case / steps", "県への裁定申請工程へ"], ["6", "計画へ収束", "management_right_aggregation_plan", "0.05haを計画対象へ"], ["7", "周辺施業へ接続", "work_case", "19.23ha一体施業のボトルネック対象として0.05haをリンク"]], "outputs": [["制度案件", "0.05haの所有者不明案件"], ["ボトルネック理由", "0.05haを処理しないと周辺施業が成立しにくい"], ["計画への接続", "経営管理権集積計画へ接続可能"], ["施業への接続", "19.23ha一体施業案件へリンク可能"], ["再走行結果", "旧制度workflow 7工程をDBトランザクション内で通過確認"]]}, "hakusan": {"title": "公開案件｜石川県白山市", "subtitle": "45.82ha・456筆の全体案件のうち、問題は0.212haと0.058haの2筆", "kind": "public", "summary": "全体案件に一括で『共有者不明』を付けず、例外2筆だけに法定workflowを走らせ、処理後に全体計画へ戻すケース。", "facts": [["全体", "45.82ha／456筆"], ["問題筆A", "0.212ha：共有者の一部不明"], ["問題筆B", "0.058ha：共有者の一部不明"], ["バックテストの焦点", "全体進捗と例外筆の制度処理を別軸で管理できるか"]], "steps": [["1", "全体案件を保持", "aggregation / forest context", "45.82ha・456筆の全体を管理"], ["2", "問題2筆を抽出", "land_parcels / rights", "A・Bだけを特例対象として分離"], ["3", "A筆workflow", "shared_owner_unknown v1", "A筆＋不明共有者＋全体森林をリンク"], ["4", "B筆workflow", "shared_owner_unknown v1", "B筆も別instanceで同じ5工程を通す"], ["5", "両筆を全体計画へ戻す", "management_right_aggregation_plan", "全体45.82ha＋問題2筆を同一planへ収束"], ["6", "配分・施業へ接続", "allocation plan / work_case", "全体案件として次の実行工程へ"]], "outputs": [["全体案件", "45.82ha・456筆"], ["特例対象", "2筆だけ"], ["内部workflow", "A筆5工程＋B筆5工程を独立実行"], ["全体計画への戻り", "問題筆処理後に全体planへ収束"], ["再走行結果", "各特例案件に3 target links（筆＋全体森林＋不明共有者）"]]}, "ayabe": {"title": "公開案件｜京都府綾部市", "subtitle": "同じ0.33ha共有林で、権利者群ごとに2つの法定ルートが並行", "kind": "public", "summary": "森林に1個の制度ステータスを付けるのではなく、3名は共有者不明、5名は確知所有者不同意として別案件を同時に走らせ、同一計画へ再合流するケース。", "facts": [["対象森林", "0.33ha共有林"], ["最終対象共有者", "147名"], ["同意", "139名"], ["宛先不明", "3名 → 共有者不明ルート"], ["不同意・未回答", "5名 → 確知所有者不同意ルート"], ["施業", "公開資料上、対象森林を含む1.18haで間伐"]], "steps": [["1", "権利者状態を分ける", "right_holders / consents", "139同意・3不明・5不同意/未回答"], ["2A", "共有者不明案件A", "regulatory_case A", "森林1＋不明3名を4 target linksで結ぶ"], ["3A", "workflow A", "shared_owner_unknown v1", "探索→旧制度公告→異議確認→みなし同意"], ["2B", "不同意案件B", "regulatory_case B", "同じ森林1＋5名を6 target linksで結ぶ"], ["3B", "workflow B", "known_owner_nonconsent v1", "勧告→裁定申請→意見提出→裁定→みなし同意"], ["4", "同じ計画へ合流", "management_right_aggregation_plan", "2つの法定案件の結果を0.33haの計画へ戻す"], ["5", "施業へ接続", "work_case: thinning", "対象森林を含む1.18ha間伐へリンク"]], "outputs": [["同じ森林に走る制度案件", "2件"], ["共有者不明側", "forest 1 + right_holder 3 = 4 target links"], ["不同意側", "forest 1 + right_holder 5 = 6 target links"], ["合流先", "同一の経営管理権集積計画"], ["施業", "対象森林を含む1.18ha間伐"], ["設計修正", "この案件から regulatory_case_targets の必要性を発見・追加"]]}};
+const order = ["sample","nakanojo","hakusan","ayabe"];
+let current = "sample";
+let selectedParcel = "C";
+
+function badgeText(kind) {
+  return kind==="public" ? "公開実案件ベース" : "設計確認用・架空ケース";
+}
+function renderTabs(){
+  const tabs=document.getElementById("tabs");
+  tabs.innerHTML = order.map(k=>`<button class="tab ${k===current?'active':''}" onclick="switchCase('${k}')">${DATA[k].title.replace("公開案件｜","").replace("設計確認用・","")}</button>`).join("");
+}
+function kv(rows) {
+  return `<table class="kv">${rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
+}
+function steps(rows) {
+  return rows.map(r=>`<div class="step"><div class="num">${r[0]}</div><div><b>${r[1]}</b><code>${r[2]}</code><p>${r[3]}</p></div></div>`).join("");
+}
+function outputs(rows) {
+  return rows.map(r=>`<div class="output"><b>${r[0]}</b><span>${r[1]}</span></div>`).join("");
+}
+function schematic(c) {
+  if(!c.parcels) return "";
+  const positions={A:"grid-column:1/5;grid-row:1/3",B:"grid-column:5/8;grid-row:1/2",C:"grid-column:8/10;grid-row:1/2",D:"grid-column:5/10;grid-row:2/4",E:"grid-column:10/13;grid-row:1/4"};
+  const boxes=c.parcels.map(p=>`<div class="parcel ${p.status} ${p.id===selectedParcel?'selected':''}" style="${positions[p.id]}" onclick="selectParcel('${p.id}')"><b>${p.label}｜${p.area}</b><span>${p.statusLabel}</span></div>`).join("");
+  const p=c.parcels.find(x=>x.id===selectedParcel)||c.parcels[0];
+  return `<div class="mapbox"><h3 style="padding-left:0;background:none;border:0">模式図｜林班12・小班3</h3>
+   <div class="schematic">${boxes}</div>
+   <div class="legend"><span><i class="dot ready"></i>問題なし</span><span><i class="dot succession"></i>相続</span><span><i class="dot unknown"></i>共有者不明</span><span><i class="dot nonconsent"></i>不同意</span><span><i class="dot boundary"></i>境界</span></div>
+   <div class="drawer"><h4>${p.label}｜${p.area}｜${p.statusLabel}</h4><p>${p.detail}</p><p><b>内部処理：</b> ${p.workflow}</p><p><b>次：</b> ${p.next}</p><div>${p.objects.map(o=>`<span class="obj">${o}</span>`).join("")}</div></div>
+  </div>`;
+}
+function render(){
+ const c=DATA[current];
+ document.getElementById("app").innerHTML=`
+  <div class="casehead"><div><h2>${c.title}</h2><p>${c.subtitle}</p></div><span class="kind">${badgeText(c.kind)}</span></div>
+  <div class="grid3">
+    <section class="card"><h3>① 何を入れたか</h3><div class="body"><p style="font-size:12px;line-height:1.6;color:var(--muted)">${c.summary}</p>${kv(c.facts)}${schematic(c)}</div></section>
+    <section class="card"><h3>② 中で何が走るか</h3><div class="body">${steps(c.steps)}</div></section>
+    <section class="card"><h3>③ 何が出るか</h3><div class="body">${outputs(c.outputs)}</div></section>
+  </div>`;
+ renderTabs();
+}
+function switchCase(k){current=k; if(k==="sample") selectedParcel="C"; render();}
+function selectParcel(id){selectedParcel=id; render();}
+render();
+</script>
+</body></html>
