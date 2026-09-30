@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Forest OS｜森林事業・財源・成果</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{
+  --bg:#f4f6f3;--panel:#fff;--line:#dce2dc;--text:#1e2821;--muted:#647169;
+  --accent:#2f5d40;--accent2:#466f53;--soft:#edf4ef;--warn:#94612b;--danger:#91483e;
+  --shadow:0 4px 18px rgba(25,42,31,.07);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif}
+body{min-height:100vh}
+header{position:sticky;top:0;z-index:900;background:rgba(255,255,255,.97);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+.header-inner{max-width:1380px;margin:auto;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.brand{display:flex;align-items:baseline;gap:9px;min-width:0}.brand h1{font-size:20px;margin:0;white-space:nowrap}.brand span{font-size:12px;color:var(--muted);white-space:nowrap}
+.header-actions{display:flex;gap:7px;align-items:center}.status-pill{font-size:10px;border:1px solid #bad0bf;background:#f0f6f1;color:#355b40;border-radius:999px;padding:5px 8px}
+main{max-width:1380px;margin:auto;padding:14px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow);overflow:hidden}
+.panel+.panel{margin-top:12px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.panel-title{font-weight:700;font-size:13px}.panel-sub{font-size:10px;color:var(--muted)}
+.panel-body{padding:12px}
+.tour{display:flex;gap:7px;overflow:auto;padding:9px 10px}.tour button{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 11px;font-size:11px;color:var(--text);cursor:pointer}.tour button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.filters{display:grid;grid-template-columns:1fr 1.4fr 1.4fr 1.4fr;gap:12px}.filter-block{min-width:0}.filter-label{font-size:10px;color:var(--muted);margin-bottom:6px;font-weight:700}.checks{display:flex;gap:6px;flex-wrap:wrap}
+.check{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:6px 8px;font-size:10px;background:#fff;cursor:pointer;user-select:none}.check:has(input:checked){background:#edf4ef;border-color:#abc2b0}.check input{margin:0;width:14px;height:14px}
+select{width:100%;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 9px;color:var(--text);font-size:11px;outline:none}
+.filter-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);cursor:pointer}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:12px}.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px;box-shadow:var(--shadow)}.kpi .k{font-size:10px;color:var(--muted)}.kpi .v{font-size:20px;font-weight:750;margin-top:3px}.kpi .n{font-size:9px;color:var(--muted);margin-top:2px}
+.flowbar{margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.flowstep{position:relative;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px;min-height:63px}.flowstep:not(:last-child):after{content:'→';position:absolute;right:-10px;top:20px;z-index:4;color:#8b988f;font-weight:700}.flowstep .k{font-size:9px;color:var(--muted)}.flowstep .v{font-size:12px;font-weight:700;margin-top:3px;line-height:1.35}.flowstep .s{font-size:9px;color:var(--muted);margin-top:2px}
+.workspace{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(330px,.78fr);gap:12px;margin-top:12px}.map-panel{min-width:0}.map-wrap{position:relative}#map{height:610px;background:#e9eee8}.map-legend{position:absolute;left:10px;bottom:10px;z-index:550;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:9px;padding:8px;box-shadow:var(--shadow);font-size:9px;max-width:220px}.legend-row{display:flex;align-items:center;gap:6px;margin:3px 0}.sw{width:12px;height:9px;border-radius:3px;flex:0 0 auto}
+.map-tools{display:flex;gap:6px;align-items:center}.mode{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.mode button{border:0;background:#fff;padding:6px 8px;font-size:10px;cursor:pointer}.mode button.active{background:var(--accent);color:#fff}
+.detail-scroll{max-height:610px;overflow:auto}.detail-empty{font-size:12px;color:var(--muted);line-height:1.7;padding:10px}.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.detail-title{font-size:17px;font-weight:750}.badge{display:inline-block;border-radius:999px;background:var(--soft);padding:4px 7px;font-size:9px;color:#3c5b45}.badge.warn{background:#f7efe3;color:#855928}.badge.danger{background:#f8e9e7;color:#87483e}.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.mini{border:1px solid #e7ebe7;border-radius:8px;padding:8px}.mini .k{font-size:9px;color:var(--muted)}.mini .v{font-size:12px;font-weight:650;margin-top:2px;line-height:1.3}.section-label{font-size:10px;color:var(--muted);font-weight:700;margin:12px 0 6px}
+.history{display:grid;gap:7px}.event-card{border:1px solid var(--line);border-radius:9px;padding:9px;cursor:pointer;background:#fff}.event-card.active{box-shadow:inset 0 0 0 2px var(--accent);background:#f5f9f6}.event-top{display:flex;justify-content:space-between;gap:8px}.event-name{font-size:11px;font-weight:750}.event-date{font-size:9px;color:var(--muted)}.event-meta{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.45}.funds{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.fund{font-size:8px;padding:3px 5px;border:1px solid #e0e5e0;border-radius:999px;background:#f8faf8}
+.lower{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.full{grid-column:1/-1}.cycle{display:flex;gap:5px;align-items:stretch;overflow:auto;padding-bottom:2px}.cycle-node{min-width:145px;flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff;position:relative}.cycle-node:not(:last-child):after{content:'→';position:absolute;right:-9px;top:29px;color:#8e9991;z-index:2}.cycle-node .stage{font-size:10px;font-weight:750}.cycle-node .date{font-size:9px;color:var(--muted);margin-top:3px}.cycle-node .amount{font-size:12px;font-weight:700;margin-top:5px}.cycle-node .meta{font-size:9px;color:var(--muted);margin-top:2px}
+.table-wrap{overflow:auto}.tbl{width:100%;border-collapse:collapse;font-size:10px;min-width:680px}.tbl th,.tbl td{border-bottom:1px solid #e6eae6;padding:8px 7px;text-align:left;white-space:nowrap}.tbl th{font-size:9px;color:var(--muted);background:#fafbfa;position:sticky;top:0}.tbl td.num{text-align:right;font-variant-numeric:tabular-nums}.diff.plus{color:#7a4d22}.diff.minus{color:#416452}.muted{color:var(--muted)}
+.source-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.source-card{border:1px solid var(--line);border-radius:8px;padding:8px}.source-card .name{font-size:9px;color:var(--muted)}.source-card .amt{font-size:13px;font-weight:700;margin-top:3px}.bar{height:5px;border-radius:999px;background:#edf0ed;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:#758e7b;border-radius:999px}
+.loading{padding:22px;text-align:center;color:var(--muted);font-size:12px}.error{margin:12px 0;padding:11px;border:1px solid #edccc7;background:#fff2ef;color:#7c3c34;border-radius:9px;font-size:11px}.hidden{display:none!important}
+@media(max-width:1050px){.filters{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:repeat(3,1fr)}.workspace{grid-template-columns:1fr}.detail-scroll{max-height:none}#map{height:520px}.lower{grid-template-columns:1fr}}
+@media(max-width:650px){main{padding:9px}.header-inner{padding:10px}.brand span{display:none}.filters{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}.flowbar{grid-template-columns:1fr 1fr}.flowstep:nth-child(2):after{display:none}.source-bars{grid-template-columns:1fr 1fr}#map{height:430px}.panel-body{padding:10px}.header-actions .status-pill:last-child{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand"><h1>Forest OS</h1><span>森林事業・財源・成果</span></div>
+    <div class="header-actions"><span class="status-pill">青嶺町（架空）</span><span class="status-pill">DB接続</span></div>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <div class="panel-head"><div><div class="panel-title">操作ガイド</div><div class="panel-sub">地域全体から、森林・筆・施業・財源・権利まで辿る</div></div><div id="tourState" class="panel-sub"></div></div>
+    <div id="tour" class="tour"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div class="panel-title">表示条件</div><div id="filterSummary" class="panel-sub"></div></div>
+    <div class="panel-body">
+      <div class="filters">
+        <div class="filter-block">
+          <div class="filter-label">地域・森林・筆</div>
+          <select id="regionSelect"></select>
+          <select id="forestSelect" style="margin-top:6px"></select>
+          <select id="parcelSelect" style="margin-top:6px"></select>
+          <select id="ownerSelect" style="margin-top:6px"></select>
+        </div>
+        <div class="filter-block">
+          <div class="filter-label">年度</div>
+          <div id="yearChecks" class="checks"></div>
+          <div class="filter-actions"><button id="playBtn" class="btn primary">▶ 累積再生</button><button id="stopBtn" class="btn" disabled>停止</button><button id="allYearsBtn" class="btn">全年度</button></div>
+        </div>
+        <div class="filter-block">
+          <div class="filter-label">財源区分</div>
+          <div id="sourceChecks" class="checks"></div>
+          <select id="sourceProgramSelect" style="margin-top:7px"></select>
+        </div>
+        <div class="filter-block">
+          <div class="filter-label">施業・対応</div>
+          <div id="workChecks" class="checks"></div>
+          <div class="filter-actions"><button id="allWorksBtn" class="btn">すべて</button><button id="opsOnlyBtn" class="btn">森林施業のみ</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="loading" class="loading">森林OS DBから読み込んでいます…</div>
+  <div id="error" class="error hidden"></div>
+
+  <div id="app" class="hidden">
+    <div class="kpis">
+      <div class="kpi"><div class="k">選択財源の支出</div><div id="kpiAmount" class="v">—</div><div class="n">条件に該当する筆配賦額</div></div>
+      <div class="kpi"><div class="k">施業・対応実績</div><div id="kpiEvents" class="v">—</div><div class="n">重複を除いた実績件数</div></div>
+      <div class="kpi"><div class="k">対象筆</div><div id="kpiParcels" class="v">—</div><div class="n">重複を除いた筆数</div></div>
+      <div class="kpi"><div class="k">延べ施業・対応面積</div><div id="kpiArea" class="v">—</div><div class="n">同一区域の複数実施は延べ</div></div>
+      <div class="kpi"><div class="k">対象森林</div><div id="kpiForests" class="v">—</div><div class="n">森林単位</div></div>
+    </div>
+
+    <div class="flowbar">
+      <div class="flowstep"><div class="k">財源</div><div id="flowFunds" class="v">—</div><div id="flowFundsSub" class="s"></div></div>
+      <div class="flowstep"><div class="k">施業・事業</div><div id="flowWork" class="v">—</div><div id="flowWorkSub" class="s"></div></div>
+      <div class="flowstep"><div class="k">森林・筆</div><div id="flowParcel" class="v">—</div><div id="flowParcelSub" class="s"></div></div>
+      <div class="flowstep"><div class="k">山主・権利</div><div id="flowOwner" class="v">—</div><div id="flowOwnerSub" class="s"></div></div>
+    </div>
+
+    <div class="workspace">
+      <section class="panel map-panel">
+        <div class="panel-head">
+          <div><div class="panel-title">森林マップ</div><div id="mapSub" class="panel-sub"></div></div>
+          <div class="map-tools"><div class="mode"><button id="cumulativeBtn" class="active">累積</button><button id="singleBtn">単年度</button></div></div>
+        </div>
+        <div class="map-wrap"><div id="map"></div><div id="legend" class="map-legend"></div></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div class="panel-title">筆・施業履歴</div><div id="selectedBadge" class="badge">未選択</div></div>
+        <div id="detail" class="panel-body detail-scroll"><div class="detail-empty">地図または筆一覧から選ぶと、年度別の施業・財源・所有者情報を表示します。</div></div>
+      </section>
+    </div>
+
+    <div class="lower">
+      <section id="cyclePanel" class="panel">
+        <div class="panel-head"><div class="panel-title">再造林の工程</div><div class="panel-sub">主伐から保育までを同じ事業で追跡</div></div>
+        <div class="panel-body"><div id="cycle" class="cycle"></div></div>
+      </section>
+
+      <section id="allocationPanel" class="panel">
+        <div class="panel-head"><div class="panel-title">財源・筆別配賦</div><div id="allocationSub" class="panel-sub"></div></div>
+        <div class="panel-body table-wrap"><table class="tbl"><thead><tr><th>財源</th><th>施業</th><th>筆</th><th>提案額</th><th>確定額</th><th>調整</th><th>根拠</th></tr></thead><tbody id="allocationBody"></tbody></table></div>
+      </section>
+
+      <section id="summaryPanel" class="panel full">
+        <div class="panel-head"><div class="panel-title">年度別成果</div><div class="panel-sub">現在の表示条件で集計</div></div>
+        <div class="panel-body">
+          <div class="table-wrap"><table class="tbl"><thead><tr><th>年度</th><th>施業・対応</th><th>実績</th><th>対象筆</th><th>延べ面積</th><th>数量</th><th>支出</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
+          <div id="sourceBars" class="source-bars"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
+const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
+const YEARS=[2023,2024,2025,2026];
+const SOURCE_GROUPS=[
+  {id:'national',label:'国'}, {id:'prefecture',label:'県'}, {id:'municipality',label:'市町村'}, {id:'private',label:'民間'}
+];
+const WORK_COLORS={
+  thinning:'#3f7452',final_cut:'#6e4c35',site_preparation:'#9a6d3b',planting:'#4f8b5c',weeding:'#7ca56d',
+  clearing:'#72915f',road_maintenance:'#6d7780',patrol:'#75628f',boundary_check:'#49779b',owner_coordination:'#a66a2f'
+};
+const OWNER_STATUS={
+  parcel_owner_recorded:'所有者確認済',
+  collective_right_recorded_owner_allocation_not_automatic:'共有・入会権',
+  succession_or_owner_unresolved:'相続・所有者整理中',
+  forest_level_owner_only:'森林単位所有者',
+  owner_unresolved:'所有者未確定'
+};
+const TOUR=[
+  {id:'overview',label:'1 全体',desc:'地域全体'},
+  {id:'years',label:'2 年度推移',desc:'複数年'},
+  {id:'reforest',label:'3 再造林',desc:'工程'},
+  {id:'multiparcel',label:'4 複数筆・財源',desc:'配賦'},
+  {id:'owner',label:'5 山主・筆',desc:'権利'},
+  {id:'outcomes',label:'6 成果',desc:'年度集計'}
+];
+let baseRows=[],events=[],allocations=[],ownerTimes=[];
+let map,baseLayer,eventLayer,selectedLayer;
+let selectedParcelId=null,selectedEventId=null,playTimer=null,mapMode='cumulative',tourId='overview';
+const yen=n=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(n||0));
+const num=n=>new Intl.NumberFormat('ja-JP').format(Number(n||0));
+const ha=n=>Number(n||0).toFixed(1)+' ha';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uniq=a=>Array.from(new Set(a.filter(v=>v!==null&&v!==undefined&&v!=='')));
+async function q(view){
+  const r=await fetch(SB_URL+'/rest/v1/'+view+'?select=*',{headers:{apikey:SB_KEY}});
+  if(!r.ok) throw new Error(view+' '+r.status);
+  return r.json();
+}
+function fundsArray(e){return Array.isArray(e.funding_details)?e.funding_details:[]}
+function directOwners(e){
+  const arr=Array.isArray(e.direct_owner_details)?e.direct_owner_details:[];
+  return arr.map(x=>x.party_name||x.owner_name).filter(Boolean);
+}
+function ownerNamesFromOwnerTime(parcelId){
+  const rows=ownerTimes.filter(r=>r.parcel_id===parcelId);
+  return uniq(rows.flatMap(r=>Array.isArray(r.current_owner_details)?r.current_owner_details.map(x=>x.party_name||x.owner_name):[]));
+}
+function selectedValues(cls){return Array.from(document.querySelectorAll('.'+cls+':checked')).map(x=>x.value)}
+function selectedYears(){return selectedValues('yearCheck').map(Number)}
+function selectedGroups(){return selectedValues('sourceCheck')}
+function selectedWorks(){return selectedValues('workCheck')}
+function sourceProgram(){return document.getElementById('sourceProgramSelect').value}
+function selectedRegion(){return document.getElementById('regionSelect').value}
+function selectedForest(){return document.getElementById('forestSelect').value}
+function selectedParcel(){return document.getElementById('parcelSelect').value}
+function selectedOwner(){return document.getElementById('ownerSelect').value}
+function fundingAmountForEvent(e){
+  const gs=selectedGroups(),prog=sourceProgram();
+  return fundsArray(e).reduce((s,f)=>{
+    const okGroup=gs.includes(String(f.funding_source_group||f.source_group));
+    const code=String(f.funding_source_code||f.source_code||'');
+    const okProg=!prog||prog==='all'||code===prog;
+    return s+(okGroup&&okProg?Number(f.amount_jpy||0):0);
+  },0);
+}
+function eventPassesOwner(e,owner){
+  if(!owner||owner==='all') return true;
+  if(owner==='__unresolved__') return e.owner_resolution_status&&e.owner_resolution_status!=='parcel_owner_recorded';
+  const names=uniq([...directOwners(e),...ownerNamesFromOwnerTime(e.parcel_id)]);
+  return names.includes(owner);
+}
+function filteredEvents(){
+  const ys=selectedYears(),works=selectedWorks(),reg=selectedRegion(),forest=selectedForest(),parcel=selectedParcel(),owner=selectedOwner();
+  if(!ys.length||!works.length||!selectedGroups().length) return [];
+  return events.filter(e=>ys.includes(Number(e.work_fiscal_year)) && works.includes(String(e.work_type_code)) &&
+    (!reg||reg==='all'||e.region_id===reg) && (!forest||forest==='all'||e.forest_unit_id===forest) &&
+    (!parcel||parcel==='all'||e.parcel_id===parcel) && eventPassesOwner(e,owner) && fundingAmountForEvent(e)>0);
+}
+function setAllChecks(cls,on=true){document.querySelectorAll('.'+cls).forEach(x=>x.checked=on)}
+function populateFilters(){
+  const regs=uniq(events.map(e=>e.region_id)).map(id=>({id,name:(events.find(e=>e.region_id===id)||{}).region_name||id}));
+  document.getElementById('regionSelect').innerHTML='<option value="all">全地域</option>'+regs.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  document.getElementById('yearChecks').innerHTML=YEARS.map(y=>`<label class="check"><input class="yearCheck" type="checkbox" value="${y}" checked><span>${y}</span></label>`).join('');
+  document.getElementById('sourceChecks').innerHTML=SOURCE_GROUPS.map(s=>`<label class="check"><input class="sourceCheck" type="checkbox" value="${s.id}" checked><span>${s.label}</span></label>`).join('');
+  const programs={}; events.forEach(e=>fundsArray(e).forEach(f=>{const c=f.funding_source_code||f.source_code,n=f.funding_source_name||f.source_name;if(c) programs[c]=n||c}));
+  document.getElementById('sourceProgramSelect').innerHTML='<option value="all">財源制度・内訳：すべて</option>'+Object.entries(programs).sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ja')).map(([c,n])=>`<option value="${esc(c)}">${esc(n)}</option>`).join('');
+  const works=uniq(events.map(e=>e.work_type_code)).map(code=>{const r=events.find(e=>e.work_type_code===code);return {code,name:r.work_type_name||code,outcome:r.outcome_group||''}}).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ja'));
+  document.getElementById('workChecks').innerHTML=works.map(w=>`<label class="check" data-outcome="${esc(w.outcome)}"><input class="workCheck" type="checkbox" value="${esc(w.code)}" checked><span>${esc(w.name)}</span></label>`).join('');
+  refreshHierarchyOptions();
+  document.querySelectorAll('.yearCheck,.sourceCheck,.workCheck').forEach(x=>x.addEventListener('change',render));
+  ['regionSelect','forestSelect','parcelSelect','ownerSelect','sourceProgramSelect'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{if(id==='regionSelect'||id==='forestSelect')refreshHierarchyOptions(id);render()}));
+}
+function refreshHierarchyOptions(changed){
+  const reg=document.getElementById('regionSelect').value||'all';
+  const forestEl=document.getElementById('forestSelect'); const prevForest=forestEl.value||'all';
+  const forestRows=events.filter(e=>reg==='all'||e.region_id===reg);
+  const fs=uniq(forestRows.map(e=>e.forest_unit_id)).map(id=>({id,name:(forestRows.find(e=>e.forest_unit_id===id)||{}).forest_name||id}));
+  forestEl.innerHTML='<option value="all">全森林</option>'+fs.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  if(fs.some(x=>x.id===prevForest)&&changed!=='regionSelect') forestEl.value=prevForest;
+  const forest=forestEl.value;
+  const parcelEl=document.getElementById('parcelSelect'); const prevParcel=parcelEl.value||'all';
+  const pr=forestRows.filter(e=>forest==='all'||e.forest_unit_id===forest);
+  const ps=uniq(pr.map(e=>e.parcel_id)).map(id=>({id,code:(pr.find(e=>e.parcel_id===id)||{}).parcel_code||id}));
+  parcelEl.innerHTML='<option value="all">全筆</option>'+ps.map(x=>`<option value="${x.id}">${esc(x.code)}</option>`).join('');
+  if(ps.some(x=>x.id===prevParcel)&&changed!=='regionSelect'&&changed!=='forestSelect') parcelEl.value=prevParcel;
+  const ownerEl=document.getElementById('ownerSelect'); const prevOwner=ownerEl.value||'all';
+  const ownerNames=uniq(pr.flatMap(e=>[...directOwners(e),...ownerNamesFromOwnerTime(e.parcel_id)])).sort((a,b)=>String(a).localeCompare(String(b),'ja'));
+  ownerEl.innerHTML='<option value="all">全山主・権利</option>'+ownerNames.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')+'<option value="__unresolved__">共有・相続等の未確定</option>';
+  if(ownerNames.includes(prevOwner)||prevOwner==='__unresolved__') ownerEl.value=prevOwner;
+}
+function initTour(){
+  document.getElementById('tour').innerHTML=TOUR.map(t=>`<button data-tour="${t.id}">${t.label}</button>`).join('');
+  document.querySelectorAll('[data-tour]').forEach(b=>b.addEventListener('click',()=>applyTour(b.dataset.tour)));
+}
+function markTour(){
+  document.querySelectorAll('[data-tour]').forEach(b=>b.classList.toggle('active',b.dataset.tour===tourId));
+  const t=TOUR.find(x=>x.id===tourId); document.getElementById('tourState').textContent=t?t.desc:'';
+}
+function findParcelByCode(code){const e=events.find(x=>x.parcel_code===code);return e?e.parcel_id:null}
+function setSelect(id,val){const el=document.getElementById(id);if(Array.from(el.options).some(o=>o.value===val))el.value=val}
+function applyTour(id){
+  stopPlay();tourId=id;markTour();
+  document.getElementById('sourceProgramSelect').value='all'; setAllChecks('sourceCheck',true); setAllChecks('workCheck',true); setAllChecks('yearCheck',true);
+  setSelect('regionSelect','all');refreshHierarchyOptions('regionSelect');setSelect('forestSelect','all');refreshHierarchyOptions('forestSelect');setSelect('parcelSelect','all');setSelect('ownerSelect','all');
+  selectedEventId=null;selectedParcelId=null;
+  if(id==='years'){mapMode='cumulative';updateModeButtons();render();setTimeout(playYears,200);return}
+  if(id==='reforest'){
+    setAllChecks('workCheck',false);['final_cut','site_preparation','planting','weeding'].forEach(c=>{const x=document.querySelector(`.workCheck[value="${c}"]`);if(x)x.checked=true});
+    setAllChecks('yearCheck',false);[2024,2025,2026].forEach(y=>{const x=document.querySelector(`.yearCheck[value="${y}"]`);if(x)x.checked=true});
+    const p=findParcelByCode('DEMO-MUNI-100-P04'); if(p){setSelect('parcelSelect',p);selectedParcelId=p}
+    render();setTimeout(()=>document.getElementById('cyclePanel').scrollIntoView({behavior:'smooth',block:'center'}),150);return;
+  }
+  if(id==='multiparcel'){
+    setAllChecks('workCheck',false);const w=document.querySelector('.workCheck[value="road_maintenance"]');if(w)w.checked=true;
+    setAllChecks('yearCheck',false);const y=document.querySelector('.yearCheck[value="2025"]');if(y)y.checked=true;
+    render();const road=events.find(e=>e.work_type_code==='road_maintenance');if(road)selectedEventId=road.work_event_id;render();setTimeout(()=>document.getElementById('allocationPanel').scrollIntoView({behavior:'smooth',block:'center'}),150);return;
+  }
+  if(id==='owner'){
+    setAllChecks('yearCheck',false);[2024,2025].forEach(y=>{const x=document.querySelector(`.yearCheck[value="${y}"]`);if(x)x.checked=true});
+    const p=findParcelByCode('DEMO-101-1-P01');if(p){setSelect('parcelSelect',p);selectedParcelId=p}
+    render();setTimeout(()=>document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'center'}),150);return;
+  }
+  if(id==='outcomes'){render();setTimeout(()=>document.getElementById('summaryPanel').scrollIntoView({behavior:'smooth',block:'start'}),150);return}
+  render();
+}
+function initMap(){
+  map=L.map('map',{zoomControl:true});
+  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,attribution:'地理院タイル'}).addTo(map);
+  baseLayer=L.layerGroup().addTo(map);eventLayer=L.layerGroup().addTo(map);selectedLayer=L.layerGroup().addTo(map);
+  const bounds=[];
+  baseRows.forEach(r=>{if(!r.geom_geojson)return;const gj=L.geoJSON(r.geom_geojson,{style:{color:'#7c877f',weight:1,fillColor:'#e1e7e1',fillOpacity:.13},onEachFeature:(_,layer)=>{layer.on('click',()=>selectParcel(r.parcel_id));layer.bindTooltip(esc(r.parcel_code),{sticky:true})}}).addTo(baseLayer);try{bounds.push(gj.getBounds())}catch(_){}});
+  if(bounds.length){let b=bounds[0];bounds.slice(1).forEach(x=>b.extend(x));map.fitBounds(b.pad(.07))}else map.setView([34.2,135.8],12);
+}
+function yearForMap(e){
+  const ys=selectedYears();if(!ys.length)return false;const max=Math.max(...ys);if(mapMode==='cumulative')return Number(e.work_fiscal_year)<=max && Number(e.work_fiscal_year)>=Math.min(...ys);return ys.includes(Number(e.work_fiscal_year));
+}
+function drawMap(rows){
+  eventLayer.clearLayers();
+  rows.filter(yearForMap).forEach(e=>{
+    if(!e.geom_geojson)return;const color=WORK_COLORS[e.work_type_code]||'#65736a';
+    const gj=L.geoJSON(e.geom_geojson,{style:{color,weight:selectedEventId===e.work_event_id?4:2,fillColor:color,fillOpacity:selectedEventId===e.work_event_id?.62:.38}}).addTo(eventLayer);
+    gj.eachLayer(l=>{l.on('click',()=>selectEvent(e));l.bindTooltip(`${esc(e.parcel_code)}｜${esc(e.work_type_name)}｜${e.work_fiscal_year}年度`,{sticky:true})});
+  });
+  selectedLayer.clearLayers();
+  if(selectedParcelId){const b=baseRows.find(r=>r.parcel_id===selectedParcelId);if(b&&b.geom_geojson)L.geoJSON(b.geom_geojson,{style:{color:'#15251a',weight:3,fillOpacity:0}}).addTo(selectedLayer)}
+}
+function selectParcel(id){selectedParcelId=id;selectedEventId=null;setSelect('parcelSelect',id);render()}
+function selectEvent(e){selectedParcelId=e.parcel_id;selectedEventId=e.work_event_id;setSelect('parcelSelect',e.parcel_id);render()}
+function renderKpis(rows){
+  const eventMap=new Map();rows.forEach(e=>eventMap.set(e.work_event_id,e));
+  const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);
+  const area=Array.from(eventMap.values()).reduce((s,e)=>s+Number(e.actual_area_ha||0),0);
+  document.getElementById('kpiAmount').textContent=yen(amount);document.getElementById('kpiEvents').textContent=num(eventMap.size)+'件';document.getElementById('kpiParcels').textContent=num(new Set(rows.map(e=>e.parcel_id)).size)+'筆';document.getElementById('kpiArea').textContent=ha(area);document.getElementById('kpiForests').textContent=num(new Set(rows.map(e=>e.forest_unit_id)).size)+'森林';
+}
+function currentFocus(rows){
+  if(selectedEventId){return events.find(e=>e.work_event_id===selectedEventId&&(!selectedParcelId||e.parcel_id===selectedParcelId))||events.find(e=>e.work_event_id===selectedEventId)}
+  if(selectedParcelId){return events.find(e=>e.parcel_id===selectedParcelId)}
+  return rows[0]||null;
+}
+function renderFlow(rows){
+  const focus=currentFocus(rows);
+  if(focus){
+    const fa=fundsArray(focus);document.getElementById('flowFunds').textContent=uniq(fa.map(f=>f.funding_source_name||f.source_name)).join('＋')||'—';document.getElementById('flowFundsSub').textContent=yen(fundingAmountForEvent(focus));
+    document.getElementById('flowWork').textContent=focus.work_type_name||'—';document.getElementById('flowWorkSub').textContent=(focus.initiative_name||focus.work_title||'');
+    document.getElementById('flowParcel').textContent=focus.parcel_code||'—';document.getElementById('flowParcelSub').textContent=focus.forest_name||'';
+    const owners=directOwners(focus);document.getElementById('flowOwner').textContent=owners.length?owners.join('、'):(OWNER_STATUS[focus.owner_resolution_status]||'権利確認中');document.getElementById('flowOwnerSub').textContent=OWNER_STATUS[focus.owner_resolution_status]||'';
+  }else{
+    document.getElementById('flowFunds').textContent=selectedGroups().length+'区分';document.getElementById('flowFundsSub').textContent='';document.getElementById('flowWork').textContent=new Set(rows.map(e=>e.work_type_code)).size+'種類';document.getElementById('flowWorkSub').textContent='';document.getElementById('flowParcel').textContent=new Set(rows.map(e=>e.parcel_id)).size+'筆';document.getElementById('flowParcelSub').textContent='';document.getElementById('flowOwner').textContent='地域集計';document.getElementById('flowOwnerSub').textContent='';
+  }
+}
+function ownerTimeFor(e){
+  const rows=ownerTimes.filter(r=>r.work_event_id===e.work_event_id&&r.parcel_id===e.parcel_id);if(!rows.length)return null;return rows[0]
+}
+function badgeForStatus(s){const l=OWNER_STATUS[s]||s||'未確認';const cls=s==='parcel_owner_recorded'?'badge':(s==='succession_or_owner_unresolved'||s==='owner_unresolved'?'badge danger':'badge warn');return `<span class="${cls}">${esc(l)}</span>`}
+function renderDetail(){
+  const box=document.getElementById('detail'),badge=document.getElementById('selectedBadge');
+  if(!selectedParcelId){badge.textContent='未選択';box.innerHTML='<div class="detail-empty">地図または筆一覧から選ぶと、年度別の施業・財源・所有者情報を表示します。</div>';return}
+  const all=events.filter(e=>e.parcel_id===selectedParcelId).sort((a,b)=>String(a.event_date).localeCompare(String(b.event_date)));
+  const base=baseRows.find(r=>r.parcel_id===selectedParcelId)||all[0]||{};const sample=all[0]||{};badge.textContent=all.length+'件';
+  const currentOwners=uniq(all.flatMap(directOwners));const status=sample.owner_resolution_status;let html=`<div class="detail-head"><div><div class="detail-title">${esc(sample.parcel_code||base.parcel_code||'')}</div><div class="panel-sub">${esc(sample.forest_name||base.forest_name||'')}</div></div>${badgeForStatus(status)}</div>`;
+  html+=`<div class="mini-grid"><div class="mini"><div class="k">筆面積</div><div class="v">${ha(sample.parcel_area_ha||base.parcel_area_ha||0)}</div></div><div class="mini"><div class="k">現在の所有者</div><div class="v">${esc(currentOwners.join('、')||OWNER_STATUS[status]||'未確認')}</div></div></div>`;
+  const focus=selectedEventId?all.find(e=>e.work_event_id===selectedEventId):null;if(focus){const ot=ownerTimeFor(focus);const at=ot&&Array.isArray(ot.owner_at_work_details)?uniq(ot.owner_at_work_details.map(x=>x.owner_name||x.party_name)):[];html+=`<div class="mini"><div class="k">${focus.work_fiscal_year}年度・施業時点所有者</div><div class="v">${esc(at.join('、')||OWNER_STATUS[focus.owner_resolution_status]||'未確認')}</div></div>`}
+  html+='<div class="section-label">施業・対応履歴</div><div class="history">';
+  all.forEach(e=>{const active=e.work_event_id===selectedEventId;const fa=fundsArray(e);const q=e.actual_quantity?`${num(e.actual_quantity)} ${esc(e.quantity_unit||'')}`:'';html+=`<div class="event-card ${active?'active':''}" data-event="${e.work_event_id}"><div class="event-top"><div class="event-name"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${WORK_COLORS[e.work_type_code]||'#667'};margin-right:6px"></span>${esc(e.work_type_name)}</div><div class="event-date">${e.work_fiscal_year}年度</div></div><div class="event-meta">${esc(e.event_date)}${e.actual_area_ha?'｜'+ha(e.actual_area_ha):''}${q?'｜'+q:''}｜${yen(e.total_amount_jpy)}</div><div class="funds">${fa.map(f=>`<span class="fund">${esc(f.funding_source_name||f.source_name)} ${yen(f.amount_jpy)}</span>`).join('')}</div></div>`});
+  html+='</div>';box.innerHTML=html;box.querySelectorAll('[data-event]').forEach(el=>el.addEventListener('click',()=>{selectedEventId=el.dataset.event;render()}));
+}
+function renderCycle(){
+  const rows=events.filter(e=>e.initiative_code==='DEMO-REFOREST-WHITEPEAK-2024').sort((a,b)=>(Number(a.lifecycle_stage_order||999)-Number(b.lifecycle_stage_order||999))||String(a.event_date).localeCompare(String(b.event_date)));
+  document.getElementById('cycle').innerHTML=rows.map(e=>`<div class="cycle-node" data-cycle="${e.work_event_id}"><div class="stage">${esc(e.work_type_name)}</div><div class="date">${e.work_fiscal_year}年度｜${esc(e.event_date)}</div><div class="amount">${yen(e.total_amount_jpy)}</div><div class="meta">${e.actual_area_ha?ha(e.actual_area_ha):''}${e.actual_quantity?'｜'+num(e.actual_quantity)+' '+esc(e.quantity_unit||''):''}</div></div>`).join('')||'<div class="detail-empty">対象データなし</div>';
+  document.querySelectorAll('[data-cycle]').forEach(el=>el.addEventListener('click',()=>{const e=events.find(x=>x.work_event_id===el.dataset.cycle);if(e)selectEvent(e)}));
+}
+function allocationRowsForDisplay(rows){
+  if(selectedEventId)return allocations.filter(a=>a.work_event_id===selectedEventId);
+  if(tourId==='multiparcel')return allocations.filter(a=>a.work_type_name==='作業道整備・補修'||a.work_code==='POLICY-2025-ROAD-MUNI-P04P05');
+  const ids=new Set(rows.map(e=>e.work_event_id));return allocations.filter(a=>ids.has(a.work_event_id));
+}
+function renderAllocations(rows){
+  const ar=allocationRowsForDisplay(rows).sort((a,b)=>String(a.work_fiscal_year).localeCompare(String(b.work_fiscal_year))||String(a.reference_no).localeCompare(String(b.reference_no))||Number(a.line_no)-Number(b.line_no));
+  document.getElementById('allocationSub').textContent=selectedEventId?'選択施業':(tourId==='multiparcel'?'複数筆の手入力調整例':'表示条件内');
+  document.getElementById('allocationBody').innerHTML=ar.length?ar.map(a=>{const d=Number(a.adjustment_jpy||0);return `<tr><td>${esc(a.funding_source_name)}</td><td>${esc(a.work_title)}</td><td>${esc(a.parcel_code||'')}</td><td class="num">${yen(a.proposed_amount_jpy)}</td><td class="num"><strong>${yen(a.final_amount_jpy)}</strong></td><td class="num diff ${d>0?'plus':d<0?'minus':''}">${d===0?'—':(d>0?'+':'')+yen(d)}</td><td>${esc(a.manual_adjustment_reason||a.allocation_basis||'')}</td></tr>`}).join(''):'<tr><td colspan="7" class="muted">対象データなし</td></tr>';
+}
+function renderSummary(rows){
+  const groups=new Map();const eventById=new Map();rows.forEach(e=>eventById.set(e.work_event_id,e));
+  rows.forEach(e=>{const k=e.work_fiscal_year+'|'+e.work_type_code;if(!groups.has(k))groups.set(k,{year:e.work_fiscal_year,code:e.work_type_code,name:e.work_type_name,rows:[]});groups.get(k).rows.push(e)});
+  const out=Array.from(groups.values()).sort((a,b)=>a.year-b.year||String(a.name).localeCompare(String(b.name),'ja'));
+  document.getElementById('summaryBody').innerHTML=out.length?out.map(g=>{const ev=new Map();g.rows.forEach(e=>ev.set(e.work_event_id,e));const evs=Array.from(ev.values());const area=evs.reduce((s,e)=>s+Number(e.actual_area_ha||0),0);const qtys=evs.filter(e=>e.actual_quantity).map(e=>`${num(e.actual_quantity)} ${e.quantity_unit||''}`);const amount=g.rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);return `<tr><td>${g.year}</td><td>${esc(g.name)}</td><td class="num">${ev.size}件</td><td class="num">${new Set(g.rows.map(e=>e.parcel_id)).size}筆</td><td class="num">${area?area.toFixed(1)+' ha':'—'}</td><td>${qtys.length?esc(qtys.join(' / ')):'—'}</td><td class="num">${yen(amount)}</td></tr>`}).join(''):'<tr><td colspan="7" class="muted">対象データなし</td></tr>';
+  const sums={national:0,prefecture:0,municipality:0,private:0};rows.forEach(e=>fundsArray(e).forEach(f=>{const g=f.funding_source_group||f.source_group;if(Object.hasOwn(sums,g)&&selectedGroups().includes(g)){const prog=sourceProgram();const code=f.funding_source_code||f.source_code;if(prog==='all'||prog===code)sums[g]+=Number(f.amount_jpy||0)}}));const max=Math.max(1,...Object.values(sums));document.getElementById('sourceBars').innerHTML=SOURCE_GROUPS.map(s=>`<div class="source-card"><div class="name">${s.label}</div><div class="amt">${yen(sums[s.id])}</div><div class="bar"><i style="width:${Math.round(sums[s.id]/max*100)}%"></i></div></div>`).join('');
+}
+function renderLegend(rows){const ws=uniq(rows.map(e=>e.work_type_code));document.getElementById('legend').innerHTML=ws.map(c=>{const e=events.find(x=>x.work_type_code===c);return `<div class="legend-row"><span class="sw" style="background:${WORK_COLORS[c]||'#68736b'}"></span>${esc(e?e.work_type_name:c)}</div>`}).join('')||'表示対象なし'}
+function renderFilterSummary(rows){const ys=selectedYears();const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);document.getElementById('filterSummary').textContent=(ys.length?Math.min(...ys)+'〜'+Math.max(...ys)+'年度':'年度なし')+'｜'+new Set(rows.map(e=>e.parcel_id)).size+'筆｜'+yen(amount);document.getElementById('mapSub').textContent=mapMode==='cumulative'?'選択年度までの累積表示':'選択年度のみ表示'}
+function render(){
+  const rows=filteredEvents();renderKpis(rows);renderFlow(rows);drawMap(rows);renderDetail();renderCycle();renderAllocations(rows);renderSummary(rows);renderLegend(rows);renderFilterSummary(rows);markTour();
+}
+function updateModeButtons(){document.getElementById('cumulativeBtn').classList.toggle('active',mapMode==='cumulative');document.getElementById('singleBtn').classList.toggle('active',mapMode==='single')}
+function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null}document.getElementById('playBtn').disabled=false;document.getElementById('stopBtn').disabled=true}
+function playYears(){stopPlay();mapMode='cumulative';updateModeButtons();setAllChecks('yearCheck',false);let i=0;document.getElementById('playBtn').disabled=true;document.getElementById('stopBtn').disabled=false;const step=()=>{if(i>=YEARS.length){stopPlay();return}const x=document.querySelector(`.yearCheck[value="${YEARS[i]}"]`);if(x)x.checked=true;render();i++};step();playTimer=setInterval(step,1300)}
+function bindActions(){
+  document.getElementById('playBtn').onclick=playYears;document.getElementById('stopBtn').onclick=stopPlay;document.getElementById('allYearsBtn').onclick=()=>{stopPlay();setAllChecks('yearCheck',true);render()};
+  document.getElementById('allWorksBtn').onclick=()=>{setAllChecks('workCheck',true);render()};document.getElementById('opsOnlyBtn').onclick=()=>{document.querySelectorAll('.workCheck').forEach(x=>{x.checked=(x.closest('label').dataset.outcome==='森林施業')});render()};
+  document.getElementById('cumulativeBtn').onclick=()=>{mapMode='cumulative';updateModeButtons();render()};document.getElementById('singleBtn').onclick=()=>{mapMode='single';updateModeButtons();render()};
+}
+async function start(){
+  initTour();bindActions();
+  try{
+    const data=await Promise.all([q('forest_os_ui_policy_demo_forest_base'),q('forest_os_ui_policy_demo_flow_summary'),q('forest_os_ui_policy_demo_allocation_detail'),q('forest_os_ui_policy_demo_finance_owner_time')]);
+    baseRows=data[0];events=data[1];allocations=data[2];ownerTimes=data[3];
+    if(!events.length)throw new Error('表示対象データがありません');
+    populateFilters();initMap();document.getElementById('loading').classList.add('hidden');document.getElementById('app').classList.remove('hidden');applyTour('overview');
+  }catch(e){document.getElementById('loading').classList.add('hidden');const er=document.getElementById('error');er.classList.remove('hidden');er.textContent='データを読み込めませんでした：'+String(e.message||e)}
+}
+start();
+})();
+</script>
+</body>
+</html>
