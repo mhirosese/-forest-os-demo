@@ -340,7 +340,12 @@ function toggleBaseMap(){
   if(btn)btn.classList.add('active');
 }
 function yearForMap(e){
-  const ys=selectedYears();if(!ys.length)return false;const max=Math.max(...ys);if(mapMode==='cumulative')return Number(e.work_fiscal_year)<=max && Number(e.work_fiscal_year)>=Math.min(...ys);return ys.includes(Number(e.work_fiscal_year));
+  const ys=selectedYears();
+  if(!ys.length)return false;
+  const y=Number(e.work_fiscal_year);
+  const max=Math.max(...ys);
+  if(mapMode==='cumulative') return ys.includes(y);
+  return y===max;
 }
 function drawMap(rows){
   eventLayer.clearLayers();
@@ -416,7 +421,7 @@ function renderSummary(rows){
   const sums={national:0,prefecture:0,municipality:0,private:0};rows.forEach(e=>fundsArray(e).forEach(f=>{const g=f.funding_source_group||f.source_group;if(Object.hasOwn(sums,g)&&selectedGroups().includes(g)){const prog=sourceProgram();const code=f.funding_source_code||f.source_code;if(prog==='all'||prog===code)sums[g]+=Number(f.amount_jpy||0)}}));const max=Math.max(1,...Object.values(sums));document.getElementById('sourceBars').innerHTML=SOURCE_GROUPS.map(s=>`<div class="source-card"><div class="name">${s.label}</div><div class="amt">${yen(sums[s.id])}</div><div class="bar"><i style="width:${Math.round(sums[s.id]/max*100)}%"></i></div></div>`).join('');
 }
 function renderLegend(rows){const ws=uniq(rows.map(e=>e.work_type_code));let h='<div class="legend-row"><span class="sw outline"></span>筆境界</div>';if(mapMode==='cumulative'&&selectedYears().length>1)h+='<div class="legend-row"><span class="sw" style="background:#7f8b83;opacity:.35"></span>過年度（淡色）</div>';h+=ws.map(c=>{const e=events.find(x=>x.work_type_code===c);return `<div class="legend-row"><span class="sw" style="background:${WORK_COLORS[c]||'#68736b'}"></span>${esc(e?e.work_type_name:c)}</div>`}).join('');document.getElementById('legend').innerHTML=h}
-function renderFilterSummary(rows){const ys=selectedYears();const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);document.getElementById('filterSummary').textContent=(ys.length?Math.min(...ys)+'〜'+Math.max(...ys)+'年度':'年度なし')+'｜'+new Set(rows.map(e=>e.parcel_id)).size+'筆｜'+yen(amount);document.getElementById('mapSub').textContent=mapMode==='cumulative'?'濃色＝最新選択年度、淡色＝過年度｜背景地図は必要時のみ表示':'選択年度のみ｜背景地図は必要時のみ表示'}
+function renderFilterSummary(rows){const ys=selectedYears();const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);document.getElementById('filterSummary').textContent=(ys.length?Math.min(...ys)+'〜'+Math.max(...ys)+'年度':'年度なし')+'｜'+new Set(rows.map(e=>e.parcel_id)).size+'筆｜'+yen(amount);document.getElementById('mapSub').textContent=mapMode==='cumulative'?'選択した年度を累積表示｜最新年度を濃色':'選択した年度のうち最新年度だけ表示'}
 function render(){
   const rows=filteredEvents();renderKpis(rows);renderFlow(rows);drawMap(rows);renderDetail();renderCycle();renderAllocations(rows);renderSummary(rows);renderLegend(rows);renderFilterSummary(rows);markTour();
 }
@@ -434,7 +439,7 @@ async function start(){
   try{
     const core=await Promise.all([
       q('forest_os_ui_policy_demo_forest_base'),
-      q('forest_os_ui_policy_demo_flow_summary')
+      q('forest_os_ui_policy_demo_map_events_v2')
     ]);
     baseRows=core[0];events=core[1];
     if(!events.length)throw new Error('表示対象データがありません');
