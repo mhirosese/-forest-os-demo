@@ -171,6 +171,7 @@ const TOUR=[
 ];
 let baseRows=[],events=[],allocations=[],ownerTimes=[];
 let map,baseLayer,labelLayer,eventLayer,selectedLayer,allMapBounds=null;
+let mapResizeObserver=null;
 let mapLabelsVisible=true;
 let selectedParcelId=null,selectedEventId=null,playTimer=null,mapMode='cumulative',tourId='overview';
 const yen=n=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(n||0));
@@ -316,6 +317,10 @@ function initMap(){
   forestBounds.forEach(v=>{const icon=L.divIcon({className:'',html:`<div class="forest-label">${esc(v.name)}</div>`,iconSize:null});L.marker(v.bounds.getCenter(),{icon,interactive:false}).addTo(labelLayer)});
   if(bounds.length){let b=L.latLngBounds(bounds[0].getSouthWest(),bounds[0].getNorthEast());bounds.slice(1).forEach(x=>b.extend(x));allMapBounds=b;map.fitBounds(b.pad(.07))}else map.setView([34.2,135.8],12);
   map.on('zoomend',updateMapLabelVisibility);updateMapLabelVisibility();
+  if(window.ResizeObserver){
+    mapResizeObserver=new ResizeObserver(()=>{if(map)map.invalidateSize(false)});
+    mapResizeObserver.observe(document.getElementById('map'));
+  }
 }
 function yearForMap(e){
   const ys=selectedYears();if(!ys.length)return false;const max=Math.max(...ys);if(mapMode==='cumulative')return Number(e.work_fiscal_year)<=max && Number(e.work_fiscal_year)>=Math.min(...ys);return ys.includes(Number(e.work_fiscal_year));
@@ -410,12 +415,40 @@ function bindActions(){
 async function start(){
   initTour();bindActions();
   try{
-    const data=await Promise.all([q('forest_os_ui_policy_demo_forest_base'),q('forest_os_ui_policy_demo_flow_summary'),q('forest_os_ui_policy_demo_allocation_detail'),q('forest_os_ui_policy_demo_finance_owner_time')]);
-    baseRows=data[0];events=data[1];allocations=data[2];ownerTimes=data[3];
+    const core=await Promise.all([
+      q('forest_os_ui_policy_demo_forest_base'),
+      q('forest_os_ui_policy_demo_flow_summary')
+    ]);
+    baseRows=core[0];events=core[1];
     if(!events.length)throw new Error('表示対象データがありません');
-    populateFilters();initMap();document.getElementById('loading').classList.add('hidden');document.getElementById('app').classList.remove('hidden');applyTour('overview');
-  }catch(e){document.getElementById('loading').classList.add('hidden');const er=document.getElementById('error');er.classList.remove('hidden');er.textContent='データを読み込めませんでした：'+String(e.message||e)}
+
+    populateFilters();
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    initMap();
+    map.invalidateSize(true);
+    applyTour('overview');
+    setTimeout(()=>{if(map)map.invalidateSize(false)},250);
+
+    Promise.all([
+      q('forest_os_ui_policy_demo_allocation_detail'),
+      q('forest_os_ui_policy_demo_finance_owner_time')
+    ]).then(extra=>{
+      allocations=extra[0]||[];
+      ownerTimes=extra[1]||[];
+      render();
+    }).catch(()=>{});
+  }catch(e){
+    document.getElementById('loading').classList.add('hidden');
+    const er=document.getElementById('error');
+    er.classList.remove('hidden');
+    er.textContent='データを読み込めませんでした：'+String(e.message||e);
+  }
 }
+window.addEventListener('resize',()=>{if(map)requestAnimationFrame(()=>map.invalidateSize(false))});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&map)setTimeout(()=>map.invalidateSize(false),80)});
 start();
 })();
 </script>
