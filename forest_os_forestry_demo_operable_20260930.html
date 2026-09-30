@@ -236,7 +236,27 @@ function populateFilters(){
   document.getElementById('workChecks').innerHTML=works.map(w=>`<label class="check" data-outcome="${esc(w.outcome)}"><input class="workCheck" type="checkbox" value="${esc(w.code)}" checked><span>${esc(w.name)}</span></label>`).join('');
   refreshHierarchyOptions();
   document.querySelectorAll('.yearCheck,.sourceCheck,.workCheck').forEach(x=>x.addEventListener('change',render));
-  ['regionSelect','forestSelect','parcelSelect','ownerSelect','sourceProgramSelect'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{if(id==='regionSelect'||id==='forestSelect')refreshHierarchyOptions(id);render()}));
+  ['regionSelect','forestSelect','parcelSelect','ownerSelect','sourceProgramSelect'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
+    if(id==='regionSelect'){
+      selectedParcelId=null;selectedEventId=null;
+      refreshHierarchyOptions('regionSelect');
+    }else if(id==='forestSelect'){
+      selectedParcelId=null;selectedEventId=null;
+      refreshHierarchyOptions('forestSelect');
+    }else if(id==='parcelSelect'){
+      selectedEventId=null;
+      const p=selectedParcel();
+      selectedParcelId=(p&&p!=='all')?p:null;
+    }else if(id==='ownerSelect'){
+      selectedEventId=null;
+      const owner=selectedOwner();
+      if(selectedParcelId){
+        const sample=events.find(e=>e.parcel_id===selectedParcelId);
+        if(!sample||!eventPassesOwner(sample,owner)) selectedParcelId=null;
+      }
+    }
+    render();
+  }));
 }
 function refreshHierarchyOptions(changed){
   const reg=document.getElementById('regionSelect').value||'all';
@@ -391,8 +411,15 @@ function renderDetail(){
   if(!selectedParcelId){badge.textContent='未選択';box.innerHTML='<div class="detail-empty">地図または筆一覧から選ぶと、年度別の施業・財源・所有者情報を表示します。</div>';return}
   const all=events.filter(e=>e.parcel_id===selectedParcelId).sort((a,b)=>String(a.event_date).localeCompare(String(b.event_date)));
   const base=baseRows.find(r=>r.parcel_id===selectedParcelId)||all[0]||{};const sample=all[0]||{};badge.textContent=all.length+'件';
-  const currentOwners=uniq(all.flatMap(directOwners));const status=sample.owner_resolution_status;let html=`<div class="detail-head"><div><div class="detail-title">${esc(sample.parcel_code||base.parcel_code||'')}</div><div class="panel-sub">${esc(sample.forest_name||base.forest_name||'')}</div></div>${badgeForStatus(status)}</div>`;
+  const currentOwners=uniq(all.flatMap(directOwners));const status=sample.owner_resolution_status;
+  const predecessorOwners=uniq(ownerTimes.filter(r=>r.parcel_id===selectedParcelId).flatMap(r=>
+    Array.isArray(r.owner_at_work_details)?r.owner_at_work_details.map(x=>x.owner_name||x.party_name):[]
+  )).filter(n=>n&&!currentOwners.includes(n));
+  let html=`<div class="detail-head"><div><div class="detail-title">${esc(sample.parcel_code||base.parcel_code||'')}</div><div class="panel-sub">${esc(sample.forest_name||base.forest_name||'')}</div></div>${badgeForStatus(status)}</div>`;
   html+=`<div class="mini-grid"><div class="mini"><div class="k">筆面積</div><div class="v">${ha(sample.parcel_area_ha||base.parcel_area_ha||0)}</div></div><div class="mini"><div class="k">現在の所有者</div><div class="v">${esc(currentOwners.join('、')||OWNER_STATUS[status]||'未確認')}</div></div></div>`;
+  if(predecessorOwners.length&&(status==='succession_or_owner_unresolved'||status==='owner_unresolved')){
+    html+=`<div class="mini"><div class="k">確認中の前所有者等</div><div class="v">${esc(predecessorOwners.join('、'))}</div></div>`;
+  }
   const focus=selectedEventId?all.find(e=>e.work_event_id===selectedEventId):null;if(focus){const ot=ownerTimeFor(focus);const at=ot&&Array.isArray(ot.owner_at_work_details)?uniq(ot.owner_at_work_details.map(x=>x.owner_name||x.party_name)):[];html+=`<div class="mini"><div class="k">${focus.work_fiscal_year}年度・施業時点所有者</div><div class="v">${esc(at.join('、')||OWNER_STATUS[focus.owner_resolution_status]||'未確認')}</div></div>`}
   html+='<div class="section-label">施業・対応履歴</div><div class="history">';
   all.forEach(e=>{const active=e.work_event_id===selectedEventId;const fa=fundsArray(e);const q=e.actual_quantity?`${num(e.actual_quantity)} ${esc(e.quantity_unit||'')}`:'';html+=`<div class="event-card ${active?'active':''}" data-event="${e.work_event_id}"><div class="event-top"><div class="event-name"><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${WORK_COLORS[e.work_type_code]||'#667'};margin-right:6px"></span>${esc(e.work_type_name)}</div><div class="event-date">${e.work_fiscal_year}年度</div></div><div class="event-meta">${esc(e.event_date)}${e.actual_area_ha?'｜'+ha(e.actual_area_ha):''}${q?'｜'+q:''}｜${yen(e.total_amount_jpy)}</div><div class="funds">${fa.map(f=>`<span class="fund">${esc(f.funding_source_name||f.source_name)} ${yen(f.amount_jpy)}</span>`).join('')}</div></div>`});
