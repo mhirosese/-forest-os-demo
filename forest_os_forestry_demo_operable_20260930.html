@@ -30,8 +30,9 @@ select{width:100%;border:1px solid var(--line);background:#fff;border-radius:8px
 .filter-actions{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);cursor:pointer}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:12px}.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px;box-shadow:var(--shadow)}.kpi .k{font-size:10px;color:var(--muted)}.kpi .v{font-size:20px;font-weight:750;margin-top:3px}.kpi .n{font-size:9px;color:var(--muted);margin-top:2px}
 .flowbar{margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.flowstep{position:relative;border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 10px;min-height:63px}.flowstep:not(:last-child):after{content:'→';position:absolute;right:-10px;top:20px;z-index:4;color:#8b988f;font-weight:700}.flowstep .k{font-size:9px;color:var(--muted)}.flowstep .v{font-size:12px;font-weight:700;margin-top:3px;line-height:1.35}.flowstep .s{font-size:9px;color:var(--muted);margin-top:2px}
-.workspace{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(330px,.78fr);gap:12px;margin-top:12px}.map-panel{min-width:0}.map-wrap{position:relative}#map{height:610px;background:#e9eee8}.map-legend{position:absolute;left:10px;bottom:10px;z-index:550;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:9px;padding:8px;box-shadow:var(--shadow);font-size:9px;max-width:220px}.legend-row{display:flex;align-items:center;gap:6px;margin:3px 0}.sw{width:12px;height:9px;border-radius:3px;flex:0 0 auto}
-.map-tools{display:flex;gap:6px;align-items:center}.mode{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.mode button{border:0;background:#fff;padding:6px 8px;font-size:10px;cursor:pointer}.mode button.active{background:var(--accent);color:#fff}
+.workspace{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(330px,.78fr);gap:12px;margin-top:12px}.map-panel{min-width:0}.map-wrap{position:relative}#map{height:610px;background:#e9eee8}.map-legend{position:absolute;left:10px;bottom:10px;z-index:550;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:9px;padding:8px;box-shadow:var(--shadow);font-size:9px;max-width:240px}.legend-row{display:flex;align-items:center;gap:6px;margin:3px 0}.sw{width:12px;height:9px;border-radius:3px;flex:0 0 auto}.sw.outline{background:transparent;border:1.5px solid #728079}
+.map-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.mode{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.mode button{border:0;background:#fff;padding:6px 8px;font-size:10px;cursor:pointer}.mode button.active{background:var(--accent);color:#fff}.map-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 8px;font-size:10px;color:var(--text);cursor:pointer}.map-btn.active{background:#edf4ef;border-color:#abc2b0;color:#355b40}
+.leaflet-control-zoom a{width:34px!important;height:34px!important;line-height:34px!important;font-size:18px!important}.leaflet-container{font-family:inherit}.leaflet-tooltip.parcel-label{background:rgba(255,255,255,.86);border:1px solid rgba(97,111,101,.45);box-shadow:none;border-radius:5px;color:#36443a;font-size:8px;font-weight:700;padding:2px 4px;opacity:0!important;pointer-events:none}.show-parcel-labels .leaflet-tooltip.parcel-label{opacity:.93!important}.forest-label{background:rgba(39,65,47,.88);color:#fff;border-radius:6px;padding:3px 6px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid rgba(255,255,255,.85);box-shadow:0 1px 5px rgba(0,0,0,.12);transform:translate(-50%,-50%);opacity:.92}.hide-map-labels .forest-label,.hide-map-labels .leaflet-tooltip.parcel-label{display:none!important}
 .detail-scroll{max-height:610px;overflow:auto}.detail-empty{font-size:12px;color:var(--muted);line-height:1.7;padding:10px}.detail-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.detail-title{font-size:17px;font-weight:750}.badge{display:inline-block;border-radius:999px;background:var(--soft);padding:4px 7px;font-size:9px;color:#3c5b45}.badge.warn{background:#f7efe3;color:#855928}.badge.danger{background:#f8e9e7;color:#87483e}.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.mini{border:1px solid #e7ebe7;border-radius:8px;padding:8px}.mini .k{font-size:9px;color:var(--muted)}.mini .v{font-size:12px;font-weight:650;margin-top:2px;line-height:1.3}.section-label{font-size:10px;color:var(--muted);font-weight:700;margin:12px 0 6px}
 .history{display:grid;gap:7px}.event-card{border:1px solid var(--line);border-radius:9px;padding:9px;cursor:pointer;background:#fff}.event-card.active{box-shadow:inset 0 0 0 2px var(--accent);background:#f5f9f6}.event-top{display:flex;justify-content:space-between;gap:8px}.event-name{font-size:11px;font-weight:750}.event-date{font-size:9px;color:var(--muted)}.event-meta{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.45}.funds{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.fund{font-size:8px;padding:3px 5px;border:1px solid #e0e5e0;border-radius:999px;background:#f8faf8}
 .lower{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.full{grid-column:1/-1}.cycle{display:flex;gap:5px;align-items:stretch;overflow:auto;padding-bottom:2px}.cycle-node{min-width:145px;flex:1;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff;position:relative}.cycle-node:not(:last-child):after{content:'→';position:absolute;right:-9px;top:29px;color:#8e9991;z-index:2}.cycle-node .stage{font-size:10px;font-weight:750}.cycle-node .date{font-size:9px;color:var(--muted);margin-top:3px}.cycle-node .amount{font-size:12px;font-weight:700;margin-top:5px}.cycle-node .meta{font-size:9px;color:var(--muted);margin-top:2px}
@@ -108,7 +109,7 @@ select{width:100%;border:1px solid var(--line);background:#fff;border-radius:8px
       <section class="panel map-panel">
         <div class="panel-head">
           <div><div class="panel-title">森林マップ</div><div id="mapSub" class="panel-sub"></div></div>
-          <div class="map-tools"><div class="mode"><button id="cumulativeBtn" class="active">累積</button><button id="singleBtn">単年度</button></div></div>
+          <div class="map-tools"><button id="fitAllBtn" class="map-btn">全体</button><button id="labelBtn" class="map-btn active">筆番号</button><div class="mode"><button id="cumulativeBtn" class="active">累積</button><button id="singleBtn">単年度</button></div></div>
         </div>
         <div class="map-wrap"><div id="map"></div><div id="legend" class="map-legend"></div></div>
       </section>
@@ -169,7 +170,8 @@ const TOUR=[
   {id:'outcomes',label:'6 成果',desc:'年度集計'}
 ];
 let baseRows=[],events=[],allocations=[],ownerTimes=[];
-let map,baseLayer,eventLayer,selectedLayer;
+let map,baseLayer,labelLayer,eventLayer,selectedLayer,allMapBounds=null;
+let mapLabelsVisible=true;
 let selectedParcelId=null,selectedEventId=null,playTimer=null,mapMode='cumulative',tourId='overview';
 const yen=n=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(n||0));
 const num=n=>new Intl.NumberFormat('ja-JP').format(Number(n||0));
@@ -288,26 +290,46 @@ function applyTour(id){
   if(id==='outcomes'){render();setTimeout(()=>document.getElementById('summaryPanel').scrollIntoView({behavior:'smooth',block:'start'}),150);return}
   render();
 }
+function shortParcel(code){const p=String(code||'').split('-');return p[p.length-1]||String(code||'')}
+function updateMapLabelVisibility(){
+  if(!map)return;const c=map.getContainer();c.classList.toggle('hide-map-labels',!mapLabelsVisible);c.classList.toggle('show-parcel-labels',mapLabelsVisible&&map.getZoom()>=14);
+  const b=document.getElementById('labelBtn');if(b)b.classList.toggle('active',mapLabelsVisible);
+}
 function initMap(){
-  map=L.map('map',{zoomControl:true});
+  map=L.map('map',{zoomControl:true,tap:true});
   L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,attribution:'地理院タイル'}).addTo(map);
-  baseLayer=L.layerGroup().addTo(map);eventLayer=L.layerGroup().addTo(map);selectedLayer=L.layerGroup().addTo(map);
-  const bounds=[];
-  baseRows.forEach(r=>{if(!r.geom_geojson)return;const gj=L.geoJSON(r.geom_geojson,{style:{color:'#7c877f',weight:1,fillColor:'#e1e7e1',fillOpacity:.13},onEachFeature:(_,layer)=>{layer.on('click',()=>selectParcel(r.parcel_id));layer.bindTooltip(esc(r.parcel_code),{sticky:true})}}).addTo(baseLayer);try{bounds.push(gj.getBounds())}catch(_){}});
-  if(bounds.length){let b=bounds[0];bounds.slice(1).forEach(x=>b.extend(x));map.fitBounds(b.pad(.07))}else map.setView([34.2,135.8],12);
+  baseLayer=L.layerGroup().addTo(map);labelLayer=L.layerGroup().addTo(map);eventLayer=L.layerGroup().addTo(map);selectedLayer=L.layerGroup().addTo(map);
+  const bounds=[];const forestBounds=new Map();
+  baseRows.forEach(r=>{
+    if(!r.geom_geojson)return;
+    const gj=L.geoJSON(r.geom_geojson,{style:{color:'#718078',weight:1.35,opacity:.88,fillColor:'#dbe3dc',fillOpacity:.08},onEachFeature:(_,layer)=>{
+      layer.on('click',()=>selectParcel(r.parcel_id));
+      layer.bindTooltip(`${esc(r.parcel_code)}${r.parcel_area_ha?'｜'+Number(r.parcel_area_ha).toFixed(1)+' ha':''}`,{sticky:true});
+    }}).addTo(baseLayer);
+    try{
+      const b=gj.getBounds();bounds.push(b);
+      const fk=r.forest_unit_id||r.forest_name||'forest';
+      if(!forestBounds.has(fk))forestBounds.set(fk,{bounds:L.latLngBounds(b.getSouthWest(),b.getNorthEast()),name:r.forest_name||''});else forestBounds.get(fk).bounds.extend(b);
+      L.tooltip({permanent:true,direction:'center',className:'parcel-label',interactive:false,opacity:.93}).setLatLng(b.getCenter()).setContent(esc(shortParcel(r.parcel_code))).addTo(labelLayer);
+    }catch(_){}
+  });
+  forestBounds.forEach(v=>{const icon=L.divIcon({className:'',html:`<div class="forest-label">${esc(v.name)}</div>`,iconSize:null});L.marker(v.bounds.getCenter(),{icon,interactive:false}).addTo(labelLayer)});
+  if(bounds.length){let b=L.latLngBounds(bounds[0].getSouthWest(),bounds[0].getNorthEast());bounds.slice(1).forEach(x=>b.extend(x));allMapBounds=b;map.fitBounds(b.pad(.07))}else map.setView([34.2,135.8],12);
+  map.on('zoomend',updateMapLabelVisibility);updateMapLabelVisibility();
 }
 function yearForMap(e){
   const ys=selectedYears();if(!ys.length)return false;const max=Math.max(...ys);if(mapMode==='cumulative')return Number(e.work_fiscal_year)<=max && Number(e.work_fiscal_year)>=Math.min(...ys);return ys.includes(Number(e.work_fiscal_year));
 }
 function drawMap(rows){
   eventLayer.clearLayers();
+  const ys=selectedYears();const newest=ys.length?Math.max(...ys):null;
   rows.filter(yearForMap).forEach(e=>{
-    if(!e.geom_geojson)return;const color=WORK_COLORS[e.work_type_code]||'#65736a';
-    const gj=L.geoJSON(e.geom_geojson,{style:{color,weight:selectedEventId===e.work_event_id?4:2,fillColor:color,fillOpacity:selectedEventId===e.work_event_id?.62:.38}}).addTo(eventLayer);
-    gj.eachLayer(l=>{l.on('click',()=>selectEvent(e));l.bindTooltip(`${esc(e.parcel_code)}｜${esc(e.work_type_name)}｜${e.work_fiscal_year}年度`,{sticky:true})});
+    if(!e.geom_geojson)return;const color=WORK_COLORS[e.work_type_code]||'#65736a';const active=selectedEventId===e.work_event_id;const old=mapMode==='cumulative'&&newest!==null&&Number(e.work_fiscal_year)<newest;
+    const gj=L.geoJSON(e.geom_geojson,{style:{color,weight:active?4:(old?1.5:2.5),opacity:active?1:(old?.55:.92),fillColor:color,fillOpacity:active?.62:(old?.16:.42)}}).addTo(eventLayer);
+    gj.eachLayer(l=>{l.on('click',()=>selectEvent(e));l.bindTooltip(`<strong>${esc(shortParcel(e.parcel_code))}</strong>｜${esc(e.work_type_name)}｜${e.work_fiscal_year}年度｜${yen(fundingAmountForEvent(e))}`,{sticky:true})});
   });
   selectedLayer.clearLayers();
-  if(selectedParcelId){const b=baseRows.find(r=>r.parcel_id===selectedParcelId);if(b&&b.geom_geojson)L.geoJSON(b.geom_geojson,{style:{color:'#15251a',weight:3,fillOpacity:0}}).addTo(selectedLayer)}
+  if(selectedParcelId){const b=baseRows.find(r=>r.parcel_id===selectedParcelId);if(b&&b.geom_geojson)L.geoJSON(b.geom_geojson,{style:{color:'#14251a',weight:4,opacity:1,fillColor:'#ffffff',fillOpacity:.04,dashArray:'8 5'}}).addTo(selectedLayer)}
 }
 function selectParcel(id){selectedParcelId=id;selectedEventId=null;setSelect('parcelSelect',id);render()}
 function selectEvent(e){selectedParcelId=e.parcel_id;selectedEventId=e.work_event_id;setSelect('parcelSelect',e.parcel_id);render()}
@@ -371,8 +393,8 @@ function renderSummary(rows){
   document.getElementById('summaryBody').innerHTML=out.length?out.map(g=>{const ev=new Map();g.rows.forEach(e=>ev.set(e.work_event_id,e));const evs=Array.from(ev.values());const area=evs.reduce((s,e)=>s+Number(e.actual_area_ha||0),0);const qtys=evs.filter(e=>e.actual_quantity).map(e=>`${num(e.actual_quantity)} ${e.quantity_unit||''}`);const amount=g.rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);return `<tr><td>${g.year}</td><td>${esc(g.name)}</td><td class="num">${ev.size}件</td><td class="num">${new Set(g.rows.map(e=>e.parcel_id)).size}筆</td><td class="num">${area?area.toFixed(1)+' ha':'—'}</td><td>${qtys.length?esc(qtys.join(' / ')):'—'}</td><td class="num">${yen(amount)}</td></tr>`}).join(''):'<tr><td colspan="7" class="muted">対象データなし</td></tr>';
   const sums={national:0,prefecture:0,municipality:0,private:0};rows.forEach(e=>fundsArray(e).forEach(f=>{const g=f.funding_source_group||f.source_group;if(Object.hasOwn(sums,g)&&selectedGroups().includes(g)){const prog=sourceProgram();const code=f.funding_source_code||f.source_code;if(prog==='all'||prog===code)sums[g]+=Number(f.amount_jpy||0)}}));const max=Math.max(1,...Object.values(sums));document.getElementById('sourceBars').innerHTML=SOURCE_GROUPS.map(s=>`<div class="source-card"><div class="name">${s.label}</div><div class="amt">${yen(sums[s.id])}</div><div class="bar"><i style="width:${Math.round(sums[s.id]/max*100)}%"></i></div></div>`).join('');
 }
-function renderLegend(rows){const ws=uniq(rows.map(e=>e.work_type_code));document.getElementById('legend').innerHTML=ws.map(c=>{const e=events.find(x=>x.work_type_code===c);return `<div class="legend-row"><span class="sw" style="background:${WORK_COLORS[c]||'#68736b'}"></span>${esc(e?e.work_type_name:c)}</div>`}).join('')||'表示対象なし'}
-function renderFilterSummary(rows){const ys=selectedYears();const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);document.getElementById('filterSummary').textContent=(ys.length?Math.min(...ys)+'〜'+Math.max(...ys)+'年度':'年度なし')+'｜'+new Set(rows.map(e=>e.parcel_id)).size+'筆｜'+yen(amount);document.getElementById('mapSub').textContent=mapMode==='cumulative'?'選択年度までの累積表示':'選択年度のみ表示'}
+function renderLegend(rows){const ws=uniq(rows.map(e=>e.work_type_code));let h='<div class="legend-row"><span class="sw outline"></span>筆境界</div>';if(mapMode==='cumulative'&&selectedYears().length>1)h+='<div class="legend-row"><span class="sw" style="background:#7f8b83;opacity:.35"></span>過年度（淡色）</div>';h+=ws.map(c=>{const e=events.find(x=>x.work_type_code===c);return `<div class="legend-row"><span class="sw" style="background:${WORK_COLORS[c]||'#68736b'}"></span>${esc(e?e.work_type_name:c)}</div>`}).join('');document.getElementById('legend').innerHTML=h}
+function renderFilterSummary(rows){const ys=selectedYears();const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);document.getElementById('filterSummary').textContent=(ys.length?Math.min(...ys)+'〜'+Math.max(...ys)+'年度':'年度なし')+'｜'+new Set(rows.map(e=>e.parcel_id)).size+'筆｜'+yen(amount);document.getElementById('mapSub').textContent=mapMode==='cumulative'?'濃色＝最新選択年度、淡色＝過年度｜筆境界を常時表示':'選択年度のみ｜筆境界を常時表示'}
 function render(){
   const rows=filteredEvents();renderKpis(rows);renderFlow(rows);drawMap(rows);renderDetail();renderCycle();renderAllocations(rows);renderSummary(rows);renderLegend(rows);renderFilterSummary(rows);markTour();
 }
@@ -382,6 +404,7 @@ function playYears(){stopPlay();mapMode='cumulative';updateModeButtons();setAllC
 function bindActions(){
   document.getElementById('playBtn').onclick=playYears;document.getElementById('stopBtn').onclick=stopPlay;document.getElementById('allYearsBtn').onclick=()=>{stopPlay();setAllChecks('yearCheck',true);render()};
   document.getElementById('allWorksBtn').onclick=()=>{setAllChecks('workCheck',true);render()};document.getElementById('opsOnlyBtn').onclick=()=>{document.querySelectorAll('.workCheck').forEach(x=>{x.checked=(x.closest('label').dataset.outcome==='森林施業')});render()};
+  document.getElementById('fitAllBtn').onclick=()=>{if(allMapBounds)map.fitBounds(allMapBounds.pad(.07))};document.getElementById('labelBtn').onclick=()=>{mapLabelsVisible=!mapLabelsVisible;updateMapLabelVisibility()};
   document.getElementById('cumulativeBtn').onclick=()=>{mapMode='cumulative';updateModeButtons();render()};document.getElementById('singleBtn').onclick=()=>{mapMode='single';updateModeButtons();render()};
 }
 async function start(){
