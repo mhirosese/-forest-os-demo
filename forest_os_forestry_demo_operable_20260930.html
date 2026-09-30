@@ -247,12 +247,34 @@ function populateFilters(){
       selectedEventId=null;
       const p=selectedParcel();
       selectedParcelId=(p&&p!=='all')?p:null;
+
+      // 筆を選んだときは、その筆に合わない山主フィルタを残さない。
+      if(selectedParcelId){
+        const sample=events.find(e=>e.parcel_id===selectedParcelId);
+        const owner=selectedOwner();
+        if(owner!=='all' && (!sample || !eventPassesOwner(sample,owner))){
+          setSelect('ownerSelect','all');
+        }
+      }
     }else if(id==='ownerSelect'){
       selectedEventId=null;
       const owner=selectedOwner();
-      if(selectedParcelId){
-        const sample=events.find(e=>e.parcel_id===selectedParcelId);
-        if(!sample||!eventPassesOwner(sample,owner)) selectedParcelId=null;
+
+      if(owner==='all'){
+        // 山主絞り込み解除時は、現在の筆選択は維持。
+      }else{
+        // 山主を選んだら、古い筆選択を引きずらず、
+        // 現在の地域・森林の中でその山主に該当する最初の筆へ同期する。
+        const reg=selectedRegion(),forest=selectedForest();
+        const candidates=events.filter(e =>
+          (!reg||reg==='all'||e.region_id===reg) &&
+          (!forest||forest==='all'||e.forest_unit_id===forest) &&
+          eventPassesOwner(e,owner)
+        );
+        const p=candidates.length?candidates[0].parcel_id:null;
+        selectedParcelId=p;
+        if(p) setSelect('parcelSelect',p);
+        else setSelect('parcelSelect','all');
       }
     }
     render();
@@ -305,7 +327,12 @@ function applyTour(id){
   }
   if(id==='owner'){
     setAllChecks('yearCheck',false);[2024,2025].forEach(y=>{const x=document.querySelector(`.yearCheck[value="${y}"]`);if(x)x.checked=true});
-    const p=findParcelByCode('DEMO-101-1-P01');if(p){setSelect('parcelSelect',p);selectedParcelId=p}
+    const p=findParcelByCode('DEMO-101-1-P01');
+    if(p){
+      setSelect('parcelSelect',p);
+      selectedParcelId=p;
+      setSelect('ownerSelect','山主A（デモ）');
+    }
     render();setTimeout(()=>document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'center'}),150);return;
   }
   if(id==='outcomes'){render();setTimeout(()=>document.getElementById('summaryPanel').scrollIntoView({behavior:'smooth',block:'start'}),150);return}
