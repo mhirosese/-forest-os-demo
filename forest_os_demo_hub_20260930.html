@@ -71,13 +71,22 @@
 </div>
 <script>
 const frame=document.getElementById('view');
+
+function freshSrc(path){
+  const sep = path.includes('?') ? '&' : '?';
+  return path + sep + 'v=' + Date.now();
+}
+
 document.querySelectorAll('.tab').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    frame.src=btn.dataset.src;
+    frame.src=freshSrc(btn.dataset.src);
   });
 });
+
+// 初期表示もキャッシュを避ける
+frame.src=freshSrc('index.html');
 </script>
 </body>
 </html>
