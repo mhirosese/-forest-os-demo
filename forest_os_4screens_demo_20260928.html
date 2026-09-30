@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>森林OS｜簡易説明デモ</title>
+<style>
+:root{
+  --bg:#f5f7f5; --card:#ffffff; --line:#dbe3dd; --text:#18211d; --muted:#65736c;
+  --green:#2d5c46; --soft:#edf4ef; --soft2:#f8fbf9;
+  --ok:#d8eadc; --hold:#f2e2b5; --stop:#ebd2cf; --check:#dce6ec;
+  --shadow:0 8px 24px rgba(18,36,28,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Noto Sans JP",sans-serif}
+header{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px 28px}
+.head{max-width:1120px;margin:0 auto;padding:14px 16px 12px}
+h1{margin:0;font-size:24px;color:var(--green)}
+.sub{margin-top:4px;color:var(--muted);font-size:13px;line-height:1.6}
+.tabs{display:flex;gap:10px;margin-top:12px;overflow:auto;padding-bottom:2px}
+.tabs button{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:12px;padding:10px 14px;font-size:14px;font-weight:700;white-space:nowrap;cursor:pointer}
+.tabs button.active{background:var(--green);color:#fff;border-color:var(--green)}
+.screen{display:none;padding-top:18px}
+.screen.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+.card h2{margin:0;padding:14px 16px;font-size:16px;border-bottom:1px solid var(--line)}
+.body{padding:14px 16px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+.kpi .label{font-size:11px;color:var(--muted)}
+.kpi .value{font-size:22px;font-weight:800;margin-top:4px;color:var(--green)}
+.kpi .note{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.45}
+.grid2{display:grid;grid-template-columns:1.2fr .9fr;gap:14px}
+.mapwrap{background:var(--soft2);border:1px solid #e6ece7;border-radius:12px;padding:12px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.leg{display:flex;align-items:center;gap:6px;font-size:11px;color:#445149}
+.sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.05)}
+.parcelgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.parcel{min-height:60px;border-radius:10px;border:1px solid rgba(0,0,0,.06);padding:8px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:transform .08s ease, outline .08s ease}
+.parcel:hover{transform:translateY(-1px)}
+.parcel.active{outline:3px solid var(--green)}
+.parcel .id{font-weight:800;font-size:13px}
+.parcel .st{font-size:11px;line-height:1.35}
+.parcel.ok{background:var(--ok)} .parcel.hold{background:var(--hold)} .parcel.stop{background:var(--stop)} .parcel.check{background:var(--check)}
+.smallnote{font-size:11px;color:var(--muted);line-height:1.6;margin-top:10px}
+.detailhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.badge{display:inline-block;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:700;background:var(--soft);color:var(--green);border:1px solid #d4e0d8}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kvbox{border:1px solid #e8eeea;border-radius:10px;padding:10px;background:#fafcfb}
+.kvbox .k{font-size:11px;color:var(--muted)}
+.kvbox .v{font-size:13px;line-height:1.55;margin-top:4px}
+.summarylist{display:grid;gap:8px}
+.sum{border-left:4px solid var(--green);background:#f7faf8;border-radius:10px;padding:9px 10px}
+.sum b{font-size:13px}
+.sum div{font-size:11px;color:var(--muted);line-height:1.5;margin-top:2px}
+.flow3{display:grid;grid-template-columns:1fr 72px 1fr 72px 1fr;gap:8px;align-items:center}
+.col{border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden}
+.col h3{margin:0;padding:12px 14px;font-size:14px;border-bottom:1px solid var(--line)}
+.list{padding:10px 14px}
+.item{border-bottom:1px solid #edf1ee;padding:8px 0}
+.item:last-child{border-bottom:none}
+.item b{display:block;font-size:13px}
+.item span{display:block;font-size:11px;color:var(--muted);line-height:1.45;margin-top:2px}
+.arrow{text-align:center;font-size:24px;color:#91a097;font-weight:800}
+.returnbox{margin-top:12px;border:1px dashed #bfd0c5;background:#f7faf8;border-radius:12px;padding:12px 14px}
+.returnbox b{display:block;font-size:14px;color:var(--green)}
+.returnbox span{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.6}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chip{padding:6px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--soft);color:var(--green);border:1px solid #d4e0d8}
+.funnel{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:stretch}
+.stagebox{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff;box-shadow:var(--shadow)}
+.stagebox .num{font-size:11px;color:var(--muted)}
+.stagebox .big{font-size:24px;font-weight:800;color:var(--green);margin-top:4px}
+.stagebox .ttl{font-size:13px;font-weight:700;margin-top:2px}
+.stagebox .desc{font-size:11px;color:var(--muted);line-height:1.45;margin-top:4px}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rowitem{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border-bottom:1px solid #edf1ee;padding:8px 0}
+.rowitem:last-child{border-bottom:none}
+.rowitem b{font-size:13px}
+.rowitem span{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:700;background:var(--soft);color:var(--green)}
+.outputs{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.output{border:1px solid var(--line);border-radius:14px;background:#fff;padding:12px;box-shadow:var(--shadow)}
+.output b{display:block;font-size:13px}
+.output span{display:block;font-size:11px;color:var(--muted);line-height:1.45;margin-top:4px}
+@media (max-width:900px){
+  .kpis,.funnel,.outputs{grid-template-columns:repeat(2,1fr)}
+  .grid2,.twocol{grid-template-columns:1fr}
+  .flow3{grid-template-columns:1fr;gap:10px}
+  .arrow{transform:rotate(90deg)}
+}
+@media (max-width:560px){
+  .kpis,.funnel,.outputs{grid-template-columns:1fr}
+  .parcelgrid{grid-template-columns:repeat(3,1fr)}
+  .kv{grid-template-columns:1fr}
+  h1{font-size:21px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="head">
+    <h1>森林OS</h1>
+    <div class="sub">森林の状態を整理し、次に動かす森林と必要な対応を見える化する</div>
+    <div class="tabs">
+      <button class="active" data-tab="forest">① 区画の状態</button>
+      <button data-tab="detail">② 区画詳細</button>
+      <button data-tab="money">③ 費用・財源・収益</button>
+      <button data-tab="progress">④ 案件・集約の進捗</button>
+      <button data-tab="outputs">出力イメージ</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section id="forest" class="screen active">
+    <div class="kpis">
+      <div class="kpi"><div class="label">対象森林</div><div class="value">240ha</div><div class="note">状況把握済み</div></div>
+      <div class="kpi"><div class="label">施業候補</div><div class="value">95ha</div><div class="note">次に動かせる森林</div></div>
+      <div class="kpi"><div class="label">まとまり候補</div><div class="value">55ha</div><div class="note">一体で進めやすい範囲</div></div>
+      <div class="kpi"><div class="label">主な停止要因</div><div class="value" style="font-size:18px">相続・境界</div><div class="note">所有者不明、不同意も管理</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>区画ごとの状態</h2>
+        <div class="body">
+          <div class="mapwrap">
+            <div class="legend">
+              <div class="leg"><span class="sw" style="background:var(--ok)"></span>施業候補</div>
+              <div class="leg"><span class="sw" style="background:var(--hold)"></span>相続・権利整理</div>
+              <div class="leg"><span class="sw" style="background:var(--check)"></span>境界確認中</div>
+              <div class="leg"><span class="sw" style="background:var(--stop)"></span>所有者不明・不同意</div>
+            </div>
+            <div class="parcelgrid" id="parcelGrid"></div>
+            <div class="smallnote">色で現在の状態を表示し、クリックすると詳細へ移れます。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>区画の概要</h2>
+        <div class="body" id="forestPane"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="detail" class="screen">
+    <div class="card">
+      <h2>区画詳細</h2>
+      <div class="body" id="detailPane"></div>
+    </div>
+  </section>
+
+  <section id="money" class="screen">
+    <div class="card">
+      <h2>費用・財源・収益</h2>
+      <div class="body">
+        <div class="flow3">
+          <div class="col">
+            <h3>かかる費用</h3>
+            <div class="list">
+              <div class="item"><b>所有者対応</b><span>探索、意向確認、相続整理支援</span></div>
+              <div class="item"><b>境界・調査</b><span>資料収集、現地確認、測量、境界案</span></div>
+              <div class="item"><b>施業</b><span>間伐、植栽、下刈り、作業道</span></div>
+              <div class="item"><b>管理費</b><span>巡視、事務局、モニタリング</span></div>
+            </div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="col">
+            <h3>使う財源</h3>
+            <div class="list">
+              <div class="item"><b>森林環境譲与税</b><span>地域の森林管理費へ充当</span></div>
+              <div class="item"><b>国・県補助</b><span>対象施業、対象経費に応じて活用</span></div>
+              <div class="item"><b>自治体負担</b><span>譲与税で不足する部分を補完</span></div>
+              <div class="item"><b>山主・事業主体負担</b><span>必要に応じて設定</span></div>
+            </div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="col">
+            <h3>入ってくるお金</h3>
+            <div class="list">
+              <div class="item"><b>木材収入</b><span>施業対象や市況に応じて発生</span></div>
+              <div class="item"><b>J-クレジット収入</b><span>対象森林のみ収益源として活用</span></div>
+              <div class="item"><b>その他収入</b><span>保険金、協賛、関連事業収入など</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="returnbox">
+          <b>還元・再投資</b>
+          <span>山主還元、管理費回収、次の森林管理への再投資までつなげて管理します。</span>
+          <div class="chips">
+            <span class="chip">山主還元</span>
+            <span class="chip">管理費</span>
+            <span class="chip">次年度施業</span>
+            <span class="chip">J-クレジット対象候補</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="progress" class="screen">
+    <div class="card">
+      <h2>案件・集約の進捗</h2>
+      <div class="body">
+        <div class="funnel">
+          <div class="stagebox">
+            <div class="num">1</div>
+            <div class="big">300ha</div>
+            <div class="ttl">対象森林</div>
+            <div class="desc">まず全体の対象を持つ</div>
+          </div>
+          <div class="stagebox">
+            <div class="num">2</div>
+            <div class="big">240ha</div>
+            <div class="ttl">状況把握済み</div>
+            <div class="desc">所有・境界・現況を確認</div>
+          </div>
+          <div class="stagebox">
+            <div class="num">3</div>
+            <div class="big">95ha</div>
+            <div class="ttl">施業候補</div>
+            <div class="desc">次に動かせる森林</div>
+          </div>
+          <div class="stagebox">
+            <div class="num">4</div>
+            <div class="big">55ha</div>
+            <div class="ttl">まとまり候補</div>
+            <div class="desc">一体で進めやすい範囲</div>
+          </div>
+        </div>
+
+        <div class="twocol" style="margin-top:14px">
+          <div class="card" style="margin:0;box-shadow:none">
+            <h2>今止まっているもの</h2>
+            <div class="body">
+              <div class="rowitem"><div><b>相続・共有</b><span>権利関係の整理が必要</span></div><span class="pill">42ha</span></div>
+              <div class="rowitem"><div><b>境界確認</b><span>施業範囲の確認が未了</span></div><span class="pill">31ha</span></div>
+              <div class="rowitem"><div><b>所有者不明</b><span>探索・照会が必要</span></div><span class="pill">18ha</span></div>
+              <div class="rowitem"><div><b>不同意</b><span>別ルートで継続管理</span></div><span class="pill">12ha</span></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin:0;box-shadow:none">
+            <h2>次に動かす案件</h2>
+            <div class="body">
+              <div class="rowitem"><div><b>東山A団地</b><span>24ha｜計画作成へ</span></div><span class="pill">優先</span></div>
+              <div class="rowitem"><div><b>北谷B団地</b><span>18ha｜境界確認へ</span></div><span class="pill">準備中</span></div>
+              <div class="rowitem"><div><b>西峰C団地</b><span>13ha｜積算準備へ</span></div><span class="pill">準備中</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <section id="outputs" class="screen">
+    <div class="card">
+      <h2>出力イメージ</h2>
+      <div class="body">
+        <div class="outputs">
+          <div class="output"><b>森林状況レポート</b><span>森林ごとの状態、課題、担当、次工程</span></div>
+          <div class="output"><b>施業候補一覧</b><span>次に動かせる森林のまとまり</span></div>
+          <div class="output"><b>案件進捗表</b><span>何で止まり、何を進めるか</span></div>
+          <div class="output"><b>年度収支</b><span>費用、財源、収益、還元の整理</span></div>
+          <div class="output"><b>J-クレジット候補一覧</b><span>候補森林、進捗、対象可否の整理</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const parcels = [
+  {id:"A-12", cls:"ok", status:"施業候補", area:"12.4ha", owner:"確認済", issue:"主要な課題なし", next:"計画化・施業準備", route:"森林経営計画へ接続"},
+  {id:"A-13", cls:"hold", status:"相続整理中", area:"8.1ha", owner:"相続未了", issue:"権利関係の整理が必要", next:"相続関係人確認", route:"整理後に施業候補判定"},
+  {id:"A-14", cls:"check", status:"境界確認中", area:"6.3ha", owner:"確認済", issue:"施業範囲の境界確認が未了", next:"資料確認・現地確認", route:"確認後に施業候補化"},
+  {id:"A-15", cls:"stop", status:"所有者不明", area:"4.8ha", owner:"不明", issue:"所有者探索が必要", next:"探索・照会", route:"管理ルート判定"},
+  {id:"B-21", cls:"ok", status:"施業候補", area:"10.6ha", owner:"確認済", issue:"同意取得済", next:"積算・予算化", route:"施業案件へ"},
+  {id:"B-22", cls:"hold", status:"共有・不同意", area:"5.9ha", owner:"共有者あり", issue:"一部不同意", next:"同意調整", route:"継続管理または別ルート"},
+  {id:"B-23", cls:"check", status:"境界確認中", area:"7.2ha", owner:"確認済", issue:"一部の筆で境界不確実", next:"境界案確認", route:"一部除外して施業も可"},
+  {id:"B-24", cls:"ok", status:"施業候補", area:"9.4ha", owner:"確認済", issue:"路網条件も概ね良好", next:"発注準備", route:"施業案件へ"}
+];
+
+const grid = document.getElementById("parcelGrid");
+const forestPane = document.getElementById("forestPane");
+const detailPane = document.getElementById("detailPane");
+
+function renderGrid(selectedId){
+  grid.innerHTML = parcels.map(p => 
+    '<div class="parcel ' + p.cls + (p.id === selectedId ? ' active' : '') + '" data-id="' + p.id + '">' +
+    '<div class="id">' + p.id + '</div>' +
+    '<div class="st">' + p.status + '</div>' +
+    '</div>'
+  ).join('');
+  grid.querySelectorAll(".parcel").forEach(el => {
+    el.addEventListener("click", function(){ selectParcel(el.dataset.id); });
+  });
+}
+
+function renderForestPane(p){
+  forestPane.innerHTML =
+    '<div class="detailhead"><div><div style="font-size:18px;font-weight:800">' + p.id + '</div><div style="font-size:12px;color:var(--muted);margin-top:2px">' + p.area + '</div></div><span class="badge">' + p.status + '</span></div>' +
+    '<div class="kv">' +
+      '<div class="kvbox"><div class="k">所有・権利</div><div class="v">' + p.owner + '</div></div>' +
+      '<div class="kvbox"><div class="k">現在の課題</div><div class="v">' + p.issue + '</div></div>' +
+      '<div class="kvbox"><div class="k">次の対応</div><div class="v">' + p.next + '</div></div>' +
+      '<div class="kvbox"><div class="k">その先</div><div class="v">' + p.route + '</div></div>' +
+    '</div>';
+}
+
+function renderDetailPane(p){
+  detailPane.innerHTML =
+    '<div class="detailhead"><div><div style="font-size:22px;font-weight:800">' + p.id + '</div><div style="font-size:12px;color:var(--muted);margin-top:2px">' + p.area + '</div></div><span class="badge">' + p.status + '</span></div>' +
+    '<div class="kv" style="margin-bottom:12px">' +
+      '<div class="kvbox"><div class="k">所有・権利</div><div class="v">' + p.owner + '</div></div>' +
+      '<div class="kvbox"><div class="k">現在の課題</div><div class="v">' + p.issue + '</div></div>' +
+      '<div class="kvbox"><div class="k">次の対応</div><div class="v">' + p.next + '</div></div>' +
+      '<div class="kvbox"><div class="k">その先</div><div class="v">' + p.route + '</div></div>' +
+    '</div>' +
+    '<div class="summarylist">' +
+      '<div class="sum"><b>現在地</b><div>施業候補として管理。周辺区画とのまとまりも確認。</div></div>' +
+      '<div class="sum"><b>次工程</b><div>計画化、積算、発注準備へ進む。</div></div>' +
+      '<div class="sum"><b>費用・収益</b><div>施業費、管理費、財源、木材・J-クレジット候補まで追跡。</div></div>' +
+    '</div>';
+}
+
+function selectParcel(id){
+  const parcel = parcels.find(function(p){ return p.id === id; });
+  renderGrid(id);
+  renderForestPane(parcel);
+  renderDetailPane(parcel);
+}
+
+selectParcel("A-12");
+
+document.querySelectorAll(".tabs button").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll(".tabs button").forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.querySelectorAll(".screen").forEach(function(sc){ sc.classList.remove("active"); });
+    document.getElementById(tab).classList.add("active");
+  });
+});
+</script>
+</body>
+</html>
