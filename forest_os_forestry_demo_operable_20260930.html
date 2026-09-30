@@ -109,7 +109,7 @@ select{width:100%;border:1px solid var(--line);background:#fff;border-radius:8px
       <section class="panel map-panel">
         <div class="panel-head">
           <div><div class="panel-title">森林マップ</div><div id="mapSub" class="panel-sub"></div></div>
-          <div class="map-tools"><button id="fitAllBtn" class="map-btn">全体</button><button id="labelBtn" class="map-btn active">筆番号</button><div class="mode"><button id="cumulativeBtn" class="active">累積</button><button id="singleBtn">単年度</button></div></div>
+          <div class="map-tools"><button id="fitAllBtn" class="map-btn">全体</button><button id="baseMapBtn" class="map-btn">背景地図</button><button id="labelBtn" class="map-btn active">筆番号</button><div class="mode"><button id="cumulativeBtn" class="active">累積</button><button id="singleBtn">単年度</button></div></div>
         </div>
         <div class="map-wrap"><div id="map"></div><div id="legend" class="map-legend"></div></div>
       </section>
@@ -170,7 +170,7 @@ const TOUR=[
   {id:'outcomes',label:'6 成果',desc:'年度集計'}
 ];
 let baseRows=[],events=[],allocations=[],ownerTimes=[];
-let map,baseLayer,labelLayer,eventLayer,selectedLayer,allMapBounds=null;
+let map,baseLayer,labelLayer,eventLayer,selectedLayer,allMapBounds=null,baseMapTileLayer=null;
 let mapResizeObserver=null;
 let mapLabelsVisible=true;
 let selectedParcelId=null,selectedEventId=null,playTimer=null,mapMode='cumulative',tourId='overview';
@@ -297,8 +297,7 @@ function updateMapLabelVisibility(){
   const b=document.getElementById('labelBtn');if(b)b.classList.toggle('active',mapLabelsVisible);
 }
 function initMap(){
-  map=L.map('map',{zoomControl:true,tap:true});
-  L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,attribution:'地理院タイル'}).addTo(map);
+  map=L.map('map',{zoomControl:true,tap:true,preferCanvas:true,attributionControl:false});
   baseLayer=L.layerGroup().addTo(map);labelLayer=L.layerGroup().addTo(map);eventLayer=L.layerGroup().addTo(map);selectedLayer=L.layerGroup().addTo(map);
   const bounds=[];const forestBounds=new Map();
   baseRows.forEach(r=>{
@@ -321,6 +320,24 @@ function initMap(){
     mapResizeObserver=new ResizeObserver(()=>{if(map)map.invalidateSize(false)});
     mapResizeObserver.observe(document.getElementById('map'));
   }
+}
+function toggleBaseMap(){
+  const btn=document.getElementById('baseMapBtn');
+  if(baseMapTileLayer){
+    map.removeLayer(baseMapTileLayer);
+    baseMapTileLayer=null;
+    if(btn)btn.classList.remove('active');
+    return;
+  }
+  baseMapTileLayer=L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{
+    maxZoom:18,
+    attribution:'地理院タイル',
+    updateWhenIdle:true,
+    keepBuffer:1
+  });
+  baseMapTileLayer.addTo(map);
+  baseMapTileLayer.bringToBack();
+  if(btn)btn.classList.add('active');
 }
 function yearForMap(e){
   const ys=selectedYears();if(!ys.length)return false;const max=Math.max(...ys);if(mapMode==='cumulative')return Number(e.work_fiscal_year)<=max && Number(e.work_fiscal_year)>=Math.min(...ys);return ys.includes(Number(e.work_fiscal_year));
@@ -399,7 +416,7 @@ function renderSummary(rows){
   const sums={national:0,prefecture:0,municipality:0,private:0};rows.forEach(e=>fundsArray(e).forEach(f=>{const g=f.funding_source_group||f.source_group;if(Object.hasOwn(sums,g)&&selectedGroups().includes(g)){const prog=sourceProgram();const code=f.funding_source_code||f.source_code;if(prog==='all'||prog===code)sums[g]+=Number(f.amount_jpy||0)}}));const max=Math.max(1,...Object.values(sums));document.getElementById('sourceBars').innerHTML=SOURCE_GROUPS.map(s=>`<div class="source-card"><div class="name">${s.label}</div><div class="amt">${yen(sums[s.id])}</div><div class="bar"><i style="width:${Math.round(sums[s.id]/max*100)}%"></i></div></div>`).join('');
 }
 function renderLegend(rows){const ws=uniq(rows.map(e=>e.work_type_code));let h='<div class="legend-row"><span class="sw outline"></span>筆境界</div>';if(mapMode==='cumulative'&&selectedYears().length>1)h+='<div class="legend-row"><span class="sw" style="background:#7f8b83;opacity:.35"></span>過年度（淡色）</div>';h+=ws.map(c=>{const e=events.find(x=>x.work_type_code===c);return `<div class="legend-row"><span class="sw" style="background:${WORK_COLORS[c]||'#68736b'}"></span>${esc(e?e.work_type_name:c)}</div>`}).join('');document.getElementById('legend').innerHTML=h}
-function renderFilterSummary(rows){const ys=selectedYears();const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);document.getElementById('filterSummary').textContent=(ys.length?Math.min(...ys)+'〜'+Math.max(...ys)+'年度':'年度なし')+'｜'+new Set(rows.map(e=>e.parcel_id)).size+'筆｜'+yen(amount);document.getElementById('mapSub').textContent=mapMode==='cumulative'?'濃色＝最新選択年度、淡色＝過年度｜筆境界を常時表示':'選択年度のみ｜筆境界を常時表示'}
+function renderFilterSummary(rows){const ys=selectedYears();const amount=rows.reduce((s,e)=>s+fundingAmountForEvent(e),0);document.getElementById('filterSummary').textContent=(ys.length?Math.min(...ys)+'〜'+Math.max(...ys)+'年度':'年度なし')+'｜'+new Set(rows.map(e=>e.parcel_id)).size+'筆｜'+yen(amount);document.getElementById('mapSub').textContent=mapMode==='cumulative'?'濃色＝最新選択年度、淡色＝過年度｜背景地図は必要時のみ表示':'選択年度のみ｜背景地図は必要時のみ表示'}
 function render(){
   const rows=filteredEvents();renderKpis(rows);renderFlow(rows);drawMap(rows);renderDetail();renderCycle();renderAllocations(rows);renderSummary(rows);renderLegend(rows);renderFilterSummary(rows);markTour();
 }
@@ -409,7 +426,7 @@ function playYears(){stopPlay();mapMode='cumulative';updateModeButtons();setAllC
 function bindActions(){
   document.getElementById('playBtn').onclick=playYears;document.getElementById('stopBtn').onclick=stopPlay;document.getElementById('allYearsBtn').onclick=()=>{stopPlay();setAllChecks('yearCheck',true);render()};
   document.getElementById('allWorksBtn').onclick=()=>{setAllChecks('workCheck',true);render()};document.getElementById('opsOnlyBtn').onclick=()=>{document.querySelectorAll('.workCheck').forEach(x=>{x.checked=(x.closest('label').dataset.outcome==='森林施業')});render()};
-  document.getElementById('fitAllBtn').onclick=()=>{if(allMapBounds)map.fitBounds(allMapBounds.pad(.07))};document.getElementById('labelBtn').onclick=()=>{mapLabelsVisible=!mapLabelsVisible;updateMapLabelVisibility()};
+  document.getElementById('fitAllBtn').onclick=()=>{if(allMapBounds)map.fitBounds(allMapBounds.pad(.07))};document.getElementById('baseMapBtn').onclick=toggleBaseMap;document.getElementById('labelBtn').onclick=()=>{mapLabelsVisible=!mapLabelsVisible;updateMapLabelVisibility()};
   document.getElementById('cumulativeBtn').onclick=()=>{mapMode='cumulative';updateModeButtons();render()};document.getElementById('singleBtn').onclick=()=>{mapMode='single';updateModeButtons();render()};
 }
 async function start(){
