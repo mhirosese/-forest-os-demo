@@ -1165,7 +1165,7 @@ function renderForestDetail(id){
 }
 async function forestView(){
  const [allForests,allContracts,allEvidence,personaScopes,rightsMatrix]=await Promise.all([
-   q('forest_os_ui_forest_detail','select=*&order=name'),
+   q('forest_os_demo_public_forest_detail_compat','select=*&order=name'),
    q('forest_os_ui_contract_relation','select=*&order=contract_no'),
    q('forest_os_ui_work_evidence','select=*'),
    q('forest_os_ui_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
@@ -2059,7 +2059,7 @@ async function townMap(){
   q('forest_os_ui_persona_forest_scope','select=*&order=viewer_name,region_name,forest_name'),
   q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
   q('forest_os_ui_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
-  q('forest_os_ui_parcel_display','select=*&order=forest_code,parcel_code'),
+  q('forest_os_demo_public_parcel_display_compat','select=*&order=forest_code,parcel_code'),
   q('forest_os_ui_forest_display','select=*&order=region_name,forest_name')
  ]);
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
