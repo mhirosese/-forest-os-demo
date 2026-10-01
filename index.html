@@ -516,7 +516,7 @@ async function municipality(){
    q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
    q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
    q('forest_os_ui_map_feature','select=*'),
-   q('forest_os_ui_jcredit_project'),
+   q('forest_os_demo_public_jcredit_project'),
    q('forest_os_demo_public_task_core_current',`select=*&assigned_party_name=eq.${encodeURIComponent(p.party)}&order=due_on`).then(rows=>(rows||[]).map(x=>({...x,status:x.task_status,assigned_to:x.assigned_party_name}))),
    q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no')
  ]);
@@ -899,7 +899,7 @@ async function jcreditProject(){
  const p=currentPersona();
  const viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
  const [j,a,allc,growth,muniWork,wide,projectScopes,forestScopes,planScopes,certSchedule,inventory,sales,annualPlan,wideCandidates]=await Promise.all([
-   q('forest_os_ui_jcredit_project_legacy_detail','select=*'),
+   q('forest_os_demo_public_jcredit_project','select=*'),
    q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code'),
    q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
    q('forest_os_ui_jcredit_growth','select=*&order=project_code,area_version_no,forest_name'),
@@ -2502,7 +2502,7 @@ function adminRender(){
 }
 async function adminConsole(rebuild=false){
  if(!adminData||rebuild){
-  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([q('forest_os_ui_map_filter','select=*&order=forest_name'),q('forest_os_ui_jcredit_project','select=*&order=project_code'),q('forest_os_demo_public_work_core_current','select=*&order=work_title').then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,work_type_name:x.work_type_name||x.work_type_code,responsible_party_name:x.responsible_party_name||x.performed_by_party_name}))),q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code'),q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')]);
+  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([q('forest_os_ui_map_filter','select=*&order=forest_name'),q('forest_os_demo_public_jcredit_project','select=*&order=project_code'),q('forest_os_demo_public_work_core_current','select=*&order=work_title').then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,work_type_name:x.work_type_name||x.work_type_code,responsible_party_name:x.responsible_party_name||x.performed_by_party_name}))),q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code'),q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name')]);
   const mapRows=[...baseMapRows];for(const r of neighborDemo.mapRows)if(!mapRows.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))mapRows.push(r);
   const projects=[...baseProjects];for(const p of neighborDemo.projects)if(!projects.some(x=>x.project_code===p.project_code))projects.push(p);
   const works=[...baseWorks];for(const w of neighborDemo.works)if(!works.some(x=>x.title===w.title))works.push(w);
@@ -2523,7 +2523,7 @@ async function ensurePartyData(){
  if(adminData)return adminData;
  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities,delegations]=await Promise.all([
   q('forest_os_ui_map_filter','select=*&order=forest_name'),
-  q('forest_os_ui_jcredit_project','select=*&order=project_code'),
+  q('forest_os_demo_public_jcredit_project','select=*&order=project_code'),
   q('forest_os_demo_public_work_core_current','select=*&order=work_title').then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,work_type_name:x.work_type_name||x.work_type_code,responsible_party_name:x.responsible_party_name||x.performed_by_party_name}))),
   q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),
   q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),
@@ -3088,7 +3088,7 @@ async function jcreditProject(){
  const code=cur.project_code;
  const [storyRows,periodRows,storyTargets,sponsorRows]=await Promise.all([
   q('forest_os_ui_project_story_summary',`select=*&project_code=eq.${encodeURIComponent(code)}`),
-  q('forest_os_ui_jcredit_period_settings',`select=*&project_code=eq.${encodeURIComponent(code)}`),
+  q('forest_os_demo_public_jcredit_period_settings_compat',`select=*&project_code=eq.${encodeURIComponent(code)}`),
   code==='DEMO-JC-WIDE-001'?q('forest_os_ui_project_story_targets',`select=*&project_code=eq.${encodeURIComponent(code)}&order=planned_join_fiscal_year,target_code`):Promise.resolve([]),
   code==='DEMO-JC-SOUTANI-001'?q('forest_os_ui_project_sponsor_terms',`select=*&project_code=eq.${encodeURIComponent(code)}`):Promise.resolve([])
  ]);
