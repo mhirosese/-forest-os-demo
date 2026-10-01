@@ -1196,7 +1196,7 @@ async function forestView(){
 
 
 
-let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[],townMapPersonaScopes=[],townRightsMatrix=[],townParcelCells=[],townParcelDisplays=[],townForestDisplays=[];
+let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[],townMapPersonaScopes=[],townRightsMatrix=[],townParcelCells=[],townParcelDisplays=[],townForestDisplays=[],townCanonicalMapLayers=[];
 let townMapAllowedForestIds=new Set();
 let leafletTownMap=null,leafletFeatureLayers={};
 let townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
@@ -1856,6 +1856,47 @@ function activeLayerLegend(){
  el.innerHTML=`<strong>表示中</strong>${items.map(([label,color,kind])=>`<div class="legendrow"><span class="swatch ${kind}" style="${kind==='dash'?`color:${color}`:`background:${color}`}" ></span>${esc(label)}</div>`).join('')}`;
 }
 
+function canonicalForestIdForMapRow(f){
+ const p=featureProps(f);
+ if(f.layer_code==='forest')return String(f.target_id||p.forest_unit_id||'');
+ if(f.layer_code==='parcel'){
+  const pr=townParcelDisplays.find(x=>String(x.parcel_id)===String(f.target_id));
+  return String(pr?.forest_unit_id||'');
+ }
+ if(f.layer_code==='work'){
+  const w=townWorkScopes.find(x=>String(x.work_case_id||'')===String(f.target_id)||x.work_title===f.display_name);
+  return String(w?.forest_unit_id||'');
+ }
+ return '';
+}
+function canonicalMapRowPasses(f){
+ const forestId=canonicalForestIdForMapRow(f);
+ if(forestId)return passesMapFilters({display_name:f.display_name,properties:{forest_unit_id:forestId}});
+ const p=featureProps(f),region=p.region_name||'';
+ if(townMapFilterState.region!=='*'&&region&&region!==townMapFilterState.region)return false;
+ return personaAllowsOperationalContext();
+}
+function renderCanonicalMapDetail(f){
+ const p=featureProps(f);
+ if(f.layer_code==='forest'){
+  const row=forestRows.find(x=>String(x.forest_unit_id)===String(f.target_id));
+  if(row){renderForestDetail(row.forest_unit_id);return;}
+ }
+ if(f.layer_code==='parcel'){
+  const row=townParcelDisplays.find(x=>String(x.parcel_id)===String(f.target_id));
+  if(row){renderParcelDisplayDetail(row);return;}
+ }
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(f.display_name||'地図情報')}</h2><div class="map-summary-note">Canonical Map Readから表示しています。</div><div class="detailgrid"><div class="detailitem"><div class="k">レイヤー</div><div class="v">${esc(f.layer_code||'—')}</div></div><div class="detailitem"><div class="k">対象</div><div class="v">${esc(f.target_type||'—')}</div></div><div class="detailitem"><div class="k">面積</div><div class="v">${f.area_ha?ha(f.area_ha):'—'}</div></div><div class="detailitem"><div class="k">データ源</div><div class="v">${esc(f.source_name||'—')}</div></div></div>`;
+}
+function addCanonicalMapRowToGroup(f,mode,group){
+ const gj=geoObj(f.geom_geojson);if(!gj)return null;const color=layerColor(mode);
+ const isLine=mode==='operations';
+ const lyr=L.geoJSON(gj,{smoothFactor:1.0,style:()=>({color,weight:isLine?1.35:1.05,opacity:.88,fillColor:color,fillOpacity:mode==='parcel_boundary'?0:(mode==='disaster'?.12:.18),dashArray:mode==='parcel_boundary'?'3 3':null}),pointToLayer:(feature,latlng)=>L.circleMarker(latlng,{radius:6,color:'#fff',weight:2,fillColor:color,fillOpacity:.95}),onEachFeature:(feature,layer)=>{layer.on('click',()=>renderCanonicalMapDetail(f));if(f.display_name)layer.bindTooltip(f.display_name,{sticky:true,direction:'top'});}});
+ lyr.addTo(group);return lyr;
+}
+function addCanonicalGroup(key,layerCode,mode){
+ const g=L.layerGroup();townCanonicalMapLayers.filter(f=>f.layer_code===layerCode&&canonicalMapRowPasses(f)).forEach(f=>addCanonicalMapRowToGroup(f,mode,g));g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
+}
 function refreshLeafletLayers(){
  if(!leafletTownMap)return;
  clearLeafletFeatureLayers();
@@ -1864,21 +1905,17 @@ function refreshLeafletLayers(){
   features.forEach(f=>{addFeatureGeoJSONToGroup(f,mode,g);});
   g.addTo(leafletTownMap);leafletFeatureLayers[key]=g;
  };
- if(townMapLayers.details)addGroup('details',townDetailFeatures.filter(passesMapFilters),'details');
- if(townMapLayers.parcel_boundary){const g=L.layerGroup();townParcelDisplays.filter(parcelDisplayPassesMapFilters).forEach(p=>addParcelBoundaryToGroup(p,g));g.addTo(leafletTownMap);leafletFeatureLayers.parcel_boundary=g;}
+ if(townMapLayers.details)addCanonicalGroup('details','forest','details');
+ if(townMapLayers.parcel_boundary)addCanonicalGroup('parcel_boundary','parcel','parcel_boundary');
  ['issues','owner_unknown','boundary_unknown'].forEach(mode=>{if(townMapLayers[mode]&&mapLayerAllowedForPersona(mode))addGroup(mode,issueOverviewFeatures(mode),mode)});
  if(townMapLayers.municipal&&mapLayerAllowedForPersona('municipal'))addGroup('municipal',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'municipal')&&passesMapFilters(f)),'municipal');
- ['credit','candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)&&passesMapFilters(f)),mode)});
- if(townMapLayers.operations){
-  const g=L.layerGroup();
-  townWorkScopes.filter(workPassesMapFilters).forEach(w=>addWorkScopeToGroup(w,g));
-  g.addTo(leafletTownMap);leafletFeatureLayers.operations=g;
- }
+ if(townMapLayers.credit)addCanonicalGroup('credit','jcredit_scope','credit');
+ ['candidate','program'].forEach(mode=>{if(townMapLayers[mode])addGroup(mode,townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,mode)&&passesMapFilters(f)),mode)});
+ if(townMapLayers.operations)addCanonicalGroup('operations','work','operations');
  // 水系は森林面より前、災害記号より後ろ。森林との関係を読みやすくする。
  if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
  if(townMapLayers.disaster&&mapLayerAllowedForPersona('disaster')){
-  addGroup('disaster-managed',townMapFeatures.filter(f=>f.layer_code==='managed_forest'&&managedMatchesFeature(f,'disaster')&&passesMapFilters(f)),'disaster');
-  addGroup('disaster-events',townMapFeatures.filter(f=>f.layer_code==='hazard_area'),'disaster');
+  addCanonicalGroup('disaster-events','incident','disaster');
  }
  activeLayerLegend();
 }
@@ -2041,7 +2078,7 @@ function initLeafletTownMap(){
  if(added)fitTownMapRegion('*');else leafletTownMap.setView([34.14,135.89],11);
 }
 async function townMap(){
- const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes,rightsMatrix,parcelCells,parcelDisplays,forestDisplays]=await Promise.all([
+ const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes,rightsMatrix,parcelCells,parcelDisplays,forestDisplays,canonicalMapLayers]=await Promise.all([
   q('forest_os_ui_town_profile','select=*'),
   q('forest_os_ui_town_forest_block','select=*&order=sort_order'),
   q('forest_os_ui_forest_decision_context','select=*'),
@@ -2060,7 +2097,8 @@ async function townMap(){
   q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
   q('forest_os_ui_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
   q('forest_os_demo_public_parcel_display_compat','select=*&order=forest_code,parcel_code'),
-  q('forest_os_ui_forest_display','select=*&order=region_name,forest_name')
+  q('forest_os_ui_forest_display','select=*&order=region_name,forest_name'),
+  q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name')
  ]);
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
  townDetailFeatures=mapFeatures.filter(f=>f.layer_code==='managed_forest');
@@ -2084,6 +2122,7 @@ async function townMap(){
  townParcelCells=parcelCells;
  townParcelDisplays=parcelDisplays;
  townForestDisplays=forestDisplays;
+ townCanonicalMapLayers=canonicalMapLayers;
  const personaScopeRows=currentPersonaScopeRows();
  townMapAllowedForestIds=new Set(personaScopeRows.map(x=>String(x.forest_unit_id)));
  townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
