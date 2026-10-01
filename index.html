@@ -514,7 +514,7 @@ async function municipality(){
  const p=currentPersona();
  const [scopes,matrix,mapFeatures,j,t,allc]=await Promise.all([
    q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
-   q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
+   q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
    q('forest_os_ui_map_feature','select=*'),
    q('forest_os_ui_jcredit_project'),
    q('forest_os_ui_role_task',`select=*&role_code=eq.municipality&assigned_to=eq.${encodeURIComponent(p.party)}&order=due_on`),
@@ -734,7 +734,7 @@ function rightsBasisLabel(v){
 async function ownerComplexRights(){
  const p=currentPersona();
  const [matrix,scopes]=await Promise.all([
-   q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
+   q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
    q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`)
  ]);
  const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
@@ -1169,7 +1169,7 @@ async function forestView(){
    q('forest_os_ui_contract_relation','select=*&order=contract_no'),
    q('forest_os_ui_work_evidence','select=*'),
    q('forest_os_ui_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
-   q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name')
+   q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name')
  ]);
  const viewer=personaScopePartyName();
  const allowedIds=new Set(personaScopes.filter(x=>x.viewer_name===viewer).map(x=>String(x.forest_unit_id)));
@@ -2094,7 +2094,7 @@ async function townMap(){
   q('forest_os_ui_forest_data_coverage','select=*&order=forest_name'),
   q('forest_os_ui_map_filter','select=*&order=forest_name'),
   q('forest_os_ui_persona_forest_scope','select=*&order=viewer_name,region_name,forest_name'),
-  q('forest_os_ui_forest_rights_matrix','select=*&order=region_name,forest_name'),
+  q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
   q('forest_os_ui_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
   q('forest_os_demo_public_parcel_display_compat','select=*&order=forest_code,parcel_code'),
   q('forest_os_ui_forest_display','select=*&order=region_name,forest_name'),
