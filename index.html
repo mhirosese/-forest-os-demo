@@ -822,9 +822,9 @@ async function accounting(){
    q('forest_os_ui_persona_transaction_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
    q('forest_os_ui_town_jcredit_finance_story','select=*&order=fiscal_year'),
    q('forest_os_ui_town_jcredit_annual_plan','select=*&order=calendar_year'),
-   q('forest_os_ui_town_jcredit_certification_schedule','select=*&order=certification_round'),
-   q('forest_os_ui_town_jcredit_inventory','select=*&order=sale_priority,lot_code'),
-   q('forest_os_ui_town_jcredit_sales','select=*&order=sale_date'),
+   q('forest_os_demo_public_town_jcredit_certification_schedule','select=*&order=certification_round'),
+   q('forest_os_demo_public_town_jcredit_inventory','select=*&order=sale_priority,lot_code'),
+   q('forest_os_demo_public_town_jcredit_sales','select=*&order=sale_date'),
    q('forest_os_ui_wide_candidate_forests','select=*&order=region_name,forest_name')
  ]);
  const d=dash[0]||{},y26=story.find(x=>Number(x.fiscal_year)===2026)||{};
@@ -908,9 +908,9 @@ async function jcreditProject(){
    q('forest_os_ui_persona_jcredit_project_scope',`select=*&viewer_name=eq.${vq}&order=project_code`),
    q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
    q('forest_os_ui_persona_jcredit_plan_scope',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,plan_name`),
-   q('forest_os_ui_town_jcredit_certification_schedule','select=*&order=certification_round'),
-   q('forest_os_ui_town_jcredit_inventory','select=*&order=sale_priority,lot_code'),
-   q('forest_os_ui_town_jcredit_sales','select=*&order=sale_date'),
+   q('forest_os_demo_public_town_jcredit_certification_schedule','select=*&order=certification_round'),
+   q('forest_os_demo_public_town_jcredit_inventory','select=*&order=sale_priority,lot_code'),
+   q('forest_os_demo_public_town_jcredit_sales','select=*&order=sale_date'),
    q('forest_os_ui_town_jcredit_annual_plan','select=*&order=calendar_year'),
    q('forest_os_ui_wide_candidate_forests','select=*&order=region_name,forest_name')
  ]);
@@ -987,7 +987,7 @@ async function pm(){
    q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${vq}&order=project_code,region_name,forest_name`),
    Promise.resolve([])
  ]);
- const [pmCertSchedule,pmWideCandidates]=await Promise.all([q('forest_os_ui_town_jcredit_certification_schedule','select=*&order=certification_round'),q('forest_os_ui_wide_candidate_forests','select=*&order=region_name,forest_name')]);
+ const [pmCertSchedule,pmWideCandidates]=await Promise.all([q('forest_os_demo_public_town_jcredit_certification_schedule','select=*&order=certification_round'),q('forest_os_ui_wide_candidate_forests','select=*&order=region_name,forest_name')]);
  const coreProjectCodes=new Set(['DEMO-JC-001','DEMO-JC-SOUTANI-001','DEMO-JC-WIDE-001']);
  projectScopes.splice(0,projectScopes.length,...projectScopes.filter(x=>coreProjectCodes.has(x.project_code)));
  const dash=(dashRows||[])[0]||{};
