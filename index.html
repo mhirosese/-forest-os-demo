@@ -427,7 +427,7 @@ function renderDemoContextBar(){
   `<div class="ctxfield"><label>現在のPJ</label><div class="ctxvalue"><strong>私有林集約｜青嶺町・蒼谷村</strong><div class="context-inline-note">森林復帰の中核工程。所有者・権利・境界を整理し事業単位を形成</div></div></div>`:
   `<div class="ctxfield"><label>現在のPJ</label><div id="demoProjectField" class="ctxvalue"><span class="project-context-loading">PJを読み込み中...</span></div></div>`;
  el.innerHTML=`<div class="demo-context">
-  <div class="ctxfield"><label>誰の目線で見る？</label><select id="demoPersonaSelect" onchange="setDemoPersona(this.value)">${DEMO_PERSONAS.map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(personaOptionLabel(x))}</option>`).join('')}</select><div class="context-inline-note">実運用ではログイン所属・対象関係・機密度で権限判定</div></div>
+  <div class="ctxfield"><label>誰の目線で見る？</label><select id="demoPersonaSelect" onchange="setDemoPersona(this.value)">${DEMO_PERSONAS.map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(personaOptionLabel(x))}</option>`).join('')}</select><div class="context-inline-note"><b>デモ表示切替</b>：この選択はログイン権限ではありません。本番では user_memberships・Access Scope・RLS で判定します。</div></div>
   <div class="ctxfield"><label>現在の立場</label><div class="ctxvalue">${badge}<strong>${esc(p.roleLabel)}</strong><br>${esc(p.party)}</div></div>
   ${projectField}
   <div class="ctxfield"><label>主な表示範囲</label><div class="ctxvalue">${esc(p.scope)}${p.principal?`<br><span class="mini">権利者：${esc(p.principal)}</span>`:''}</div></div>
@@ -504,7 +504,7 @@ function rolePersonaFallback(role){
  if(role==='owner'&&!['owner','owner_proxy'].includes(p.kind))return 'owner_a';
  return null;
 }
-function personaNoteHtml(){const p=currentPersona();return `<div class="persona-scope-note"><b>現在の利用者：</b>${esc(p.roleLabel)}｜${esc(p.party)}　 <b>表示範囲：</b>${esc(p.scope)}${p.kind==='owner_proxy'?'<br>※ 管理代理は「所有者」ではありません。委任された範囲だけを扱う想定です。':''}</div>`;}
+function personaNoteHtml(){const p=currentPersona();return `<div class="persona-scope-note"><b>デモPersona：</b>${esc(p.roleLabel)}｜${esc(p.party)}　 <b>デモ表示範囲：</b>${esc(p.scope)}<br><span class="smallnote">画面確認用の表示切替です。現在のPersona選択は認証・本番権限を付与しません。本番Accessは user_memberships → Access Scope → RLS/RPC で別途判定します。</span>${p.kind==='owner_proxy'?'<br>※ 管理代理は「所有者」ではありません。委任された範囲だけを扱う想定です。':''}</div>`;}
 function cards(items){document.getElementById('cards').innerHTML=items.map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('')}
 function table(title,headers,rows){
  if(!rows.length)return `<section><h2>${title}</h2><div class="empty">該当データなし</div></section>`;
@@ -2978,10 +2978,10 @@ function ownOrgFinanceSection(p,d){
 }
 async function accessAuditScreen(){
  const p=currentPersona();if(p.kind!=='admin')return personaHome();
- const [perms,health,mods]=await Promise.all([q('forest_os_ui_access_role_permissions','select=*&order=role_code,resource_type'),q('forest_os_demo_public_database_health','select=*&order=domain,check_code'),q('forest_os_ui_persona_module_scope','select=*&order=persona_kind,sort_order')]);
+ const [perms,health,mods,roles]=await Promise.all([q('forest_os_ui_access_role_permissions','select=*&order=role_code,resource_type'),q('forest_os_demo_public_database_health','select=*&order=domain,check_code'),q('forest_os_ui_persona_module_scope','select=*&order=persona_kind,sort_order'),q('forest_os_ui_access_role_current','select=role_code,role_name,description&order=role_code')]);
  const healthFail=health.filter(x=>x.status==='FAIL').length,healthPass=health.filter(x=>x.status==='PASS').length;
- cards([['DB状態',healthFail===0?'PASS':'FAIL'],['整合性',`${healthPass} PASS / ${healthFail} FAIL`],['権限ルール',`${perms.length}件`],['立場別画面ルール',`${mods.length}件`]]);
- document.getElementById('content').innerHTML=personaNoteHtml()+table('アクセス権限ルール',['ロール','対象','範囲','操作','注記'],perms.map(x=>[esc(x.role_code),esc(x.resource_type),esc(x.scope_mode),esc((x.allowed_actions||[]).join(' / ')),esc(x.notes)]))+table('立場別画面',['立場','画面','アクセス方式'],mods.map(x=>[esc(x.persona_kind),esc(x.module_label),esc(x.access_mode)]));
+ cards([['DB状態',healthFail===0?'PASS':'FAIL'],['整合性',`${healthPass} PASS / ${healthFail} FAIL`],['本番Access Scope','未接続'],['本番Membership','未登録']]);
+ document.getElementById('content').innerHTML=personaNoteHtml()+`<section><h2>Persona / Access の分離状態</h2><div class="map-summary-note"><b>デモPersona：</b>画面・表示範囲の確認用です。プルダウン変更で本番権限は変わりません。<br><b>本番Access：</b>user_memberships等の本番条件を登録後、Access Scope → RLS/RPCへ接続します。現在は未接続のため、このデモ画面を本番認可として使用しません。</div></section>`+table('本番ロール定義',['ロール','名称','注記'],roles.map(x=>[esc(x.role_code),esc(x.role_name),esc(x.description||'—')]))+table('アクセス権限ルール（設計定義）',['ロール','対象','範囲','操作','注記'],perms.map(x=>[esc(x.role_code),esc(x.resource_type),esc(x.scope_mode),esc((x.allowed_actions||[]).join(' / ')),esc(x.notes)]))+table('デモPersona画面ルール',['立場','画面','アクセス方式'],mods.map(x=>[esc(x.persona_kind),esc(x.module_label),esc(x.access_mode)]));
 }
 
 /* ---------------- v68 PJ選択・3ストーリー・未来会計・デモ入力 ---------------- */
