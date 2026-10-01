@@ -517,7 +517,7 @@ async function municipality(){
    q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
    q('forest_os_ui_map_feature','select=*'),
    q('forest_os_ui_jcredit_project'),
-   q('forest_os_ui_role_task',`select=*&role_code=eq.municipality&assigned_to=eq.${encodeURIComponent(p.party)}&order=due_on`),
+   q('forest_os_demo_public_task_core_current',`select=*&assigned_party_name=eq.${encodeURIComponent(p.party)}&order=due_on`).then(rows=>(rows||[]).map(x=>({...x,status:x.task_status,assigned_to:x.assigned_party_name}))),
    q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no')
  ]);
  const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
@@ -577,10 +577,10 @@ async function forestCoop(){
  const [dashRows,projects,plans,forests,works,tasks,contracts]=await Promise.all([
    q('forest_os_ui_forest_coop_dashboard',`select=*&viewer_name=eq.${vq}`),
    q('forest_os_ui_forest_coop_project_portfolio',`select=*&viewer_name=eq.${vq}&order=is_wide_project,project_code`),
-   q('forest_os_ui_forest_coop_plan',`select=*&viewer_name=eq.${vq}&order=starts_on,plan_code`),
+   q('forest_os_demo_public_plan_core_current','select=*&order=starts_on,plan_code').then(rows=>(rows||[]).map(x=>({...x,target_forest_count:x.target_count,linked_project_count:x.initiative_id?1:0,linked_project_names:x.initiative_name||'',open_task_count:0,next_task_due:null}))),
    q('forest_os_ui_forest_coop_forest',`select=*&viewer_name=eq.${vq}&order=management_period_status,region_name,forest_name`),
-   q('forest_os_ui_forest_coop_work',`select=*&viewer_name=eq.${vq}&order=planned_start_on,work_code`),
-   q('forest_os_ui_forest_coop_task',`select=*&viewer_name=eq.${vq}&order=due_on,title`),
+   q('forest_os_demo_public_work_core_current','select=*&order=planned_start_on,work_code').then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,status:x.work_status,forest_names:(Array.isArray(x.targets)?x.targets.map(t=>t.target_name||t.forest_name||'').filter(Boolean).join(', '):''),project_names:x.initiative_name||''}))),
+   q('forest_os_demo_public_task_core_current','select=*&order=due_on,title').then(rows=>(rows||[]).map(x=>({...x,status:x.task_status,project_names:x.initiative_name||'',plan_names:'',forest_names:'',work_names:''}))),
    q('forest_os_ui_forest_coop_contract',`select=*&viewer_name=eq.${vq}&order=starts_on,contract_no`)
  ]);
  const dash=(dashRows||[])[0]||{};
@@ -684,7 +684,7 @@ async function forestCoop(){
 }
 async function forestryCompany(){
  const [w,allc,alle,wc]=await Promise.all([
-   q('forest_os_ui_forestry_company_work','select=*&order=title'),
+   q('forest_os_demo_public_work_core_current',`select=*&performed_by_party_name=eq.${encodeURIComponent(currentPersona().party)}&order=work_title`).then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,actual_area_ha:x.latest_actual_area_ha,forest_name:(Array.isArray(x.targets)?((x.targets.find(t=>t.target_name||t.forest_name)||{}).target_name||(x.targets.find(t=>t.target_name||t.forest_name)||{}).forest_name||''):'')}))),
    q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
    q('forest_os_demo_public_work_evidence_compat','select=*'),
    q('forest_os_ui_work_credit_context','select=*')
