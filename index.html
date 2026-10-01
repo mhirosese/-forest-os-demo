@@ -518,7 +518,7 @@ async function municipality(){
    q('forest_os_ui_map_feature','select=*'),
    q('forest_os_ui_jcredit_project'),
    q('forest_os_ui_role_task',`select=*&role_code=eq.municipality&assigned_to=eq.${encodeURIComponent(p.party)}&order=due_on`),
-   q('forest_os_ui_contract_relation','select=*&order=contract_no')
+   q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no')
  ]);
  const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
  const byId=new Map(matrix.filter(x=>ids.has(String(x.forest_unit_id))).map(x=>[String(x.forest_unit_id),x]));
@@ -685,8 +685,8 @@ async function forestCoop(){
 async function forestryCompany(){
  const [w,allc,alle,wc]=await Promise.all([
    q('forest_os_ui_forestry_company_work','select=*&order=title'),
-   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
-   q('forest_os_ui_work_evidence','select=*'),
+   q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
+   q('forest_os_demo_public_work_evidence_compat','select=*'),
    q('forest_os_ui_work_credit_context','select=*')
  ]);
  const c=allc.filter(x=>hasAudience(x,'forestry_company'));
@@ -706,8 +706,8 @@ async function ownerProxy(){
  const p=currentPersona();
  const [delegations,allc,alle]=await Promise.all([
    q('forest_os_ui_party_delegations','select=*&order=region_name,forest_name'),
-   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
-   q('forest_os_ui_work_evidence','select=*')
+   q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
+   q('forest_os_demo_public_work_evidence_compat','select=*')
  ]);
  const d=delegations.filter(x=>x.delegate_name===p.party);
  const c=allc.filter(x=>hasAudience(x,'owner'));const e=alle.filter(x=>hasAudience(x,'owner'));
@@ -769,8 +769,8 @@ async function owner(){
  const p=currentPersona(), ownerName=p.party;
  const [f,allc,alle,pjScope]=await Promise.all([
    q('forest_os_demo_public_owner_forest_compat',`select=*&owner_name=eq.${encodeURIComponent(ownerName)}&order=name`),
-   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
-   q('forest_os_ui_work_evidence','select=*'),
+   q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
+   q('forest_os_demo_public_work_evidence_compat','select=*'),
    q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(ownerName)}&order=region_name,forest_name,project_code`)
  ]);
  const c=allc.filter(x=>hasAudience(x,'owner'));
@@ -901,7 +901,7 @@ async function jcreditProject(){
  const [j,a,allc,growth,muniWork,wide,projectScopes,forestScopes,planScopes,certSchedule,inventory,sales,annualPlan,wideCandidates]=await Promise.all([
    q('forest_os_ui_jcredit_project_legacy_detail','select=*'),
    q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code'),
-   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
+   q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
    q('forest_os_ui_jcredit_growth','select=*&order=project_code,area_version_no,forest_name'),
    q('forest_os_ui_municipal_work','select=*&order=work_code'),
    q('forest_os_ui_wide_area_jcredit','select=*'),
@@ -1166,8 +1166,8 @@ function renderForestDetail(id){
 async function forestView(){
  const [allForests,allContracts,allEvidence,personaScopes,rightsMatrix]=await Promise.all([
    q('forest_os_demo_public_forest_detail_compat','select=*&order=name'),
-   q('forest_os_ui_contract_relation','select=*&order=contract_no'),
-   q('forest_os_ui_work_evidence','select=*'),
+   q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
+   q('forest_os_demo_public_work_evidence_compat','select=*'),
    q('forest_os_ui_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
    q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name')
  ]);
