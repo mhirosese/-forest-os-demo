@@ -768,7 +768,7 @@ async function owner(){
  if(currentPersona().complexRights)return ownerComplexRights();
  const p=currentPersona(), ownerName=p.party;
  const [f,allc,alle,pjScope]=await Promise.all([
-   q('forest_os_ui_owner_forest',`select=*&owner_name=eq.${encodeURIComponent(ownerName)}&order=name`),
+   q('forest_os_demo_public_owner_forest_compat',`select=*&owner_name=eq.${encodeURIComponent(ownerName)}&order=name`),
    q('forest_os_ui_contract_relation','select=*&order=contract_no'),
    q('forest_os_ui_work_evidence','select=*'),
    q('forest_os_ui_persona_jcredit_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(ownerName)}&order=region_name,forest_name,project_code`)
