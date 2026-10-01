@@ -2939,9 +2939,9 @@ function ownOrgFinanceSection(p,d){
 }
 async function accessAuditScreen(){
  const p=currentPersona();if(p.kind!=='admin')return personaHome();
- const [perms,health,mods]=await Promise.all([q('forest_os_ui_access_role_permissions','select=*&order=role_code,resource_type'),q('forest_os_ui_database_health','select=*'),q('forest_os_ui_persona_module_scope','select=*&order=persona_kind,sort_order')]);
- const h=health[0]||{};
- cards([['DB状態',esc(h.status||'—')],['整合性エラー',num(h.integrity_issue_count||0)],['権限ルール',`${perms.length}件`],['立場別画面ルール',`${mods.length}件`]]);
+ const [perms,health,mods]=await Promise.all([q('forest_os_ui_access_role_permissions','select=*&order=role_code,resource_type'),q('forest_os_demo_public_database_health','select=*&order=domain,check_code'),q('forest_os_ui_persona_module_scope','select=*&order=persona_kind,sort_order')]);
+ const healthFail=health.filter(x=>x.status==='FAIL').length,healthPass=health.filter(x=>x.status==='PASS').length;
+ cards([['DB状態',healthFail===0?'PASS':'FAIL'],['整合性',`${healthPass} PASS / ${healthFail} FAIL`],['権限ルール',`${perms.length}件`],['立場別画面ルール',`${mods.length}件`]]);
  document.getElementById('content').innerHTML=personaNoteHtml()+table('アクセス権限ルール',['ロール','対象','範囲','操作','注記'],perms.map(x=>[esc(x.role_code),esc(x.resource_type),esc(x.scope_mode),esc((x.allowed_actions||[]).join(' / ')),esc(x.notes)]))+table('立場別画面',['立場','画面','アクセス方式'],mods.map(x=>[esc(x.persona_kind),esc(x.module_label),esc(x.access_mode)]));
 }
 
@@ -3066,9 +3066,10 @@ async function personaFinanceScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
  if(['owner','owner_proxy'].includes(p.kind)){
   const ownerTargetName=p.kind==='owner_proxy'?(p.principal||''):p.party;
-  const ownerAnnual=ownerTargetName?await q('forest_os_ui_owner_annual_cashflow',`select=*&owner_name=eq.${encodeURIComponent(ownerTargetName)}&order=fiscal_year`):[];
-  cards([['年度数',`${ownerAnnual.length}年`],['累計Jクレ配賦',ownerAnnual.length?yen(ownerAnnual[ownerAnnual.length-1].cumulative_distribution_jpy):'—'],['表示','自分の森林・収支'],'PJ在庫','非表示']);
-  document.getElementById('content').innerHTML=personaNoteHtml()+table('年度別の森林収支',['年度','状態','整備費精算率（対象時）','整備費精算見込','立木等手取り','Jクレ収益配賦','年度差引','累計Jクレ配賦'],ownerAnnual.map(x=>[esc(x.fiscal_year),`<span class="tag">${esc(x.plan_status)}</span>`,ownerShareRateDisplay(x),moneyRange(x.owner_contribution_min_jpy,null,x.owner_contribution_max_jpy,'未確定'),x.timber_net_to_owner_jpy==null?'—':yen(x.timber_net_to_owner_jpy),ownerDistributionDisplay(x),ownerNetDisplay(x),yen(x.cumulative_distribution_jpy)]))+`<section><div class="delegation-note"><b>山主表示：</b>クレジット在庫・Vintage・販売先は表示せず、自分の森林から生じる負担・立木収入・Jクレ収益配賦を年度別に確認します。</div></section>`;return;
+  const ownerAnnual=ownerTargetName?await q('forest_os_demo_public_owner_annual_settlement',`select=*&owner_name=eq.${encodeURIComponent(ownerTargetName)}&order=fiscal_year`):[];
+  const latest=ownerAnnual[ownerAnnual.length-1]||{};
+  cards([['年度数',`${ownerAnnual.length}年`],['確定配賦',ownerAnnual.length?yen(latest.finalized_distribution_jpy):'—'],['実支払',ownerAnnual.length?yen(latest.actual_payment_jpy):'—'],['表示','山主精算']]);
+  document.getElementById('content').innerHTML=personaNoteHtml()+table('年度別の山主精算',['年度','予定配賦','確定配賦','控除','再投資留保','実支払','明細件数'],ownerAnnual.map(x=>[esc(x.fiscal_year),yen(x.planned_distribution_jpy),yen(x.finalized_distribution_jpy),yen(x.recorded_deduction_jpy),yen(x.reinvestment_reserved_jpy),yen(x.actual_payment_jpy),`${num(x.distribution_count||0)}件`]))+`<section><div class="delegation-note"><b>山主表示：</b>推測による山主負担は表示せず、DBに記録された予定・確定・控除・留保・実支払だけを表示します。</div></section>`;return;
  }
  const rows=await personaProjectPortfolio(p),cur=await currentProjectRow(p);if(!cur){document.getElementById('content').innerHTML=personaNoteHtml()+'<div class="empty">関与PJがありません。</div>';return;}
  const code=cur.project_code;
