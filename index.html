@@ -2819,7 +2819,7 @@ function projectHubTabsHtml(children){
  const labels={portfolio:'地域森林ポートフォリオ',aggregation:'私有林集約',jcredit:'森林J-クレジット'};
  return `<div class="projecthub-tabs">${children.map(c=>`<button type="button" class="${c===projectHubType?'active':''}" onclick="switchProjectHub('${esc(c)}')">${esc(labels[c]||c)}</button>`).join('')}</div><div class="projecthub-note">地域森林ポートフォリオが全体を管理し、私有林集約は事業単位形成の中核工程、J-クレジットは出口の一つとして別管理します。</div>`;
 }
-async function switchProjectHub(type){projectHubType=type;localStorage.setItem('forest_os_project_hub_v79',type);renderDemoContextBar();await projectHub();}
+async function switchProjectHub(type){projectHubType=type;localStorage.setItem('forest_os_project_hub_v79',type);renderDemoContextBar();if(type==='aggregation'){await aggregationProject();renderDemoContextBar();return;}await projectHub();}
 async function projectHub(){
  const pm=(await roleModules()).find(x=>x.module_code==='projects');
  const children=Array.isArray(pm?.project_children)?pm.project_children:[];
