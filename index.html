@@ -3138,7 +3138,7 @@ function renderGuidedDemoNav(){
  el.innerHTML=`<div class="demo-routebar"><button type="button" class="demo-home ${currentModuleCode==='home'?'active':''}" onclick="load('home')">← デモ入口</button>${items.map(x=>`<button type="button" class="${currentModuleCode===x[0]?'active':''}" onclick="guidedDemoGo('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
 }
 async function guidedDemoAudience(kind){
- if(kind==='municipality'){const p=DEMO_PERSONAS.find(x=>x.id==='municipality_aomine');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
+ if(kind==='municipality'){const p=DEMO_PERSONAS.find(x=>x.id==='pm_integrated');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
  else {const p=DEMO_PERSONAS.find(x=>x.id==='platform_admin');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
 }
 function injectGuidedDemo(){const c=document.getElementById('content');if(c&&!c.querySelector('.demo-guide'))c.insertAdjacentHTML('afterbegin',guidedDemoHtml());}
