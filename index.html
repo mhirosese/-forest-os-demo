@@ -3220,6 +3220,40 @@ async function personaFinanceScreen(){
 }
 
 
+
+async function forestryAgencyScreen(){
+ const p=currentPersona();
+ const viewer=encodeURIComponent(PM_UNIFIED_PARTY);
+ const [reg,flows,sumRows]=await Promise.all([
+  q('forest_os_demo_public_regulatory_current','select=*&order=due_on.asc'),
+  q('forest_os_demo_public_workflow_current','select=*&order=started_at.asc'),
+  q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${viewer}&limit=1`)
+ ]);
+ const summary=(sumRows||[])[0]||{};
+ const flowByTarget=new Map((flows||[]).map(x=>[String(x.target_id),x]));
+ const jpStatus=v=>({in_progress:'進行中',active:'運用中',completed:'完了',closed:'完了',pending:'未着手',approved:'承認済'}[String(v||'')]||demoStatusLabel(v||'—'));
+ cards([
+  ['対象森林',ha(summary.project_target_area_ha??300)],
+  ['状況把握',ha(summary.project_known_area_ha??240)],
+  ['施業候補',ha(summary.project_ready_area_ha??95)],
+  ['事業単位候補',ha(summary.project_business_unit_area_ha??55)],
+  ['制度案件',`${(reg||[]).length}件`],
+  ['進行中workflow',`${(flows||[]).filter(x=>x.workflow_status==='in_progress').length}件`]
+ ]);
+ let html=personaNoteHtml()+`<section><h2>林野庁向け｜制度と現場実務の接続</h2><p>森林GIS・森林簿等を置き換える画面ではありません。既存情報を使い、所有者探索・意向・権利・境界・案件化・制度手続・施業までを同じ案件の履歴として追います。</p><div class="demo-guide-note">以下の制度案件は説明用デモです。実在自治体の案件ではありません。制度・workflowはCoreを置き換えず、Core上に重ねて表示します。</div></section>`;
+ html+=`<section><h2>地域森林が動くまで</h2><div class="demo-guide-flow">${[
+  ['300.0 ha','対象森林','地域内の対象森林群'],['240.0 ha','状況把握','所有者・意向等を確認'],['95.0 ha','施業候補','権利・境界・条件を整理'],['55.0 ha','事業単位候補','面的なまとまりとして案件化']
+ ].map((x,i)=>`<button type="button" class="demo-guide-step" onclick="guidedDemoGo('${i<2?'projects':i===2?'planning':'work'}')"><b>${x[0]}｜${x[1]}</b><span>${x[2]}</span></button>`).join('')}</div></section>`;
+ html+=table('制度案件｜現在地',['制度・手続','状態','現在工程','担当','期限','対象'],(reg||[]).map(r=>{
+   const w=flowByTarget.get(String(r.regulatory_case_id))||{};
+   return [esc(r.procedure_name),esc(jpStatus(r.regulatory_case_status)),esc(w.step_name||'—'),esc(r.responsible_party_name||w.assigned_party_name||'—'),date(r.due_on),esc(r.target_type==='forest_unit'?'森林・筆':'案件')];
+ }));
+ html+=`<section><h2>政策側で確認できること</h2><div class="finance-axis"><div><h3>どこで止まっているか</h3><p>所有者探索、意向、権利、境界、計画、制度手続を分離して記録し、停滞工程を確認します。</p></div><div><h3>次に何をするか</h3><p>workflowの現在工程・担当・期限を案件単位で確認します。制度上の手続と、施業・契約・会計の実務を混同しません。</p></div></div></section>`;
+ html+=`<section><h2>説明用3案件</h2>${(flows||[]).map(w=>`<div class="detail"><b>${esc(w.workflow_name)}</b><div>${esc(w.step_name||'—')}｜${esc(jpStatus(w.current_step_status||w.workflow_status))}｜担当 ${esc(w.assigned_party_name||'—')}</div></div>`).join('')}</section>`;
+ html+=`<section><h2>森林OSでの位置づけ</h2><p>制度対応だけを独立管理するのではなく、制度案件から対象森林、所有・権利、計画、作業、証拠、費用へ遷移できます。J-クレジットは案件化後の出口の一つとして別レイヤーで扱います。</p></section>`;
+ document.getElementById('content').innerHTML=html;
+}
+
 function guidedDemoHtml(){
  const steps=[
   ['1','地域を見る','森林マップ','map'],
@@ -3234,12 +3268,12 @@ function guidedDemoHtml(){
 async function guidedDemoGo(code){if(code==='projects')projectHubType='portfolio';await load(code);}
 function renderGuidedDemoNav(){
  const el=document.getElementById('guidedDemoNav');if(!el)return;
- const items=[['map','地域を見る'],['forest','森林を選ぶ'],['projects','案件化する'],['planning','計画する'],['work','実施する'],['finance','お金を追う']];
+ const items=[['map','地域を見る'],['forest','森林を選ぶ'],['projects','案件化する'],['planning','計画する'],['work','実施する'],['finance','お金を追う'],['agency','制度を見る']];
  el.innerHTML=`<div class="demo-routebar"><button type="button" class="demo-home ${currentModuleCode==='home'?'active':''}" onclick="load('home')">← デモ入口</button>${items.map(x=>`<button type="button" class="${currentModuleCode===x[0]?'active':''}" onclick="guidedDemoGo('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
 }
 async function guidedDemoAudience(kind){
  if(kind==='municipality'){const p=DEMO_PERSONAS.find(x=>x.id==='pm_integrated');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
- else {const p=DEMO_PERSONAS.find(x=>x.id==='platform_admin');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
+ else {const p=DEMO_PERSONAS.find(x=>x.id==='platform_admin');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('agency');}
 }
 function injectGuidedDemo(){const c=document.getElementById('content');if(c&&!c.querySelector('.demo-guide'))c.insertAdjacentHTML('afterbegin',guidedDemoHtml());}
 
@@ -3262,7 +3296,7 @@ async function personaHome(){
  injectGuidedDemo();
 }
 
-const loaders={home:personaHome,map:townMap,projects:projectHub,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,finance:personaFinanceScreen,access:accessAuditScreen};
+const loaders={home:personaHome,map:townMap,projects:projectHub,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,finance:personaFinanceScreen,agency:forestryAgencyScreen,access:accessAuditScreen};
 async function load(moduleCode){
  if(moduleCode==='portfolio'){projectHubType='portfolio';moduleCode='projects';}
  if(moduleCode==='aggregation'){projectHubType='aggregation';moduleCode='projects';}
@@ -3274,7 +3308,7 @@ async function load(moduleCode){
  document.getElementById('content').innerHTML='<div class="notice">読み込み中...</div>';
  try{
   const mods=await roleModules();
-  const allowed=mods.some(x=>x.module_code===currentModuleCode);
+  const allowed=currentModuleCode==='agency'||mods.some(x=>x.module_code===currentModuleCode);
   if(!allowed){currentModuleCode='home';await renderRoleNav();}
   const fn=loaders[currentModuleCode]||personaHome;await fn();
   const p=currentPersona();renderDemoContextBar();await renderRoleNav();renderGuidedDemoNav();
