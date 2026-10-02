@@ -305,6 +305,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .projecthub-tabs button{font-size:12px;padding:8px 12px}
 .projecthub-tabs button.active{background:#425f4b;color:#fff;border-color:#425f4b}
 .projecthub-note{font-size:11px;color:var(--muted);margin:-3px 0 12px 2px;line-height:1.55}
+.screen-scope{margin:0 0 12px;padding:10px 12px;border:1px solid #d8dfda;border-radius:10px;background:#f8faf8;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}.screen-scope .scope-label{font-size:10px;font-weight:800;letter-spacing:.04em;color:#607066}.screen-scope .scope-title{font-size:13px;font-weight:800;color:#26312a}.screen-scope .scope-desc{font-size:11px;color:var(--muted);line-height:1.5;flex:1;min-width:220px}
 @media(max-width:520px){.projecthub-tabs{display:grid;grid-template-columns:1fr 1fr}.projecthub-tabs button{width:100%;padding:8px 7px}}
 
 
@@ -3218,6 +3219,23 @@ async function personaFinanceScreen(){
 
 
 
+function screenScopeHtml(){
+ const m=currentModuleCode;
+ let title='表示範囲',desc='';
+ if(m==='home'){title='選択中プロジェクト';desc='現在選択している1つのPJの概要。地域全体の集計ではありません。';}
+ else if(m==='map'){title='地域全体';desc='地域内の森林・筆を地図から見る画面。特定PJだけに限定しません。';}
+ else if(m==='forest'){title='森林・筆';desc='個別の森林・筆を主語に、所有・権利・履歴を確認します。';}
+ else if(m==='projects'&&projectHubType==='portfolio'){title='地域全体｜森林ポートフォリオ';desc='地域の森林をどこから動かすかを見る上位管理。個別PJの詳細ではありません。';}
+ else if(m==='projects'&&projectHubType==='aggregation'){title='プロジェクト｜私有林集約';desc='広域私有林を状況把握→施業候補→事業単位へ絞り込む1つの事業工程です。';}
+ else if(m==='projects'&&projectHubType==='jcredit'){title='プロジェクト｜森林J-クレジット';desc='J-クレジット対象PJを管理します。地域森林全体や集約そのものとは別の出口管理です。';}
+ else if(m==='planning'){title='計画｜表示権限内の横断一覧';desc='複数PJ・森林にまたがる計画一覧。選択中PJだけの画面ではありません。';}
+ else if(m==='work'){title='作業｜表示権限内の横断一覧';desc='複数PJ・森林にまたがる作業・実績一覧。選択中PJだけの画面ではありません。';}
+ else if(m==='finance'){title='選択中プロジェクト｜お金';desc='上部で選択しているPJの予算・支出・収入・分配を追います。';}
+ else if(m==='agency'){title='プロジェクト＋制度レイヤー';desc='広域私有林集約PJ全体の動きに、関係する制度案件とworkflowを重ねて確認します。';}
+ return `<div class="screen-scope"><div><div class="scope-label">いま見ている単位</div><div class="scope-title">${title}</div></div><div class="scope-desc">${desc}</div></div>`;
+}
+function injectScreenScope(){const c=document.getElementById('content');if(c&&!c.querySelector('.screen-scope'))c.insertAdjacentHTML('afterbegin',screenScopeHtml());}
+
 async function forestryAgencyScreen(){
  const p=currentPersona();
  const viewer=encodeURIComponent(PM_UNIFIED_PARTY);
@@ -3238,7 +3256,7 @@ async function forestryAgencyScreen(){
   ['制度案件',`${(reg||[]).length}件`],
   ['進行中workflow',`${(flows||[]).filter(x=>x.workflow_status==='in_progress').length}件`]
  ]);
- let html=personaNoteHtml()+`<section><h2>林野庁向け｜制度と現場実務の接続</h2><p>森林GIS・森林簿等を置き換える画面ではありません。既存情報を使い、所有者探索・意向・権利・境界・案件化・制度手続・施業までを同じ案件の履歴として追います。</p><div class="demo-guide-note">以下の制度案件は説明用デモです。実在自治体の案件ではありません。制度・workflowはCoreを置き換えず、Core上に重ねて表示します。</div></section>`;
+ let html=personaNoteHtml()+`<section><h2>広域私有林集約｜プロジェクト全体と制度対応</h2><p>このPJが、対象森林の把握から事業単位形成までどこまで進み、その中で制度対応が発生しているかを同じ画面で確認します。</p><div class="demo-guide-note">制度案件は説明用デモです。制度・workflowは別プロジェクトではなく、このPJに重ねる管理情報として表示します。</div></section>`;
  html+=`<section><h2>地域森林が動くまで</h2><div class="demo-guide-flow">${[
   ['300.0 ha','対象森林','地域内の対象森林群'],['240.0 ha','状況把握','所有者・意向等を確認'],['95.0 ha','施業候補','権利・境界・条件を整理'],['55.0 ha','事業単位候補','面的なまとまりとして案件化']
  ].map((x,i)=>`<button type="button" class="demo-guide-step" onclick="guidedDemoGo('${i<2?'projects':i===2?'planning':'work'}')"><b>${x[0]}｜${x[1]}</b><span>${x[2]}</span></button>`).join('')}</div></section>`;
@@ -3247,8 +3265,6 @@ async function forestryAgencyScreen(){
    return [esc(r.procedure_name),esc(jpStatus(r.regulatory_case_status)),esc(w.step_name||'—'),esc(r.responsible_party_name||w.assigned_party_name||'—'),date(r.due_on),esc(r.target_type==='forest_unit'?'森林・筆':'案件')];
  }));
  html+=`<section><h2>制度案件｜工程サマリー</h2><p>案件を選ぶと、その制度の全工程と現在位置を表示します。</p><div class="agency-case-buttons">${(flows||[]).map((w,i)=>`<button type="button" class="${i===0?'active':''}" onclick="agencySelectWorkflow('${esc(w.workflow_instance_id)}',this)">${esc(w.workflow_name)}</button>`).join('')}</div><div id="agencyWorkflowSummary"></div></section>`;
- html+=`<section><h2>政策側で確認できること</h2><div class="finance-axis"><div><h3>どこで止まっているか</h3><p>所有者探索、意向、権利、境界、計画、制度手続を分離して記録し、停滞工程を確認します。</p></div><div><h3>次に何をするか</h3><p>workflowの現在工程・担当・期限を案件単位で確認します。制度上の手続と、施業・契約・会計の実務を混同しません。</p></div></div></section>`;
- html+=`<section><h2>森林OSでの位置づけ</h2><p>制度対応だけを独立管理するのではなく、制度案件から対象森林、所有・権利、計画、作業、証拠、費用へ遷移できます。J-クレジットは案件化後の出口の一つとして別レイヤーで扱います。</p></section>`;
  document.getElementById('content').innerHTML=html;
  window.agencyWorkflowRows=flowSteps||[];
  if((flows||[]).length)agencySelectWorkflow(String(flows[0].workflow_instance_id));
@@ -3276,7 +3292,7 @@ function guidedDemoHtml(){
 async function guidedDemoGo(code){if(code==='projects')projectHubType='portfolio';await load(code);}
 function renderGuidedDemoNav(){
  const el=document.getElementById('guidedDemoNav');if(!el)return;
- const items=[['map','地域を見る'],['forest','森林を選ぶ'],['projects','案件化する'],['planning','計画する'],['work','実施する'],['finance','お金を追う'],['agency','制度を見る']];
+ const items=[['map','地域'],['forest','森林・筆'],['projects','地域・案件化'],['planning','計画一覧'],['work','作業一覧'],['finance','選択PJ会計'],['agency','制度対応']];
  el.innerHTML=`<div class="demo-routebar"><button type="button" class="demo-home ${currentModuleCode==='home'?'active':''}" onclick="load('home')">← デモ入口</button>${items.map(x=>`<button type="button" class="${currentModuleCode===x[0]?'active':''}" onclick="guidedDemoGo('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
 }
 async function guidedDemoAudience(kind){
@@ -3319,6 +3335,7 @@ async function load(moduleCode){
   const allowed=currentModuleCode==='agency'||mods.some(x=>x.module_code===currentModuleCode);
   if(!allowed){currentModuleCode='home';await renderRoleNav();}
   const fn=loaders[currentModuleCode]||personaHome;await fn();
+  injectScreenScope();
   const p=currentPersona();renderDemoContextBar();await renderRoleNav();renderGuidedDemoNav();
   document.getElementById('notice').innerHTML=`<b>表示中：${esc(p.roleLabel)}｜${esc(p.party)}</b>　この立場に必要な画面だけを表示しています。閲覧・入力範囲はDBの対象関係で判定します。`;
  }catch(e){document.getElementById('notice').innerHTML=`<span class="warn">DB接続エラー：</span>${esc(e.message)}`;document.getElementById('content').innerHTML='<section><div class="empty">ネット接続またはSupabase側の公開設定を確認してください。</div></section>'}
