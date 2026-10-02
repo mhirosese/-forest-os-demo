@@ -314,6 +314,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .demo-guide-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:12px}
 .demo-guide-step{border:1px solid #dfe5e0;border-radius:9px;padding:10px 8px;background:#fafbfa;text-align:left;cursor:pointer}
 .demo-guide-step b{display:block;font-size:12px;margin-bottom:4px}.demo-guide-step span{display:block;font-size:10px;color:var(--muted);line-height:1.45}
+.agency-case-buttons{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.agency-case-buttons button{border:1px solid var(--line);border-radius:8px;background:#fff;padding:8px 10px;cursor:pointer}.agency-case-buttons button.active{background:#eef5f0;border-color:#91aa98;font-weight:700}.agency-workflow{display:flex;gap:6px;align-items:stretch;overflow-x:auto;padding:8px 0 4px}.agency-workflow-step{min-width:145px;max-width:190px;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fafbfa;position:relative}.agency-workflow-step.done{background:#f1f5f2}.agency-workflow-step.current{border:2px solid #63866e;background:#eef5f0}.agency-workflow-step.future{opacity:.72}.agency-workflow-step:not(:last-child)::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);z-index:2;color:#748078}.agency-workflow-step b{display:block;font-size:11px;line-height:1.45}.agency-workflow-step small{display:block;margin-top:5px;color:var(--muted);font-size:10px}.agency-summary-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.agency-summary-meta div{border-top:1px solid var(--line);padding-top:7px;font-size:11px}
 .demo-guide-audience{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.demo-guide-audience button{font-size:11px;padding:7px 10px}
 .demo-guide-note{font-size:10px;color:var(--muted);line-height:1.55;margin-top:9px}
 @media(max-width:800px){.demo-guide-flow{grid-template-columns:repeat(3,1fr)}}
@@ -3220,9 +3221,10 @@ async function personaFinanceScreen(){
 async function forestryAgencyScreen(){
  const p=currentPersona();
  const viewer=encodeURIComponent(PM_UNIFIED_PARTY);
- const [reg,flows,sumRows]=await Promise.all([
+ const [reg,flows,flowSteps,sumRows]=await Promise.all([
   q('forest_os_demo_public_regulatory_current','select=*&order=due_on.asc'),
   q('forest_os_demo_public_workflow_current','select=*&order=started_at.asc'),
+  q('forest_os_demo_public_workflow_steps','select=*&order=workflow_instance_id.asc,sequence_no.asc'),
   q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${viewer}&limit=1`)
  ]);
  const summary=(sumRows||[])[0]||{};
@@ -3244,10 +3246,20 @@ async function forestryAgencyScreen(){
    const w=flowByTarget.get(String(r.regulatory_case_id))||{};
    return [esc(r.procedure_name),esc(jpStatus(r.regulatory_case_status)),esc(w.step_name||'—'),esc(r.responsible_party_name||w.assigned_party_name||'—'),date(r.due_on),esc(r.target_type==='forest_unit'?'森林・筆':'案件')];
  }));
+ html+=`<section><h2>制度案件｜工程サマリー</h2><p>案件を選ぶと、その制度の全工程と現在位置を表示します。</p><div class="agency-case-buttons">${(flows||[]).map((w,i)=>`<button type="button" class="${i===0?'active':''}" onclick="agencySelectWorkflow('${esc(w.workflow_instance_id)}',this)">${esc(w.workflow_name)}</button>`).join('')}</div><div id="agencyWorkflowSummary"></div></section>`;
  html+=`<section><h2>政策側で確認できること</h2><div class="finance-axis"><div><h3>どこで止まっているか</h3><p>所有者探索、意向、権利、境界、計画、制度手続を分離して記録し、停滞工程を確認します。</p></div><div><h3>次に何をするか</h3><p>workflowの現在工程・担当・期限を案件単位で確認します。制度上の手続と、施業・契約・会計の実務を混同しません。</p></div></div></section>`;
- html+=`<section><h2>説明用3案件</h2>${(flows||[]).map(w=>`<div class="detail"><b>${esc(w.workflow_name)}</b><div>${esc(w.step_name||'—')}｜${esc(jpStatus(w.current_step_status||w.workflow_status))}｜担当 ${esc(w.assigned_party_name||'—')}</div></div>`).join('')}</section>`;
  html+=`<section><h2>森林OSでの位置づけ</h2><p>制度対応だけを独立管理するのではなく、制度案件から対象森林、所有・権利、計画、作業、証拠、費用へ遷移できます。J-クレジットは案件化後の出口の一つとして別レイヤーで扱います。</p></section>`;
  document.getElementById('content').innerHTML=html;
+ window.agencyWorkflowRows=flowSteps||[];
+ if((flows||[]).length)agencySelectWorkflow(String(flows[0].workflow_instance_id));
+}
+function agencySelectWorkflow(id,btn){
+ const rows=(window.agencyWorkflowRows||[]).filter(x=>String(x.workflow_instance_id)===String(id)).sort((a,b)=>Number(a.sequence_no)-Number(b.sequence_no));
+ const box=document.getElementById('agencyWorkflowSummary'); if(!box||!rows.length)return;
+ document.querySelectorAll('.agency-case-buttons button').forEach(b=>b.classList.remove('active')); if(btn)btn.classList.add('active');
+ const cur=rows.find(x=>x.is_current)||rows[0]; const curSeq=Number(cur.sequence_no||0);
+ const steps=rows.map(x=>{const seq=Number(x.sequence_no||0),state=x.is_current?'current':seq<curSeq?'done':'future';const mark=x.is_current?'現在':seq<curSeq?'通過':'次工程';return `<div class="agency-workflow-step ${state}"><b>${esc(x.step_name)}</b><small>${mark}</small></div>`}).join('');
+ box.innerHTML=`<div class="detail"><b>${esc(cur.workflow_name)}｜${esc(demoStatusLabel(cur.workflow_status))}</b><div class="agency-workflow">${steps}</div><div class="agency-summary-meta"><div><b>現在工程</b><br>${esc(cur.step_name)}</div><div><b>担当</b><br>${esc(cur.assigned_party_name||'—')}</div><div><b>期限</b><br>${date(cur.due_at)}</div></div></div>`;
 }
 
 function guidedDemoHtml(){
