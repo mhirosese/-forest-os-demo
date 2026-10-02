@@ -324,6 +324,9 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .demo-routebar button{font-size:11px;padding:7px 9px;white-space:nowrap}.demo-routebar button.active{background:#425f4b;color:#fff;border-color:#425f4b}.demo-routebar .demo-home{font-weight:700}
 @media(max-width:520px){.demo-routebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:static}.demo-routebar button{width:100%;white-space:normal;padding:7px 5px}}
 
+
+.breadcrumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;padding:7px 2px;color:var(--muted);font-size:11px}.breadcrumbs button{border:0;background:transparent;padding:0;color:#496653;cursor:pointer;font-size:11px}.breadcrumbs button:hover{text-decoration:underline}.breadcrumbs .bc-current{color:var(--text);font-weight:700}.breadcrumbs .bc-sep{color:#9aa39d}.nav-group-label{font-size:10px;color:var(--muted);font-weight:700;padding:0 2px}.demo-routebar .nav-divider{width:1px;height:24px;background:var(--line);margin:0 2px}
+@media(max-width:520px){.demo-routebar .nav-divider,.demo-routebar .nav-group-label{display:none}}
 </style>
 </head>
 <body>
@@ -3219,20 +3222,39 @@ async function personaFinanceScreen(){
 
 
 
+function breadcrumbHtml(){
+ const m=currentModuleCode;
+ let parts=[];
+ if(m==='home') parts=[['地域','']];
+ else if(m==='map') parts=[['地域','map'],['地域森林Map','']];
+ else if(m==='forest') parts=[['地域','map'],['地域森林','projects:portfolio'],['森林・筆','']];
+ else if(m==='projects'&&projectHubType==='portfolio') parts=[['地域','map'],['地域森林','']];
+ else if(m==='projects'&&projectHubType==='aggregation') parts=[['地域','map'],['プロジェクト','projects:portfolio'],['私有林集約PJ','']];
+ else if(m==='projects'&&projectHubType==='jcredit') parts=[['地域','map'],['プロジェクト','projects:portfolio'],['森林J-クレジットPJ','']];
+ else if(m==='agency') parts=[['地域','map'],['プロジェクト','projects:portfolio'],['私有林集約PJ','projects:aggregation'],['制度対応','']];
+ else if(m==='planning') parts=[['地域','map'],['横断管理',''],['計画一覧','']];
+ else if(m==='work') parts=[['地域','map'],['横断管理',''],['作業一覧','']];
+ else if(m==='finance') parts=[['地域','map'],['選択中PJ','home'],['お金','']];
+ return `<div class="breadcrumbs">${parts.map((x,i)=>{const last=i===parts.length-1;if(last||!x[1])return `<span class="${last?'bc-current':''}">${esc(x[0])}</span>`;return `<button type="button" onclick="breadcrumbGo('${esc(x[1])}')">${esc(x[0])}</button>`}).join('<span class="bc-sep">›</span>')}</div>`;
+}
+async function breadcrumbGo(target){
+ if(target.startsWith('projects:')){projectHubType=target.split(':')[1];localStorage.setItem('forest_os_project_hub_v79',projectHubType);await load('projects');return;}
+ await load(target);
+}
 function screenScopeHtml(){
  const m=currentModuleCode;
  let title='表示範囲',desc='';
- if(m==='home'){title='選択中プロジェクト';desc='現在選択している1つのPJの概要。地域全体の集計ではありません。';}
- else if(m==='map'){title='地域全体';desc='地域内の森林・筆を地図から見る画面。特定PJだけに限定しません。';}
- else if(m==='forest'){title='森林・筆';desc='個別の森林・筆を主語に、所有・権利・履歴を確認します。';}
- else if(m==='projects'&&projectHubType==='portfolio'){title='地域全体｜森林ポートフォリオ';desc='地域の森林をどこから動かすかを見る上位管理。個別PJの詳細ではありません。';}
- else if(m==='projects'&&projectHubType==='aggregation'){title='プロジェクト｜私有林集約';desc='広域私有林を状況把握→施業候補→事業単位へ絞り込む1つの事業工程です。';}
- else if(m==='projects'&&projectHubType==='jcredit'){title='プロジェクト｜森林J-クレジット';desc='J-クレジット対象PJを管理します。地域森林全体や集約そのものとは別の出口管理です。';}
- else if(m==='planning'){title='計画｜表示権限内の横断一覧';desc='複数PJ・森林にまたがる計画一覧。選択中PJだけの画面ではありません。';}
- else if(m==='work'){title='作業｜表示権限内の横断一覧';desc='複数PJ・森林にまたがる作業・実績一覧。選択中PJだけの画面ではありません。';}
- else if(m==='finance'){title='選択中プロジェクト｜お金';desc='上部で選択しているPJの予算・支出・収入・分配を追います。';}
- else if(m==='agency'){title='プロジェクト＋制度レイヤー';desc='広域私有林集約PJ全体の動きに、関係する制度案件とworkflowを重ねて確認します。';}
- return `<div class="screen-scope"><div><div class="scope-label">いま見ている単位</div><div class="scope-title">${title}</div></div><div class="scope-desc">${desc}</div></div>`;
+ if(m==='home'){title='地域／選択中プロジェクト';desc='自治体は地域全体から入り、必要なプロジェクトを選びます。';}
+ else if(m==='map'){title='地域全体';desc='プロジェクト参加前の森林も含め、地域内の森林・筆を確認します。';}
+ else if(m==='forest'){title='地域の森林・筆';desc='プロジェクト所属の有無にかかわらず、森林・筆そのものを主語に確認します。';}
+ else if(m==='projects'&&projectHubType==='portfolio'){title='地域森林';desc='地域の森林全体が母体です。未案件の森林もここに残り、必要に応じて各プロジェクトへ関係付けます。';}
+ else if(m==='projects'&&projectHubType==='aggregation'){title='プロジェクト｜私有林集約';desc='地域森林のうち、この集約PJに関係する森林を対象に、状況把握から事業単位形成まで追います。';}
+ else if(m==='projects'&&projectHubType==='jcredit'){title='プロジェクト｜森林J-クレジット';desc='地域森林のうち、このJ-クレジットPJに関係する森林と事業を確認します。';}
+ else if(m==='planning'){title='横断管理｜計画一覧';desc='地域内の複数PJ・森林にまたがる計画を横断して確認します。';}
+ else if(m==='work'){title='横断管理｜作業一覧';desc='地域内の複数PJ・森林にまたがる作業・実績を横断して確認します。';}
+ else if(m==='finance'){title='選択中プロジェクト｜お金';desc='現在選択しているPJの予算・支出・収入・分配を追います。';}
+ else if(m==='agency'){title='私有林集約プロジェクト｜制度対応';desc='別の制度プロジェクトではなく、同じ集約PJに関係する制度案件とworkflowを重ねて確認します。';}
+ return breadcrumbHtml()+`<div class="screen-scope"><div><div class="scope-label">いま見ている単位</div><div class="scope-title">${title}</div></div><div class="scope-desc">${desc}</div></div>`;
 }
 function injectScreenScope(){const c=document.getElementById('content');if(c&&!c.querySelector('.screen-scope'))c.insertAdjacentHTML('afterbegin',screenScopeHtml());}
 
@@ -3256,7 +3278,7 @@ async function forestryAgencyScreen(){
   ['制度案件',`${(reg||[]).length}件`],
   ['進行中workflow',`${(flows||[]).filter(x=>x.workflow_status==='in_progress').length}件`]
  ]);
- let html=personaNoteHtml()+`<section><h2>広域私有林集約｜プロジェクト全体と制度対応</h2><p>このPJが、対象森林の把握から事業単位形成までどこまで進み、その中で制度対応が発生しているかを同じ画面で確認します。</p><div class="demo-guide-note">制度案件は説明用デモです。制度・workflowは別プロジェクトではなく、このPJに重ねる管理情報として表示します。</div></section>`;
+ let html=personaNoteHtml()+`<section><h2>私有林集約プロジェクト｜制度対応</h2><p>同じ集約PJの中で、どの森林に制度対応が必要で、現在どこまで進んでいるかを確認します。</p><div class="demo-guide-note">制度案件は説明用デモです。制度・workflowは別プロジェクトではなく、このPJに重ねる管理情報として表示します。</div></section>`;
  html+=`<section><h2>地域森林が動くまで</h2><div class="demo-guide-flow">${[
   ['300.0 ha','対象森林','地域内の対象森林群'],['240.0 ha','状況把握','所有者・意向等を確認'],['95.0 ha','施業候補','権利・境界・条件を整理'],['55.0 ha','事業単位候補','面的なまとまりとして案件化']
  ].map((x,i)=>`<button type="button" class="demo-guide-step" onclick="guidedDemoGo('${i<2?'projects':i===2?'planning':'work'}')"><b>${x[0]}｜${x[1]}</b><span>${x[2]}</span></button>`).join('')}</div></section>`;
@@ -3292,8 +3314,21 @@ function guidedDemoHtml(){
 async function guidedDemoGo(code){if(code==='projects')projectHubType='portfolio';await load(code);}
 function renderGuidedDemoNav(){
  const el=document.getElementById('guidedDemoNav');if(!el)return;
- const items=[['map','地域'],['forest','森林・筆'],['projects','地域・案件化'],['planning','計画一覧'],['work','作業一覧'],['finance','選択PJ会計'],['agency','制度対応']];
- el.innerHTML=`<div class="demo-routebar"><button type="button" class="demo-home ${currentModuleCode==='home'?'active':''}" onclick="load('home')">← デモ入口</button>${items.map(x=>`<button type="button" class="${currentModuleCode===x[0]?'active':''}" onclick="guidedDemoGo('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
+ const portfolioActive=currentModuleCode==='projects'&&projectHubType==='portfolio';
+ const aggActive=(currentModuleCode==='projects'&&projectHubType==='aggregation')||currentModuleCode==='agency';
+ el.innerHTML=`<div class="demo-routebar">
+  <button type="button" class="demo-home ${currentModuleCode==='home'?'active':''}" onclick="load('home')">← 入口</button>
+  <span class="nav-group-label">地域</span>
+  <button type="button" class="${currentModuleCode==='map'?'active':''}" onclick="load('map')">地域Map</button>
+  <button type="button" class="${portfolioActive?'active':''}" onclick="projectHubType='portfolio';load('projects')">地域森林</button>
+  <span class="nav-divider"></span><span class="nav-group-label">プロジェクト</span>
+  <button type="button" class="${currentModuleCode==='projects'&&projectHubType==='aggregation'?'active':''}" onclick="projectHubType='aggregation';load('projects')">私有林集約PJ</button>
+  <button type="button" class="${currentModuleCode==='agency'?'active':''}" onclick="load('agency')">↳ 制度対応</button>
+  <span class="nav-divider"></span><span class="nav-group-label">横断</span>
+  <button type="button" class="${currentModuleCode==='planning'?'active':''}" onclick="load('planning')">計画</button>
+  <button type="button" class="${currentModuleCode==='work'?'active':''}" onclick="load('work')">作業</button>
+  <button type="button" class="${currentModuleCode==='finance'?'active':''}" onclick="load('finance')">選択PJ会計</button>
+ </div>`;
 }
 async function guidedDemoAudience(kind){
  if(kind==='municipality'){const p=DEMO_PERSONAS.find(x=>x.id==='pm_integrated');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
