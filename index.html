@@ -3040,6 +3040,68 @@ async function jcreditProject(){
  document.getElementById('content').innerHTML=html;
 }
 
+async function canonicalProjectFinanceData(cur){
+ const pid=cur.jcredit_project_id||cur.project_id||null,code=cur.project_code||'';
+ const [budgets,costs,txs,subs,ins,dists,ests]=await Promise.all([
+  q('forest_os_demo_public_budget_current','select=*'),
+  q('forest_os_demo_public_cost_current','select=*'),
+  q('forest_os_demo_public_transaction_core_current','select=*&order=transaction_date'),
+  q('forest_os_demo_public_subsidy_current','select=*'),
+  q('forest_os_demo_public_insurance_current','select=*'),
+  q('forest_os_demo_public_settlement_detail_current','select=*&order=planned_payment_on'),
+  q('forest_os_demo_public_estimate_current','select=*')
+ ]);
+ const sameId=x=>pid&&String(x||'')===String(pid);
+ const projectBudgets=budgets.filter(x=>sameId(x.context_id));
+ const projectCosts=costs.filter(x=>String(x.jcredit_project_code||'')===code);
+ let projectTx=txs.filter(x=>sameId(x.context_id));
+ // 青嶺町PJの森林整備は、PJ→作業案件へ流れる実支出も同じ資金トレースとして表示する。
+ if(code==='DEMO-JC-001') projectTx=txs.filter(x=>sameId(x.context_id)||x.reference_no==='DEMO-SUBCON-2026-01');
+ const projectDists=dists.filter(x=>sameId(x.context_id));
+ const projectSubs=subs.filter(x=>code==='DEMO-JC-001'&&String(x.context_type||'')==='work_case');
+ const projectIns=ins.filter(x=>code==='DEMO-JC-001');
+ const projectEsts=ests.filter(x=>code==='DEMO-JC-001'&&Number(x.fiscal_year||0)>=2027);
+ return {budgets:projectBudgets,costs:projectCosts,txs:projectTx,subs:projectSubs,ins:projectIns,dists:projectDists,ests:projectEsts};
+}
+function canonicalProjectFinanceHtml(d,cur){
+ const actualCosts=d.costs.filter(x=>x.accounting_status==='actual');
+ const forecastCosts=d.costs.filter(x=>x.accounting_status==='forecast');
+ const actualCostEx=actualCosts.reduce((a,x)=>a+Number(x.amount_jpy||0),0);
+ const actualCostIn=actualCosts.reduce((a,x)=>a+Number((x.amount_in_tax_jpy??x.amount_jpy)||0),0);
+ const forecastCost=forecastCosts.reduce((a,x)=>a+Number(x.amount_jpy||0),0);
+ const domainLabel={forest_operations:'森林整備・施業費',jcredit:'J-クレジット関連費',pm_admin:'管理運営費用'};
+ const domainSummary=new Map();
+ d.costs.forEach(x=>{const k=x.cost_domain||'other',v=domainSummary.get(k)||{forecast:0,actual:0};v[x.accounting_status==='actual'?'actual':'forecast']+=Number((x.accounting_status==='actual'?(x.amount_in_tax_jpy??x.amount_jpy):x.amount_jpy)||0);domainSummary.set(k,v);});
+ const budgetTotal=d.budgets.reduce((a,x)=>a+Number(x.total_amount||0),0);
+ const inflow=d.txs.filter(x=>x.direction==='in').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
+ const outflow=d.txs.filter(x=>x.direction==='out').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
+ const forestBudgetActual=d.txs.filter(x=>x.reference_no==='DEMO-PAY-2026-01').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
+ const variance=budgetTotal?budgetTotal-forestBudgetActual:null;
+ const rate=budgetTotal?Math.round(forestBudgetActual/budgetTotal*1000)/10:null;
+ let h=`<section><h2>事業会計｜予算・実績</h2><div class="map-summary-note"><b>Canonical会計データを表示。</b> 予算、実取引、原価、補助、分配を別台帳のまま突合します。入出金には主体間の資金移動を含むため、単純な差額を利益・損失とは扱いません。</div></section>`;
+ if(d.budgets.length){
+  const rows=d.budgets.map(x=>{
+   const actual=(cur.project_code==='DEMO-JC-001'&&Number(x.fiscal_year)===2026)?forestBudgetActual:0;
+   const b=Number(x.total_amount||0),v=b-actual,r=b?Math.round(actual/b*1000)/10:null;
+   return [esc(x.fiscal_year),esc((x.lines&&x.lines[0]?.description)||x.context_type||'事業予算'),yen(b),yen(actual),yen(v),r==null?'—':`${r}%`,esc(x.budget_status||'—')];
+  });
+  h+=table('予実管理',['年度','予算区分','予算','執行実績','残額','執行率','状態'],rows);
+ }
+ h+=`<section><div class="finance-snapshot"><div><div class="k">事業予算</div><div class="v">${d.budgets.length?yen(budgetTotal):'未登録'}</div></div><div><div class="k">実績原価</div><div class="v">${actualCosts.length?yen(actualCostIn):'未登録'}</div></div><div><div class="k">登録済み見込費用</div><div class="v">${forecastCosts.length?yen(forecastCost):'未登録'}</div></div><div><div class="k">入金記録</div><div class="v">${d.txs.length?yen(inflow):'—'}</div></div><div><div class="k">出金記録</div><div class="v">${d.txs.length?yen(outflow):'—'}</div></div><div><div class="k">分配予定</div><div class="v">${d.dists.length?yen(d.dists.reduce((a,x)=>a+Number(x.finalized_distribution_jpy||x.planned_distribution_jpy||0),0)):'—'}</div></div></div></section>`;
+ if(domainSummary.size)h+=table('事業費｜区分別の見込・実績',['区分','登録済み見込','実績','扱い'],[...domainSummary.entries()].map(([k,v])=>[esc(domainLabel[k]||k),v.forecast?yen(v.forecast):'—',v.actual?yen(v.actual):'—',k==='pm_admin'?'事業の管理・運営に要する費用':k==='jcredit'?'審査・モニタリング等を含む':'施業・測量・作業道等']));
+ if(d.txs.length)h+=table('実取引｜資金の流れ',['日付','内容','支払・受取主体','相手先','方向','税込金額','状態'],d.txs.map(x=>[date(x.transaction_date),esc(x.description||x.transaction_type),partyLink(x.principal_party),partyLink(x.counterparty),x.direction==='in'?'入金':'支出',yen(x.amount_in_tax),esc(x.status)]));
+ if(actualCosts.length)h+=table('実績原価｜費目別',['費目','作業・契約','税抜','税込','日付','証拠'],actualCosts.map(x=>[esc(x.cost_category_name||x.cost_category_code),esc(x.work_title||x.contract_title||'—'),yen(x.amount_jpy),yen(x.amount_in_tax_jpy??x.amount_jpy),date(x.transaction_date),esc(x.evidence_status||'—')]));
+ if(forecastCosts.length){
+  const m=new Map();forecastCosts.forEach(x=>{const k=x.cost_category_name||x.cost_category_code||'未分類';m.set(k,(m.get(k)||0)+Number(x.amount_jpy||0));});
+  h+=table('登録済み見込費用｜費目別',['費目','見込額','状態'],[...m.entries()].sort((a,b)=>b[1]-a[1]).map(([k,v])=>[esc(k),yen(v),'forecast']));
+ }
+ if(d.subs.length)h+=table('補助制度｜申請・決定',['制度','対象経費','申請額','決定額','受領額','自己資金','状態'],d.subs.map(x=>[esc(x.subsidy_program_name),yen(x.eligible_cost_amount),yen(x.applied_amount),yen(x.decided_amount),x.received_amount==null?'未受領':yen(x.received_amount),yen(x.self_funding_amount),esc(x.application_status)]));
+ if(d.dists.length)h+=table('Jクレ収益｜分配',['受取先','対象期間','確定額','支払予定日','実支払','状態'],d.dists.map(x=>[partyLink(x.payee_name),`${date(x.period_start)}〜${date(x.period_end)}`,yen(x.finalized_distribution_jpy),date(x.planned_payment_on),x.actual_payment_on?yen(x.actual_payment_transaction_jpy||0):'未支払',esc(x.distribution_status)]));
+ if(d.ins.length)h+=table('保険',['制度','保険金額','保険料','対象面積','請求','状態'],d.ins.map(x=>[esc(x.insurance_scheme_name),yen(x.insured_amount),yen(x.premium_amount),ha(x.covered_area_ha),x.claim_count?`${num(x.claim_count)}件`:'なし',esc(x.policy_status)]));
+ if(d.ests.length)h+=table('参考積算｜次年度検討',['年度','名称','対象面積','参考額','段階','注意'],d.ests.map(x=>[esc(x.fiscal_year),esc(x.title),ha(x.target_area_ha),x.lines?.length?yen(x.lines.reduce((a,z)=>a+Number(z.amount_jpy||0),0)):'未積算',esc(x.estimate_stage||x.estimate_status),esc(x.notes||'正式積算前')]));
+ return h;
+}
+
 async function personaFinanceScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
  if(['owner','owner_proxy'].includes(p.kind)){
@@ -3055,6 +3117,7 @@ async function personaFinanceScreen(){
  try{const fs=await q('forest_os_ui_persona_project_finance_display',`select=*&viewer_name=eq.${encodeURIComponent(name)}&project_code=eq.${encodeURIComponent(code)}&limit=1`);financeSnapshot=fs[0]||null;}catch(_){financeSnapshot=null;}
 
  if(cur.can_view_project_finance===false){
+  const canonicalFinance=await canonicalProjectFinanceData(cur);
   const promises=[
    q('forest_os_ui_persona_transaction_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
    q('forest_os_ui_persona_cost_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}`),
@@ -3071,7 +3134,7 @@ async function personaFinanceScreen(){
   const ownBudget=budgets.reduce((a,x)=>a+Number(x.total_amount||0),0),ownDist=dists.reduce((a,x)=>a+Number(x.planned_amount||0),0);
   if(p.kind==='municipality')cards([['現在のPJ',esc(cur.story_label||'—')],['自地域の予算・執行枠',budgets.length?yen(ownBudget):'未積算'],['自治体への配賦予定',dists.length?yen(ownDist):'未確定'],['自組織の入出金',`${txs.length}件`],['関係契約',`${contracts.length}件`],['PJ全体財務','非表示']]);
   else cards([['現在のPJ',esc(cur.story_label||'—')],['PJ全体財務','非表示'],['このPJの自組織取引',`${txs.length}件`],['このPJの費用明細',`${costs.length}件`],['このPJの関係契約',`${contracts.length}件`]]);
-  let scoped=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+projectFinanceSnapshotHtml(financeSnapshot);
+  let scoped=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+`<section><div class="map-summary-note"><b>デモ説明用｜事業全体会計</b>　吉野町・天理市など説明先にかかわらず、同じCanonical事業会計を確認できます。本番では所属・権限に応じて表示範囲を制御します。</div></section>`+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
   if(p.kind==='municipality'){
    scoped+=`<section><h2>自治体自身の会計</h2><div class="map-summary-note"><b>選択中PJについて、自地域の予算・公費支出と自治体所有林への配賦だけを表示します。</b> 他主体の原価・販売条件などPJ全体の内部財務は表示しません。<br><b>デモPersona補完：</b>この画面の予算・費用スコープには旧デモ表示値が含まれます。本番Access Scope未接続のため、正本実績とは扱いません。</div></section>`;
    if(budgets.length)scoped+=table('自地域の予算・執行枠',['年度','内容','金額','状態'],budgets.map(x=>[esc(x.fiscal_year),esc(x.context_name),yen(x.total_amount),esc(x.status)]));
@@ -3096,14 +3159,15 @@ async function personaFinanceScreen(){
   q('forest_os_ui_project_finance_version_history',`select=*&project_code=eq.${encodeURIComponent(code)}&order=version_no.desc`),...extraPromises
  ]);
  const hz=hzs[0]||{},drafts=financeDraftList(code);
+ const canonicalFinance=await canonicalProjectFinanceData(cur);
  const currentCost=moneyRange(hz.known_project_cost_min_jpy,hz.known_project_cost_base_jpy,hz.known_project_cost_max_jpy);
  cards([['現在のPJ',esc(cur.story_label||'—')],['総事業費（現在把握分）',currentCost],['総額状態',esc(hz.total_cost_status||'—')],['計画期間',hz.plan_start_year?`${hz.plan_start_year}〜${hz.plan_end_year||'未設定'}`:'—'],['対象規模',ha(hz.target_area_ha??cur.final_target_area_ha)],['現在版',hist[0]?`v${num(hist[0].version_no)} ${esc(hist[0].version_stage)}`:'—']]);
- let html=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+projectFinanceSnapshotHtml(financeSnapshot);
+ let html=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
  if(p.kind==='forest_coop'&&extras[0]?.length)html+=ownOrgFinanceSection(p,extras[0][0]);
  if(p.kind==='pm'){
   const b=(extras[0]||[])[0];
   if(b)html+=detailSection('PM／広域運営法人｜法人経営（計画値・PJ横断）',[
-   ['年間収入目標',`${yen(b.annual_revenue_min_jpy)}〜${yen(b.annual_revenue_max_jpy)}`],['収入源',esc(b.revenue_mix_note)],['事業範囲',esc(b.service_scope_note)],['Forest OS初期費',`${yen(b.os_initial_fee_min_jpy)}〜${yen(b.os_initial_fee_max_jpy)}（その他）`],['Forest OS年間利用料',`${yen(b.os_annual_fee_min_jpy)}〜${yen(b.os_annual_fee_max_jpy)}（その他）`],['二重課金',esc(b.duplicate_charge_policy)],['注意','これは法人全体の事業計画レンジ。下の選択中PJ会計とは別軸で、Jクレ売上をそのまま法人売上にはしません。']
+   ['年間収入目標',`${yen(b.annual_revenue_min_jpy)}〜${yen(b.annual_revenue_max_jpy)}`],['収入源',esc(b.revenue_mix_note)],['事業範囲',esc(b.service_scope_note)],['管理運営費用（初期）',`${yen(b.os_initial_fee_min_jpy)}〜${yen(b.os_initial_fee_max_jpy)}（その他）`],['管理運営費用（年間）',`${yen(b.os_annual_fee_min_jpy)}〜${yen(b.os_annual_fee_max_jpy)}（その他）`],['二重課金',esc(b.duplicate_charge_policy)],['注意','これは法人全体の事業計画レンジ。下の選択中PJ会計とは別軸で、Jクレ売上をそのまま法人売上にはしません。']
   ]);
  }
  html+=`<section><h2>選択中PJの会計｜2軸</h2><div class="finance-axis"><div><h3>公費・費用の使途</h3><p>町・村・県から来た公費、森林整備費、越境施工の移動・運搬費などを「どの森林・地域に使ったか」で追跡します。</p></div><div><h3>Jクレ収益・配賦</h3><p>販売収益から共通費等を控除し、森林・所有権・参加期間・配賦ルールに基づき「誰へ返すか」を追跡します。公費投入額とは相殺・自動連動しません。</p></div></div></section>`;
