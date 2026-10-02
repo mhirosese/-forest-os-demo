@@ -3138,7 +3138,7 @@ async function personaHome(){
  const p=currentPersona();
  if(['owner','owner_proxy'].includes(p.kind)){await owner();injectGuidedDemo();return;}
  const rows=await personaProjectPortfolio(p),cur=await currentProjectRow(p);
- if(!cur){cards([['関与PJ','0件']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の立場で表示できるPJはありません。</div></section>';return;}
+ if(!cur){cards([['関与PJ','0件']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の立場で表示できるPJはありません。</div></section>';injectGuidedDemo();return;}
  const story=cur.story_label||'PJ';
  if(cur.project_code==='DEMO-JC-001')cards([['関与PJ',`${rows.length}件`],['現在のPJ',esc(story)],['対象面積',ha(cur.core_target_area_ha??cur.final_target_area_ha??cur.project_active_area_ha??cur.visible_area_ha)],['対象森林',`${num(cur.project_active_forest_count||3)}件`],['対象範囲','開始時固定'],['閲覧レベル',esc(accessLevelLabel(cur.access_level))]]);
  else if(cur.project_code==='DEMO-JC-SOUTANI-001')cards([['関与PJ',`${rows.length}件`],['現在のPJ',esc(story)],['中核森林',ha(cur.core_target_area_ha??31.5)],['施工方針','同一森林内で年次拡大'],['認証期間','8年（デモ初期値）'],['閲覧レベル',esc(accessLevelLabel(cur.access_level))]]);
