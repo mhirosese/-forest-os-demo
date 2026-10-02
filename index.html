@@ -318,6 +318,9 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .demo-guide-note{font-size:10px;color:var(--muted);line-height:1.55;margin-top:9px}
 @media(max-width:800px){.demo-guide-flow{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:520px){.demo-guide-flow{grid-template-columns:repeat(2,1fr)}}
+.demo-routebar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 7px rgba(0,0,0,.05)}
+.demo-routebar button{font-size:11px;padding:7px 9px;white-space:nowrap}.demo-routebar button.active{background:#425f4b;color:#fff;border-color:#425f4b}.demo-routebar .demo-home{font-weight:700}
+@media(max-width:520px){.demo-routebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:static}.demo-routebar button{width:100%;white-space:normal;padding:7px 5px}}
 
 </style>
 </head>
@@ -330,6 +333,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 </header>
 <main>
 <div id="notice" class="notice">利用者の立場・対象関係に応じて、必要な画面だけを表示します。</div>
+<div id="guidedDemoNav"></div>
 <div id="cards" class="cards"></div>
 <div id="content"></div>
 <div class="footer">v79統合デモ。上段ナビの「プロジェクト」を、地域森林ポートフォリオ→私有林集約→森林J-クレジットの3層で表示します。森林復帰は所有者意向・権利・境界等を整理し、集約・事業単位形成を経て林業／公的管理／治山／維持管理／J-クレジット等の出口判断につなぐ上位管理レイヤーです。私有林集約は独立した中核工程として維持し、青嶺町72筆・180ha／蒼谷村48筆・120haの非対称デモを継続します。森林復帰プールとJ-クレジットPJ会計は別管理し、未確定の地域配賦・固定率は置きません。画面はバージョン番号なしの安定UI Read層を参照し、表示範囲はDBの対象関係・担当・権利・委任に基づきます。青嶺町・蒼谷村・業務情報は架空です。</div>
@@ -3128,6 +3132,11 @@ function guidedDemoHtml(){
  return `<section class="demo-guide"><h2>森林OS デモ｜説明の入口</h2><p>既存の森林GIS・森林簿を置き換えず、地域の森林を「どこから動かすか」から、案件化・計画・施業・費用・証拠までつなぐ業務基盤です。</p><div class="demo-guide-flow">${steps.map(x=>`<button type="button" class="demo-guide-step" onclick="guidedDemoGo('${x[3]}')"><b>${x[0]}. ${x[1]}</b><span>${x[2]}</span></button>`).join('')}</div><div class="demo-guide-audience"><button type="button" onclick="guidedDemoAudience('municipality')">自治体向けの順で見る</button><button type="button" onclick="guidedDemoAudience('agency')">官庁・制度説明の順で見る</button></div><div class="demo-guide-note">デモ用の案内です。Persona切替は本番ログイン権限ではありません。J-クレジットは「プロジェクト」内の出口の一つとして確認できます。</div></section>`;
 }
 async function guidedDemoGo(code){if(code==='projects')projectHubType='portfolio';await load(code);}
+function renderGuidedDemoNav(){
+ const el=document.getElementById('guidedDemoNav');if(!el)return;
+ const items=[['map','地域を見る'],['forest','森林を選ぶ'],['projects','案件化する'],['planning','計画する'],['work','実施する'],['finance','お金を追う']];
+ el.innerHTML=`<div class="demo-routebar"><button type="button" class="demo-home ${currentModuleCode==='home'?'active':''}" onclick="load('home')">← デモ入口</button>${items.map(x=>`<button type="button" class="${currentModuleCode===x[0]?'active':''}" onclick="guidedDemoGo('${x[0]}')">${x[1]}</button>`).join('')}</div>`;
+}
 async function guidedDemoAudience(kind){
  if(kind==='municipality'){const p=DEMO_PERSONAS.find(x=>x.id==='municipality_aomine');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
  else {const p=DEMO_PERSONAS.find(x=>x.id==='platform_admin');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
@@ -3159,6 +3168,7 @@ async function load(moduleCode){
  if(moduleCode==='aggregation'){projectHubType='aggregation';moduleCode='projects';}
  if(moduleCode==='jcredit'){projectHubType='jcredit';moduleCode='projects';}
  currentModuleCode=moduleCode||'home';
+ renderGuidedDemoNav();
  document.querySelectorAll('button[data-module]').forEach(b=>b.classList.toggle('active',b.dataset.module===currentModuleCode));
  document.getElementById('cards').innerHTML='';
  document.getElementById('content').innerHTML='<div class="notice">読み込み中...</div>';
@@ -3167,7 +3177,7 @@ async function load(moduleCode){
   const allowed=mods.some(x=>x.module_code===currentModuleCode);
   if(!allowed){currentModuleCode='home';await renderRoleNav();}
   const fn=loaders[currentModuleCode]||personaHome;await fn();
-  const p=currentPersona();renderDemoContextBar();await renderRoleNav();
+  const p=currentPersona();renderDemoContextBar();await renderRoleNav();renderGuidedDemoNav();
   document.getElementById('notice').innerHTML=`<b>表示中：${esc(p.roleLabel)}｜${esc(p.party)}</b>　この立場に必要な画面だけを表示しています。閲覧・入力範囲はDBの対象関係で判定します。`;
  }catch(e){document.getElementById('notice').innerHTML=`<span class="warn">DB接続エラー：</span>${esc(e.message)}`;document.getElementById('content').innerHTML='<section><div class="empty">ネット接続またはSupabase側の公開設定を確認してください。</div></section>'}
 }
