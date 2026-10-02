@@ -332,6 +332,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 /* v80 summary hierarchy */
 .summary-hero{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;margin:12px 0}.summary-panel{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px}.summary-panel h2{margin:0 0 8px}.summary-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.summary-kpi{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafbfa}.summary-kpi .k{font-size:10px;color:var(--muted)}.summary-kpi .v{font-size:20px;font-weight:800;margin-top:3px}.summary-kpi .d{font-size:10px;color:var(--muted);margin-top:4px}.summary-links{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.summary-links button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;cursor:pointer}.summary-links button.go{background:#eef5f0;border-color:#91aa98;font-weight:700}.summary-projects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.summary-project{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff}.summary-project .t{font-weight:800;font-size:12px}.summary-project .m{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.55}.summary-diff{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.summary-diff .period{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafbfa}.summary-diff .arrow{font-size:20px;color:var(--muted)}.summary-mapbox{min-height:160px;border:1px dashed #aeb8b0;border-radius:10px;padding:14px;background:#fafbfa;display:flex;flex-direction:column;justify-content:center}.summary-mapbox b{font-size:13px}.summary-mapbox span{font-size:11px;color:var(--muted);margin-top:6px}.summary-unconnected{font-size:11px;color:var(--muted);padding:8px 10px;border-left:3px solid #b8c0ba;background:#fafbfa;margin-top:8px}
 @media(max-width:800px){.summary-hero,.summary-projects{grid-template-columns:1fr}.summary-kpis{grid-template-columns:1fr 1fr}}
+.project-summary-head{border:1px solid var(--line);border-radius:12px;background:#fff;padding:16px;margin:12px 0}.project-summary-head .eyebrow{font-size:10px;color:var(--muted);font-weight:700}.project-summary-head h2{font-size:20px;margin:5px 0 6px}.project-summary-head .desc{font-size:11px;color:var(--muted);line-height:1.6}.project-progress{display:flex;align-items:stretch;gap:6px;overflow-x:auto;padding:4px 0 8px}.project-step{min-width:135px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafbfa}.project-step.current{border-color:#557b62;background:#eef5f0}.project-step .n{font-size:9px;color:var(--muted)}.project-step .t{font-size:11px;font-weight:800;margin-top:3px}.project-step .v{font-size:16px;font-weight:800;margin-top:5px}.project-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.project-summary-grid>section{margin:0}.money-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.money-strip>div{border:1px solid var(--line);border-radius:9px;padding:9px;background:#fafbfa}.money-strip .k{font-size:9px;color:var(--muted)}.money-strip .v{font-size:15px;font-weight:800;margin-top:4px}@media(max-width:800px){.project-summary-grid{grid-template-columns:1fr}.money-strip{grid-template-columns:1fr 1fr}.project-step{min-width:115px}}
 </style>
 </head>
 <body>
@@ -2875,7 +2876,7 @@ async function renderRoleNav(){
   nav.querySelectorAll('button[data-module]').forEach(b=>b.addEventListener('click',()=>load(b.dataset.module)));
  }catch(e){nav.innerHTML='<button class="active">ホーム</button>';}
 }
-function summaryProjectBox(title,meta,onclick){return `<div class="summary-project"><div class="t">${esc(title)}</div><div class="m">${meta}</div><div class="summary-links"><button type="button" onclick="${onclick}">詳細を見る</button></div></div>`;}
+function summaryProjectBox(title,meta,onclick){return `<div class="summary-project"><div class="t">${esc(title)}</div><div class="m">${meta}</div><div class="summary-links"><button class="go" type="button" onclick="${onclick}">PJサマリーを見る</button></div></div>`;}
 async function widePmSummary(p,rows,cur){
  let agg=[];try{agg=await q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&limit=1`)}catch(_){agg=[]}
  const a=agg[0]||{};
@@ -2884,7 +2885,7 @@ async function widePmSummary(p,rows,cur){
  cards([['広域PJ',`${rows.length+1}系統`],['Jクレ対象',ha(jcArea)],['広域集約',a.visible_area_ha?ha(a.visible_area_ha):'300.0 ha'],['比較','Current / As-of']]);
  let html=personaNoteHtml()+`<section><h2>広域サマリー</h2><p>複数自治体の森林事業を、対象森林・進捗・作業・財源・J-クレジットまで横断して確認する入口です。詳細は各画面へ降ります。</p></section>`;
  html+=`<div class="summary-hero"><div class="summary-panel"><h2>広域の現在地</h2><div class="summary-kpis"><div class="summary-kpi"><div class="k">広域集約・対象</div><div class="v">${a.visible_area_ha?ha(a.visible_area_ha):'300.0 ha'}</div><div class="d">地域森林から対象選定</div></div><div class="summary-kpi"><div class="k">状況把握</div><div class="v">${a.visible_known_area_ha?ha(a.visible_known_area_ha):'240.0 ha'}</div><div class="d">所有・意向等</div></div><div class="summary-kpi"><div class="k">事業候補</div><div class="v">${a.visible_ready_area_ha?ha(a.visible_ready_area_ha):'95.0 ha'}</div><div class="d">実行条件を整理</div></div><div class="summary-kpi"><div class="k">まとまり</div><div class="v">${a.visible_business_unit_area_ha?ha(a.visible_business_unit_area_ha):'55.0 ha'}</div><div class="d">面的な事業単位</div></div></div><div class="summary-links"><button class="go" type="button" onclick="projectHubType='aggregation';load('projects')">広域集約を見る</button><button type="button" onclick="load('map')">広域・地域Mapを見る</button></div></div><div class="summary-panel"><h2>地図・年度差分</h2><div class="summary-mapbox"><b>広域Map</b><span>自治体・対象森林・PJを地図から確認。現在のMapへリンクします。</span><div class="summary-links"><button type="button" onclick="load('map')">地図を開く</button></div></div><div class="summary-unconnected">前年差はCurrent / As-ofの共通時間軸で表示する設計です。昨年度末の広域集計値は、現時点でこのサマリー用Readに未接続のため数値を作っていません。</div></div></div>`;
- html+=`<section><h2>事業ポートフォリオ</h2><div class="summary-projects">${summaryProjectBox('自治体単体｜森林整備・管理','通常の森林整備、計画、施業、作業、費用を自治体単位で管理。',"load('planning')")}${summaryProjectBox('自治体単体｜J-クレジット',`青嶺町 ${aom?ha(aom.core_target_area_ha??aom.project_active_area_ha??aom.visible_area_ha):'145.6 ha'} ／ 蒼谷村 ${sou?ha(sou.core_target_area_ha??sou.project_active_area_ha??sou.visible_area_ha):'31.5 ha'}`,"projectHubType='jcredit';load('projects')")}${summaryProjectBox('広域｜森林集約',`${a.visible_area_ha?ha(a.visible_area_ha):'300.0 ha'} → ${a.visible_known_area_ha?ha(a.visible_known_area_ha):'240.0 ha'} → ${a.visible_ready_area_ha?ha(a.visible_ready_area_ha):'95.0 ha'} → ${a.visible_business_unit_area_ha?ha(a.visible_business_unit_area_ha):'55.0 ha'}`,"projectHubType='aggregation';load('projects')")}${summaryProjectBox('広域｜J-クレジット',wide?`${ha(wide.core_target_area_ha??wide.project_active_area_ha??wide.visible_area_ha)}／複数地域を束ねるPJ`:'172.0 ha／複数地域を束ねるPJ',"saveSelectedProjectCode('DEMO-JC-WIDE-001');projectHubType='jcredit';load('projects')")}</div></section>`;
+ html+=`<section><h2>事業ポートフォリオ</h2><div class="summary-projects">${summaryProjectBox('自治体単体｜森林整備・管理','通常の森林整備、計画、施業、作業、費用を自治体単位で管理。',"load('planning')")}${summaryProjectBox('自治体単体｜J-クレジット',`青嶺町 ${aom?ha(aom.core_target_area_ha??aom.project_active_area_ha??aom.visible_area_ha):'145.6 ha'} ／ 蒼谷村 ${sou?ha(sou.core_target_area_ha??sou.project_active_area_ha??sou.visible_area_ha):'31.5 ha'}`,"projectHubType='jcredit';load('projects')")}${summaryProjectBox('広域｜森林集約',`${a.visible_area_ha?ha(a.visible_area_ha):'300.0 ha'} → ${a.visible_known_area_ha?ha(a.visible_known_area_ha):'240.0 ha'} → ${a.visible_ready_area_ha?ha(a.visible_ready_area_ha):'95.0 ha'} → ${a.visible_business_unit_area_ha?ha(a.visible_business_unit_area_ha):'55.0 ha'}`,"openProjectSummary('aggregation')")}${summaryProjectBox('広域｜J-クレジット',wide?`${ha(wide.core_target_area_ha??wide.project_active_area_ha??wide.visible_area_ha)}／複数地域を束ねるPJ`:'172.0 ha／複数地域を束ねるPJ',"openProjectSummary('jcredit','DEMO-JC-WIDE-001')")}</div></section>`;
  html+=`<section><h2>財源・森林環境譲与税</h2><div class="summary-kpis"><div class="summary-kpi"><div class="k">森林環境譲与税</div><div class="v">—</div><div class="d">自治体別・年度別Read未接続</div></div><div class="summary-kpi"><div class="k">予算・支出</div><div class="v">詳細へ</div><div class="d">PJ・自治体の会計から確認</div></div><div class="summary-kpi"><div class="k">補助・保険</div><div class="v">詳細へ</div><div class="d">財源と費用を分離して追跡</div></div><div class="summary-kpi"><div class="k">Jクレ収入・分配</div><div class="v">詳細へ</div><div class="d">販売・入金・分配を追跡</div></div></div><div class="summary-links"><button type="button" onclick="load('finance')">お金の詳細を見る</button></div><div class="summary-unconnected">森林環境譲与税は、広域サマリーでは「自治体別譲与額／活用額／基金／使途／前年差」と、その先の森林・PJへの充当をつなぐ想定です。現DBにない年度値は表示していません。</div></section>`;
  return html;
 }
@@ -3048,7 +3049,7 @@ function projectCardMeta(x){
 }
 function projectChoiceSection(rows,cur){
  if(rows.length<=1)return '';
- return `<section><h2>関与プロジェクト</h2><div class="project-list">${rows.map(x=>`<button type="button" class="project-choice ${cur&&x.project_code===cur.project_code?'active':''}" onclick="setSelectedProject('${esc(x.project_code)}')"><div class="pc-title">${esc(projectShortName(x))}${cur&&x.project_code===cur.project_code?' <span class="tag">選択中</span>':''}</div><div class="pc-story">${esc(x.project_name||x.story_label||'プロジェクト')}</div><div class="pc-meta">${projectCardMeta(x)}</div></button>`).join('')}</div></section>`;
+ return `<section><h2>関与プロジェクト</h2><div class="project-list">${rows.map(x=>`<button type="button" class="project-choice ${cur&&x.project_code===cur.project_code?'active':''}" onclick="openProjectSummary('jcredit','${esc(x.project_code)}')"><div class="pc-title">${esc(projectShortName(x))}${cur&&x.project_code===cur.project_code?' <span class="tag">選択中</span>':''}</div><div class="pc-story">${esc(x.project_name||x.story_label||'プロジェクト')}</div><div class="pc-meta">${projectCardMeta(x)}</div></button>`).join('')}</div></section>`;
 }
 function projectBanner(row){
  if(!row)return '<div class="notice">現在のPJがありません。</div>';
@@ -3371,6 +3372,41 @@ async function guidedDemoAudience(kind){
 }
 function injectGuidedDemo(){const c=document.getElementById('content');if(c&&!c.querySelector('.demo-guide'))c.insertAdjacentHTML('afterbegin',guidedDemoHtml());}
 
+const PROJECT_SUMMARY_CONTEXT_KEY='forest_os_project_summary_context_v1';
+function projectSummaryContext(){try{return JSON.parse(localStorage.getItem(PROJECT_SUMMARY_CONTEXT_KEY)||'{}')}catch(_){return {}}}
+async function openProjectSummary(type,code=''){
+ const ctx={type:type||'jcredit',code:code||''};
+ if(ctx.type==='jcredit'&&ctx.code)saveSelectedProjectCode(ctx.code);
+ localStorage.setItem(PROJECT_SUMMARY_CONTEXT_KEY,JSON.stringify(ctx));
+ await load('project_summary');
+}
+function summaryMoneyStrip(d){
+ const budget=(d?.budgets||[]).reduce((a,x)=>a+Number(x.total_amount||0),0);
+ const inflow=(d?.txs||[]).filter(x=>x.direction==='in').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
+ const outflow=(d?.txs||[]).filter(x=>x.direction==='out').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
+ const dist=(d?.dists||[]).reduce((a,x)=>a+Number(x.finalized_distribution_jpy||x.planned_distribution_jpy||0),0);
+ return `<div class="money-strip"><div><div class="k">事業予算</div><div class="v">${budget?yen(budget):'未登録'}</div></div><div><div class="k">入金記録</div><div class="v">${(d?.txs||[]).length?yen(inflow):'—'}</div></div><div><div class="k">出金記録</div><div class="v">${(d?.txs||[]).length?yen(outflow):'—'}</div></div><div><div class="k">分配予定</div><div class="v">${(d?.dists||[]).length?yen(dist):'—'}</div></div></div>`;
+}
+async function projectSummaryScreen(){
+ const p=currentPersona(),ctx=projectSummaryContext();
+ if(ctx.type==='aggregation'){
+  let agg=[];try{agg=await q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&limit=1`)}catch(_){agg=[]}
+  const a=agg[0]||{};
+  const target=a.visible_area_ha,known=a.visible_known_area_ha,ready=a.visible_ready_area_ha,unit=a.visible_business_unit_area_ha;
+  cards([['PJ','広域森林集約'],['対象',target?ha(target):'—'],['現在地点','まとまり形成'],['現在成果',unit?ha(unit):'—']]);
+  document.getElementById('content').innerHTML=personaNoteHtml()+`<div class="project-summary-head"><div class="eyebrow">PJサマリー｜広域・集約</div><h2>広域森林集約プロジェクト</h2><div class="desc">対象森林を把握し、所有・意向等を整理して、実行可能な森林群と面的な事業単位を形成するプロジェクト。</div></div><section><h2>現在地点・目標</h2><div class="project-progress"><div class="project-step"><div class="n">01 対象</div><div class="t">対象森林</div><div class="v">${target?ha(target):'—'}</div></div><div class="project-step"><div class="n">02 把握</div><div class="t">状況把握</div><div class="v">${known?ha(known):'—'}</div></div><div class="project-step"><div class="n">03 候補</div><div class="t">事業候補</div><div class="v">${ready?ha(ready):'—'}</div></div><div class="project-step current"><div class="n">04 現在地点</div><div class="t">まとまり形成</div><div class="v">${unit?ha(unit):'—'}</div></div></div><div class="smallnote">対象${target?ha(target):'—'}に対し、現在どこまで案件化できているかを表示。まとまり面積は目標値ではなく現在成果です。</div></section><div class="project-summary-grid"><section><h2>昨年度末 → 現在</h2><div class="summary-diff"><div class="period"><b>昨年度末</b><br><span class="mini">As-of年度末集計 未接続</span></div><div class="arrow">→</div><div class="period"><b>現在</b><br><span class="mini">まとまり ${unit?ha(unit):'—'}</span></div></div><div class="summary-unconnected">昨年度値は作らず、As-ofの年度末Read接続後に面積・件数・地図差分を表示します。</div></section><section><h2>対象地図</h2><div class="summary-mapbox"><b>集約Map</b><span>対象森林・筆と現在の集約状態を確認。</span><div class="summary-links"><button class="go" onclick="projectHubType='aggregation';load('projects')">地図・筆を見る</button></div></div></section></div><section><h2>このPJのお金</h2><div class="summary-unconnected">この集約PJに紐づく予算・財源・契約・支出のPJ別会計Readは、このサマリーには未接続です。別PJの金額を流用しません。</div><div class="summary-links"><button onclick="load('finance')">会計画面を見る</button></div></section><section><h2>詳細</h2><div class="summary-links"><button onclick="projectHubType='aggregation';load('projects')">対象森林・集約詳細</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業</button><button onclick="load('finance')">お金</button></div></section>`;
+  return;
+ }
+ const rows=await personaProjectPortfolio(p);let cur=ctx.code?rows.find(x=>x.project_code===ctx.code):null;if(!cur)cur=await currentProjectRow(p);
+ if(!cur){cards([['PJ','なし']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<div class="empty">表示できるPJがありません。</div>';return;}
+ saveSelectedProjectCode(cur.project_code,p);
+ let story=[];try{story=await q('forest_os_ui_project_story_summary',`select=*&project_code=eq.${encodeURIComponent(cur.project_code)}&limit=1`)}catch(_){story=[]}
+ const st=story[0]||{},current=st.active_area_ha??cur.project_active_area_ha??cur.visible_area_ha,goal=st.final_target_area_ha??cur.final_target_area_ha??current,candidate=st.candidate_area_ha??cur.project_candidate_area_ha;
+ let fin=null;try{fin=await canonicalProjectFinanceData(cur)}catch(_){fin=null}
+ cards([['PJ',esc(projectShortName(cur))],['現在対象',ha(current)],['目標',ha(goal)],['状態',esc(projectStatusLabel(cur.project_status))]]);
+ document.getElementById('content').innerHTML=personaNoteHtml()+`<div class="project-summary-head"><div class="eyebrow">PJサマリー｜J-クレジット</div><h2>${esc(st.story_label||cur.project_name||projectShortName(cur))}</h2><div class="desc">${esc(cur.project_name||'森林J-クレジットプロジェクト')}｜${esc(projectStatusLabel(cur.project_status))}</div></div><section><h2>現在地点・目標</h2><div class="project-progress"><div class="project-step"><div class="n">対象</div><div class="t">現在対象</div><div class="v">${ha(current)}</div></div><div class="project-step current"><div class="n">現在地点</div><div class="t">${esc(projectStatusLabel(cur.project_status))}</div><div class="v">${candidate?`候補 ${ha(candidate)}`:'進行中'}</div></div><div class="project-step"><div class="n">目標</div><div class="t">最終対象</div><div class="v">${ha(goal)}</div></div></div></section><div class="project-summary-grid"><section><h2>昨年度末 → 現在</h2><div class="summary-diff"><div class="period"><b>昨年度末</b><br><span class="mini">As-of年度末集計 未接続</span></div><div class="arrow">→</div><div class="period"><b>現在</b><br><span class="mini">対象 ${ha(current)}</span></div></div><div class="summary-unconnected">年度差分は、対象面積・認証量・発行量・地図差分をAs-of接続後に表示します。未登録値は作りません。</div></section><section><h2>対象地図</h2><div class="summary-mapbox"><b>PJ対象森林</b><span>対象森林と地域を地図で確認。</span><div class="summary-links"><button class="go" onclick="load('map')">地図を見る</button></div></div></section></div><section><h2>このPJのお金</h2>${fin?summaryMoneyStrip(fin):'<div class="summary-unconnected">会計データを取得できませんでした。</div>'}<div class="summary-links"><button onclick="load('finance')">予算・取引・分配の詳細</button></div></section><section><h2>詳細</h2><div class="summary-links"><button class="go" onclick="projectHubType='jcredit';load('projects')">J-クレ詳細</button><button onclick="load('forest')">対象森林</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業</button><button onclick="load('finance')">お金</button></div></section>`;
+}
+
 async function personaHome(){
  const p=currentPersona();
  if(['owner','owner_proxy'].includes(p.kind)){await owner();injectGuidedDemo();return;}
@@ -3392,7 +3428,7 @@ async function personaHome(){
  injectGuidedDemo();
 }
 
-const loaders={home:personaHome,map:townMap,projects:projectHub,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,finance:personaFinanceScreen,agency:forestryAgencyScreen,access:accessAuditScreen};
+const loaders={home:personaHome,project_summary:projectSummaryScreen,map:townMap,projects:projectHub,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,finance:personaFinanceScreen,agency:forestryAgencyScreen,access:accessAuditScreen};
 async function load(moduleCode){
  if(moduleCode==='portfolio'){projectHubType='portfolio';moduleCode='projects';}
  if(moduleCode==='aggregation'){projectHubType='aggregation';moduleCode='projects';}
@@ -3404,7 +3440,7 @@ async function load(moduleCode){
  document.getElementById('content').innerHTML='<div class="notice">読み込み中...</div>';
  try{
   const mods=await roleModules();
-  const allowed=currentModuleCode==='agency'||mods.some(x=>x.module_code===currentModuleCode);
+  const allowed=['agency','project_summary'].includes(currentModuleCode)||mods.some(x=>x.module_code===currentModuleCode);
   if(!allowed){currentModuleCode='home';await renderRoleNav();}
   const fn=loaders[currentModuleCode]||personaHome;await fn();
   injectScreenScope();
