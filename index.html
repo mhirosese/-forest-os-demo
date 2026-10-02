@@ -2710,20 +2710,16 @@ async function aggSelectParcel(id,el){
 }
 async function aggregationProject(){
  const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [summaries,progress,mapRows,blocks,issues,recoveryRows]=await Promise.all([
+ const [summaries,progress,mapRows,blocks,issues]=await Promise.all([
   q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${vq}&limit=1`),
   q('forest_os_ui_aggregation_persona_progress',`select=*&viewer_name=eq.${vq}&order=fiscal_year`),
   q('forest_os_ui_aggregation_persona_map_cells',`select=*&viewer_name=eq.${vq}&order=grid_y,grid_x`),
   q('forest_os_ui_aggregation_persona_business_units',`select=*&viewer_name=eq.${vq}&order=area_ha.desc`),
-  q('forest_os_ui_aggregation_persona_issue_summary',`select=*&viewer_name=eq.${vq}&order=sort_order`),
-  q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${vq}&order=region_name,forest_name`)
+  q('forest_os_ui_aggregation_persona_issue_summary',`select=*&viewer_name=eq.${vq}&order=sort_order`)
  ]);
  const s=summaries[0];
  if(!s){cards([['集約プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者は私有林集約プロジェクトの対象ではありません。</div></section>';return;}
  aggDetailCache=new Map();
- const routeCandidates=(recoveryRows||[]).filter(x=>x.portfolio_state==='route_decision_pending');
- const routeTotal=routeCandidates.length?[...new Map(routeCandidates.map(x=>[`${x.region_name}|${x.forest_name}`,x])).values()].reduce((z,x)=>z+Number(x.area_ha||0),0):0;
- aggDemoAreaByForestName=buildDemoAreaMap(routeCandidates,routeTotal);
  cards([
   ['表示対象',ha(s.visible_area_ha)],
   ['状況把握',ha(s.visible_known_area_ha)],
