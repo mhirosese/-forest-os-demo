@@ -307,6 +307,18 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .projecthub-note{font-size:11px;color:var(--muted);margin:-3px 0 12px 2px;line-height:1.55}
 @media(max-width:520px){.projecthub-tabs{display:grid;grid-template-columns:1fr 1fr}.projecthub-tabs button{width:100%;padding:8px 7px}}
 
+
+/* v80 guided demo entry */
+.demo-guide{border:1px solid var(--line);border-radius:12px;background:#fff;padding:15px;margin:0 0 14px}
+.demo-guide h2{margin:0 0 6px;font-size:17px}.demo-guide p{margin:0;color:var(--muted);font-size:12px;line-height:1.65}
+.demo-guide-flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:12px}
+.demo-guide-step{border:1px solid #dfe5e0;border-radius:9px;padding:10px 8px;background:#fafbfa;text-align:left;cursor:pointer}
+.demo-guide-step b{display:block;font-size:12px;margin-bottom:4px}.demo-guide-step span{display:block;font-size:10px;color:var(--muted);line-height:1.45}
+.demo-guide-audience{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.demo-guide-audience button{font-size:11px;padding:7px 10px}
+.demo-guide-note{font-size:10px;color:var(--muted);line-height:1.55;margin-top:9px}
+@media(max-width:800px){.demo-guide-flow{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:520px){.demo-guide-flow{grid-template-columns:repeat(2,1fr)}}
+
 </style>
 </head>
 <body>
@@ -3104,9 +3116,27 @@ async function personaFinanceScreen(){
 }
 
 
+function guidedDemoHtml(){
+ const steps=[
+  ['1','地域を見る','森林マップ','map'],
+  ['2','森林を選ぶ','森林・筆・権利','forest'],
+  ['3','案件化する','地域森林→集約','projects'],
+  ['4','計画する','計画・責任主体','planning'],
+  ['5','実施する','作業・タスク・証拠','work'],
+  ['6','お金を追う','予実・収支','finance']
+ ];
+ return `<section class="demo-guide"><h2>森林OS デモ｜説明の入口</h2><p>既存の森林GIS・森林簿を置き換えず、地域の森林を「どこから動かすか」から、案件化・計画・施業・費用・証拠までつなぐ業務基盤です。</p><div class="demo-guide-flow">${steps.map(x=>`<button type="button" class="demo-guide-step" onclick="guidedDemoGo('${x[3]}')"><b>${x[0]}. ${x[1]}</b><span>${x[2]}</span></button>`).join('')}</div><div class="demo-guide-audience"><button type="button" onclick="guidedDemoAudience('municipality')">自治体向けの順で見る</button><button type="button" onclick="guidedDemoAudience('agency')">官庁・制度説明の順で見る</button></div><div class="demo-guide-note">デモ用の案内です。Persona切替は本番ログイン権限ではありません。J-クレジットは「プロジェクト」内の出口の一つとして確認できます。</div></section>`;
+}
+async function guidedDemoGo(code){if(code==='projects')projectHubType='portfolio';await load(code);}
+async function guidedDemoAudience(kind){
+ if(kind==='municipality'){const p=DEMO_PERSONAS.find(x=>x.id==='municipality_aomine');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
+ else {const p=DEMO_PERSONAS.find(x=>x.id==='platform_admin');if(p){demoPersonaId=p.id;localStorage.setItem('forest_os_demo_persona_v30',p.id);roleModuleCache.clear();applyPersonaAdminDefaults(p);await renderRoleNav();}projectHubType='portfolio';await load('home');}
+}
+function injectGuidedDemo(){const c=document.getElementById('content');if(c&&!c.querySelector('.demo-guide'))c.insertAdjacentHTML('afterbegin',guidedDemoHtml());}
+
 async function personaHome(){
  const p=currentPersona();
- if(['owner','owner_proxy'].includes(p.kind))return owner();
+ if(['owner','owner_proxy'].includes(p.kind)){await owner();injectGuidedDemo();return;}
  const rows=await personaProjectPortfolio(p),cur=await currentProjectRow(p);
  if(!cur){cards([['関与PJ','0件']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の立場で表示できるPJはありません。</div></section>';return;}
  const story=cur.story_label||'PJ';
@@ -3120,6 +3150,7 @@ async function personaHome(){
   ['計画・作業','森林・施業の業務画面。PJとの正式な紐付けはDB側の対象関係で管理。'],
   ['デモ入力','PJ期間と仮費用はブラウザ内下書きとして入力可能。正本DBを直接上書きしません。']
  ]);
+ injectGuidedDemo();
 }
 
 const loaders={home:personaHome,map:townMap,projects:projectHub,forest:forestView,planning:personaPlanningScreen,work:personaWorkScreen,finance:personaFinanceScreen,access:accessAuditScreen};
