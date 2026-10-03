@@ -2622,7 +2622,7 @@ function planAdopt(){const p=currentPlan();if(!p.rows.length)return alert('作�
 function renderPlanningScreen(){const p=currentPlan();cards([['保存計画',`${planState.plans.length}案`],['現在の状態',`<span class="plan-status ${p.status}">${p.status==='adopted'?'確定済':p.status==='comparing'?'比較中':'下書き'}</span>`],['対象地域',p.region],['対象PJ',p.project||'—']]);document.getElementById('content').innerHTML=`<section><h2>施業計画を組み立てる</h2><div class="plan-top"><div class="planfield"><label>保存した計画案</label><select onchange="planSelect(this.value)">${planState.plans.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="planfield"><label>地域</label><select onchange="planChangeRegion(this.value)">${Object.keys(planForestsByRegion).map(x=>`<option value="${esc(x)}" ${p.region===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div><div class="planfield"><label>関連PJ</label><select onchange="currentPlan().project=this.value;savePlans()">${planProjectOptions(p)}</select></div><div class="planfield"><label>計画名</label><input value="${esc(p.name)}" onchange="planRename(this.value)"></div></div><div id="planSummary" class="plan-summary"></div><div class="plan-actions"><button class="primarybtn" type="button" onclick="savePlans();alert('保存しました（このブラウザ内の画面操作デモ）。')">保存</button><button type="button" onclick="planDuplicate()">別案として保存</button><button type="button" onclick="planNew()">新しい計画案</button><button type="button" onclick="planAddRow()">作業を追加</button><button type="button" onclick="planAdopt()">確定して作業予定へ</button></div><div id="planRows"></div><div class="plan-note"><b>検討と実作業を分離：</b>ここでは森林を複数選び、施業・年度・担当・予定費用・補助金・木材・Jクレ・炭素以外の価値を何度でも調整します。確定した作業だけが「作業予定」へ入る想定です。正式な森林経営計画やJ-クレジット申請は、この意思決定結果から別途つなぎます。</div></section>`;renderPlanningBody();}
 async function planning(){renderPlanningScreen();}
 
-/* ---------------- v78 現場イベント入力（デモ確認のみ） ---------------- */
+/* ---------------- v80 現場イベント入力（Auth接続前確認） ---------------- */
 let eventEntryData={contracts:[],forests:[],parcels:[]};
 function eventEntryTargetOptions(type){
  const rows=type==='land_parcel'?eventEntryData.parcels:eventEntryData.forests;
@@ -2646,7 +2646,7 @@ function eventEntryFields(){
   ${(fallen||thinning)?`<div><label>${fallen?'影響面積':'実施面積'}（ha）</label><input id="eventArea" type="number" min="0" step="0.01"></div>`:''}
   <div><label>${fallen?'状況':'結果・メモ'}</label><input id="eventSummary" type="text" placeholder="現場で確認した内容"></div>
  </div>
- <div class="map-note"><b>デモ入力：</b>ここではDBへ保存しません。入力内容と登録先だけを確認します。本番Auth・権限接続後に登録処理を接続します。</div>
+ <div class="map-note"><b>現場入力：</b>保存RPCはDB側に実装済みです。現在の公開デモは未ログインのため保存せず、入力内容を確認します。認証後は担当作業案件・地域担当の権限確認を通過した場合だけ保存できます。</div>
  <div class="admin-filter-actions"><button type="button" onclick="previewEventEntry()">登録内容を確認</button></div>
  <div id="eventEntryPreview"></div>`;
 }
@@ -2669,16 +2669,9 @@ function previewEventEntry(){
  const summary=document.getElementById('eventSummary')?.value||'';
  if(!targetId||!eventDate){document.getElementById('eventEntryPreview').innerHTML='<div class="empty">対象と日付を選択してください。</div>';return;}
  const fallen=code==='fallen_tree_observation';
- const payload=fallen?{
-  incidents:{incident_type:c.case_type||'fallen_tree',occurred_at:eventDate,became_known_at:document.getElementById('eventKnownDate')?.value||eventDate,severity:document.getElementById('eventSeverity')?.value||'medium',description:summary,estimated_affected_area_ha:Number(document.getElementById('eventArea')?.value||0)||null},
-  incident_impacts:{target_type:targetType,target_id:targetId,impact_type:c.event_type||'fallen_tree',affected_area_ha:Number(document.getElementById('eventArea')?.value||0)||null,impact_summary:summary}
- }:{
-  work_cases:{work_type_code:c.case_type||code,title:`${c.display_name||code}｜${targetLabel}`,status:'completed'},
-  work_case_targets:{target_type:targetType,target_id:targetId,relation_type:'primary'},
-  work_events:{event_type:c.event_type,event_date:eventDate,actual_area_ha:code==='thinning'?(Number(document.getElementById('eventArea')?.value||0)||null):null,result_summary:summary}
- };
- const routes=Object.keys(payload).join(' → ');
- document.getElementById('eventEntryPreview').innerHTML=`<section><h3>登録内容確認</h3><div class="map-summary-note"><b>種別：</b>${esc(c.display_name||code)}<br><b>対象：</b>${esc(targetLabel)}<br><b>登録先：</b>${esc(routes)}<br><b>状態：</b>デモのため未保存</div><details><summary>登録予定データ</summary><pre style="white-space:pre-wrap;overflow:auto">${esc(JSON.stringify(payload,null,2))}</pre></details></section>`;
+ const payload={entry_type:code,target_type:targetType,target_id:targetId,event_date:eventDate,known_at:fallen?(document.getElementById('eventKnownDate')?.value||eventDate):null,severity:fallen?(document.getElementById('eventSeverity')?.value||'medium'):null,area_ha:(fallen||code==='thinning')?(Number(document.getElementById('eventArea')?.value||0)||null):null,summary:summary};
+ const route=fallen?'incidents → incident_impacts':'既存の担当 work_case → work_events';
+ document.getElementById('eventEntryPreview').innerHTML=`<section><h3>登録内容確認</h3><div class="map-summary-note"><b>種別：</b>${esc(c.display_name||code)}<br><b>対象：</b>${esc(targetLabel)}<br><b>登録先：</b>${esc(route)}<br><b>状態：</b>公開デモは未保存<br>${fallen?'':'<b>本番条件：</b>認証ユーザーが対象を含む担当作業案件を持つこと'}</div><details><summary>入力データ</summary><pre style="white-space:pre-wrap;overflow:auto">${esc(JSON.stringify(payload,null,2))}</pre></details></section>`;
 }
 async function eventEntrySection(){
  try{
