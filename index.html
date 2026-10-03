@@ -2745,6 +2745,7 @@ async function aggregationProject(){
     <div class="pj-block"><h3>昨年度末との比較</h3><div class="pj-compare"><div><b>昨年度末</b><br><span class="mini">年度末As-of 未接続</span></div><div class="arrow">→</div><div><b>現在</b><br><span class="mini">まとまり ${ha(currentUnit)}</span></div></div><div class="pj-note">昨年度値を作らず、年度末データ接続後に面積・件数・地図差分を表示します。</div></div>
     <div class="pj-block"><h3>このPJのお金</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">今年度予算</div><div class="v">未接続</div></div><div class="pj-kpi"><div class="k">主要財源</div><div class="v">未接続</div></div><div class="pj-kpi"><div class="k">執行額</div><div class="v">未接続</div></div><div class="pj-kpi"><div class="k">残額</div><div class="v">未接続</div></div></div><div class="pj-note">PJ帰属が確認できる会計Readだけを接続します。他PJの金額は流用しません。</div></div>
    </div>
+   <div class="pj-block"><h3>特記事項</h3><textarea id="aggProjectNotes" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;padding:10px 12px;border:1px solid #cfd6dc;border-radius:8px;font:inherit;line-height:1.55" placeholder="PJ全体で共有したい留意事項、今後の対応、説明時の補足などを入力">${esc(loadAggregationProjectNotes())}</textarea><div class="pj-detail-bar" style="margin-top:8px"><button type="button" class="go" onclick="saveAggregationProjectNotes()">特記事項を保存</button><span id="aggProjectNotesStatus" class="pj-note">この端末のデモ画面に保存します。DB正本にはまだ書き込みません。</span></div></div>
    <div class="pj-detail-bar"><span class="label">詳しく見る：</span><button class="go" onclick="document.getElementById('aggMapDetail').scrollIntoView({behavior:'smooth'})">対象森林・地図</button><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button></div>
   </section>`+
  `<div id="aggMapDetail" class="detail-divider"><div class="eyebrow">ここから実務詳細</div></div>`+
@@ -2757,6 +2758,10 @@ async function aggregationProject(){
 
 
 /* ---------------- v79 地域森林ポートフォリオ / 森林復帰 ---------------- */
+const AGG_NOTES_KEY='forest_os_aggregation_project_notes_v1';
+function loadAggregationProjectNotes(){return localStorage.getItem(AGG_NOTES_KEY)||'';}
+function saveAggregationProjectNotes(){const el=document.getElementById('aggProjectNotes');if(!el)return;localStorage.setItem(AGG_NOTES_KEY,el.value||'');const st=document.getElementById('aggProjectNotesStatus');if(st)st.textContent='保存済み '+new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});}
+
 function demoStatusLabel(v){return ({active:'運用中',approved:'承認済',completed:'完了',planned:'計画中',forecast:'見込',provisional:'暫定',settled:'精算済',decided:'決定済',reference:'参考',estimate_confirmed:'見積確認済',payment_record:'支払記録'})[v]||txt(v);}
 function recoveryStageLabel(v){return ({untracked:'未把握',forest_identified:'森林把握',owner_identification:'所有者確認',owner_intent:'所有者意向',rights_boundary:'権利・境界整理',field_assessment:'現況確認',aggregation_candidate:'集約候補',business_assessment:'事業性・出口判断',route_decision:'出口決定',managed:'継続管理'})[v]||txt(v);}
 function recoveryStateLabel(v){return ({managed:'管理復帰',on_hold:'保留',route_decision_pending:'出口判断待ち',route_selected:'出口決定済',recovery_in_progress:'森林復帰中'})[v]||txt(v);}
