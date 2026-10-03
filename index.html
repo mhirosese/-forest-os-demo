@@ -2725,14 +2725,15 @@ async function aggSelectParcel(id,el){
 }
 async function aggregationProject(){
  const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown]=await Promise.all([
+ const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows]=await Promise.all([
   q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${vq}&limit=1`),
   q('forest_os_ui_aggregation_persona_progress',`select=*&viewer_name=eq.${vq}&order=fiscal_year`),
   q('forest_os_ui_aggregation_persona_map_cells',`select=*&viewer_name=eq.${vq}&order=grid_y,grid_x`),
   q('forest_os_ui_aggregation_persona_business_units',`select=*&viewer_name=eq.${vq}&order=area_ha.desc`),
   q('forest_os_ui_aggregation_persona_issue_summary',`select=*&viewer_name=eq.${vq}&order=sort_order`),
   q('forest_os_demo_public_aggregation_year_summary','select=*&order=fiscal_year'),
-  q('forest_os_demo_public_aggregation_budget_breakdown','select=*&order=fiscal_year,sort_order')
+  q('forest_os_demo_public_aggregation_budget_breakdown','select=*&order=fiscal_year,sort_order'),
+  q('forest_os_demo_public_aggregation_year_map','select=*&order=fiscal_year,parcel_no')
  ]);
  const s=summaries[0];
  if(!s){cards([['集約プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者は私有林集約プロジェクトの対象ではありません。</div></section>';return;}
@@ -2762,8 +2763,14 @@ async function aggregationProject(){
  const expenseHtml=expenseLines.map(x=>`<div class="pj-money-line"><span>${esc(x.label)}</span><b>${yen(x.planned_amount)}</b></div>`).join('')||'<div class="pj-note">予算内訳未登録</div>';
  const fundingHtml=`<div class="pj-money-line"><span>森林環境譲与税</span><b>${yen(y.transfer_tax_budget_jpy)}</b></div><div class="pj-money-line"><span>一般財源</span><b>${yen(y.general_budget_jpy)}</b></div>`;
  const execRate=Number(y.budget_jpy)>0?(Number(y.executed_jpy)/Number(y.budget_jpy)*100).toFixed(1):'—';
+ const selectedYearMap=(yearMapRows||[]).filter(r=>Number(r.fiscal_year)===selectedYear).map(r=>{
+  if(isCurrent){const cur=mapRows.find(x=>String(x.forest_unit_id)===String(r.forest_unit_id));return cur||r;}
+  const known=r.state_code==='known_at_year_end'||r.state_code==='known_at_year_end_partial';
+  return {...r,map_status:known?'adjustment_needed':'unknown_or_unreachable',map_status_label:known?'年度末時点で状況把握済':'年度末時点では未把握',owner_code:'',block_name:null,is_detached_owner:false,is_cross_region_owner:false};
+ });
+ const mapDisplayRows=selectedYearMap.length?selectedYearMap:mapRows;
  const mapTitle=isCurrent?'対象森林・地図｜現在':'対象森林・地図｜年度末確定時点';
- const mapNote=isCurrent?'下の筆Mapは現在のDB状態です。':'年度末の集計値は固定済みです。筆単位Mapの年度末スナップショットはまだ未接続のため、下の詳細Mapは現在状態を表示します。';
+ const mapNote=isCurrent?'現在のDB状態です。':'年度末スナップショットに保存した対象森林・状態を表示しています。過年度はデモ年度値に基づく状態再現で、実際の過去筆履歴ではありません。形状は説明用疑似形状です。';
  const html=personaNoteHtml()+`<section class="pj-sheet agg-main-summary">
    <div class="pj-sheet-head"><div><div class="eyebrow">広域集約プロジェクト</div><h2>私有林集約PJ｜${y.fiscal_year}年度</h2><div class="desc">分散する私有林について、状況把握から事業候補の抽出、実行可能なまとまり形成までを追うプロジェクトです。年度を切り替えると、その年度の確定値／現在値と会計を同じ画面で確認できます。</div></div><div class="pj-sheet-status">${statusLabel}｜${asof}</div></div>
    <div class="projecthub-tabs" style="margin:12px 0 16px">${yearButtons}</div>
@@ -2773,7 +2780,7 @@ async function aggregationProject(){
    <div class="pj-detail-bar"><span class="label">詳しく見る：</span><button class="go" onclick="document.getElementById('aggMapDetail').scrollIntoView({behavior:'smooth'})">対象森林・地図</button><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button></div>
   </section>`+
  `<div id="aggMapDetail" class="detail-divider"><div class="eyebrow">ここから実務詳細</div></div>`+
- `<div class="agg-layout"><section><h2>${mapTitle}</h2><div class="agg-body"><div class="map-summary-note">${mapNote}</div>${aggRenderMap(mapRows,blocks)}</div></section><section><h2>選択した筆</h2><div class="agg-body" id="aggDetail"><div class="smallnote" style="line-height:1.65">Map上の筆を選ぶと、所有者状況、参加意向、権利・境界、事業単位候補、次の対応を確認できます。</div></div></section></div>`+
+ `<div class="agg-layout"><section><h2>${mapTitle}</h2><div class="agg-body"><div class="map-summary-note">${mapNote}</div>${aggRenderMap(mapDisplayRows,isCurrent?blocks:[])}</div></section><section><h2>選択した筆</h2><div class="agg-body" id="aggDetail"><div class="smallnote" style="line-height:1.65">Map上の筆を選ぶと、所有者状況、参加意向、権利・境界、事業単位候補、次の対応を確認できます。</div></div></section></div>`+
  `<section><h2>年度別の集約進捗</h2><div class="agg-body">${aggRenderProgress(progress)}</div></section>`+
  aggRenderBlocks(blocks)+aggRenderIssues(issues)+
  `<section><h2>このPJの詳細画面</h2><div class="pj-detail-bar"><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button><button onclick="load('forest')">森林・権利</button></div><div class="smallnote" style="margin-top:10px">詳細はこのPJの実務確認用です。上段のPJ概要と同じ情報を別画面で繰り返すためのものではありません。</div></section>`;
