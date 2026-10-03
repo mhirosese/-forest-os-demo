@@ -3338,21 +3338,22 @@ async function aomineJcreditSummary(){
 async function soutaniRecoveryProjectSummary(){
  const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
  saveSelectedProjectCode('DEMO-JC-SOUTANI-001',p);
- const [portfolio,storyRows,recoveryRows,financeRows,workRows]=await Promise.all([
+ const [portfolio,storyRows,recoveryRows,financeRows,workRows,mapRows]=await Promise.all([
   personaProjectPortfolio(p,true),
   q('forest_os_ui_project_story_summary','select=*&project_code=eq.DEMO-JC-SOUTANI-001'),
   q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${vq}&order=region_name,forest_name`),
   q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`),
-  q('forest_os_demo_public_work_core_current','select=*&order=planned_start_on,work_code')
+  q('forest_os_demo_public_work_core_current','select=*&order=planned_start_on,work_code'),
+  q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name')
  ]);
  const cur=portfolio.find(x=>x.project_code==='DEMO-JC-SOUTANI-001')||null;
  const st=storyRows[0]||{};
- // Canonical J-credit Core / project story fixes this demo project's current target at 31.5 ha / 1 forest.
+ const targetName='蒼谷村有林・北峰団地';
+ // Canonical current target: 31.5 ha / 1 forest. Legacy 49.7 ha / 2-forest demo rows are not used here.
  const targetArea=Number(st.core_target_area_ha??st.active_area_ha??cur?.core_target_area_ha??31.5);
- const targetForestCount=Number(st.active_forest_count??cur?.project_active_forest_count??1);
  const soutaniRows=(recoveryRows||[]).filter(x=>x.region_name==='【デモ】蒼谷村');
  const exactRows=soutaniRows.filter(x=>String(x.forest_name||'').includes('北峰団地'));
- const scopedRows=exactRows.length?exactRows:soutaniRows;
+ const scopedRows=exactRows.length?exactRows:[];
  const activeRows=scopedRows.filter(x=>x.recovery_case_status==='active');
  const holdRows=scopedRows.filter(x=>x.recovery_case_status==='on_hold');
  const stages=[
@@ -3369,6 +3370,7 @@ async function soutaniRecoveryProjectSummary(){
  const observed=scopedRows.map(x=>stageIndex.get(x.recovery_stage)).filter(Number.isInteger);
  const currentIdx=observed.length?Math.max(...observed):-1;
  const hasManaged=scopedRows.some(x=>x.portfolio_state==='managed'||x.recovery_stage==='managed');
+ const currentStage=currentIdx>=0?stages[currentIdx][1]:'確認中';
  const stageCards=stages.map((x,i)=>{
   let state='未到達',cls='';
   if(hasManaged||i<currentIdx){state='確認済';cls='done'}
@@ -3389,22 +3391,41 @@ async function soutaniRecoveryProjectSummary(){
  }
  const yearHtml=[...years.entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([y,ws])=>`<div class="jc-year"><div class="jc-year-head"><div class="jc-year-label">${esc(y==='時期未設定'?y:y+'年度')}</div><span class="tag">${ws.some(w=>w.work_status==='planned')?'計画・進行':'記録'}</span></div><div class="jc-year-body">${ws.map(w=>`<div class="jc-event"><b>${esc(w.work_title||w.work_type_name||w.work_type_code||'作業')}</b><div>${w.planned_area_ha!=null?`予定 ${ha(w.planned_area_ha)}　`:''}${esc(w.performed_by_party_name||'担当確認中')}</div></div>`).join('')}</div></div>`).join('');
  const fin=financeRows[0]||null;
- const financeHtml=`<div id="soutaniRecoveryFinance">${fin?recoveryFinanceSection(fin):`<section><h2>森林復帰｜お金</h2><div class="empty">森林復帰費用の正本金額は、この画面で確認できるデータがまだありません。推測値は表示しません。</div></section>`}</div>`;
- const blockerHtml=blockerMap.size?`<div class="pj-block"><h3>保留・確認事項</h3><div class="recovery-status-grid">${[...blockerMap.entries()].map(([k,z])=>`<div class="recovery-status"><div class="t">${esc(recoveryBlockerLabel(k))}</div><div class="d">${num(z.count)}件${z.area?`／${ha(z.area)}`:''}。理由を残したまま次回確認へ引き継ぎます。</div></div>`).join('')}</div></div>`:'';
+ const financeHtml=`<div id="soutaniRecoveryFinance">${fin?recoveryFinanceSection(fin):`<section><h2>費用・財源</h2><div class="empty">この森林に対応する森林復帰費用の正本金額は、現在の公開Readでは確認できません。推測値は表示しません。</div></section>`}</div>`;
+ const blockerHtml=blockerMap.size?`<div class="pj-block" id="recovery-checks"><h3>保留・確認事項</h3><div class="recovery-status-grid">${[...blockerMap.entries()].map(([k,z])=>`<div class="recovery-status"><div class="t">${esc(recoveryBlockerLabel(k))}</div><div class="d">${num(z.count)}件${z.area?`／${ha(z.area)}`:''}。この森林の確認事項として履歴を残し、次回確認へ引き継ぎます。</div></div>`).join('')}</div></div>`:'';
+ const forestMapRows=(mapRows||[]).filter(x=>x.layer_code==='forest'&&(String(x.display_name||'').includes('北峰団地')||String(x.target_id||'')==='46947fae-beee-43a8-ab56-5b0608d0b836'));
  cards([]);
- const html=`<section class="pj-sheet agg-main-summary">
-  <div class="pj-sheet-head"><div><div class="eyebrow">蒼谷村｜森林復帰</div><h2>森林管理・復帰PJ</h2><div class="desc">管理が十分に届いていない森林を、所有・権利・境界・現況・事業条件を整理しながら通常の管理ラインへ戻すケースです。災害復旧とは別管理です。</div></div><div class="pj-sheet-status">進行中</div></div>
-  <div class="pj-kpi-row"><div class="pj-kpi"><div class="k">対象森林</div><div class="v">${targetForestCount}森林</div></div><div class="pj-kpi"><div class="k">対象面積</div><div class="v">${ha(targetArea)}</div></div><div class="pj-kpi"><div class="k">現在工程</div><div class="v">${currentIdx>=0?esc(stages[currentIdx][1]):'確認中'}</div></div><div class="pj-kpi"><div class="k">保留</div><div class="v">${holdRows.length?`${num(holdRows.length)}件`:'0件'}</div></div></div>
-  <div class="pj-note"><b>現在の対象は31.5ha／1森林です。</b> 森林復帰の進捗とJ-クレジット認証工程は分けて管理します。</div>
-  <div class="pj-block"><h3>森林復帰までの進捗</h3><div class="project-flow">${stageCards}</div><div class="pj-note">「工事が終わった」ではなく、継続して管理できる状態へ戻ったかを最後まで追います。</div></div>
-  <div class="pj-block"><h3>対象森林・前段整理</h3><div class="detailgrid"><div class="detailitem"><div class="k">対象森林</div><div class="v">蒼谷村有林・北峰団地／${ha(targetArea)}</div><div class="pj-near-actions"><button class="go" onclick="openForestFromMap('蒼谷村有林・北峰団地')">森林サマリー</button><button onclick="load('map')">地図・境界</button></div></div><div class="detailitem"><div class="k">所有・権利</div><div class="v">所有者、共有・相続、意向、境界等を復帰判断の前提として確認します。</div><div class="pj-near-actions"><button onclick="openForestFromMap('蒼谷村有林・北峰団地')">所有・権利を見る</button></div></div><div class="detailitem"><div class="k">計画・作業</div><div class="v">復帰方針から施業計画・作業・現場記録へ接続します。</div><div class="pj-near-actions"><button onclick="load('planning')">計画を見る</button><button onclick="load('work')">作業・記録を見る</button></div></div></div></div>
+ const html=`<section class="pj-sheet agg-main-summary recovery-detail">
+  <div class="pj-sheet-head"><div><div class="eyebrow">蒼谷村｜森林復帰詳細</div><h2>${esc(targetName)}</h2><div class="desc">この31.5haについて、位置・権利・境界・現況・事業条件・作業・費用を一つの森林単位で追い、通常の管理ラインへ戻るまでの判断履歴を残します。</div></div><div class="pj-sheet-status">${esc(currentStage)}</div></div>
+  <div class="pj-kpi-row"><div class="pj-kpi"><div class="k">対象面積</div><div class="v">${ha(targetArea)}</div></div><div class="pj-kpi"><div class="k">現在工程</div><div class="v">${esc(currentStage)}</div></div><div class="pj-kpi"><div class="k">作業記録</div><div class="v">${num(workForTarget.length)}件</div></div><div class="pj-kpi"><div class="k">確認保留</div><div class="v">${holdRows.length?`${num(holdRows.length)}件`:'0件'}</div></div></div>
+  <div class="pj-detail-bar recovery-anchorbar"><span class="label">この森林：</span><button class="go" onclick="document.getElementById('recovery-location')?.scrollIntoView({behavior:'smooth'})">位置</button><button onclick="document.getElementById('recovery-process')?.scrollIntoView({behavior:'smooth'})">復帰工程</button><button onclick="document.getElementById('recovery-rights')?.scrollIntoView({behavior:'smooth'})">権利・境界</button><button onclick="document.getElementById('recovery-work')?.scrollIntoView({behavior:'smooth'})">計画・作業</button><button onclick="document.getElementById('soutaniRecoveryFinance')?.scrollIntoView({behavior:'smooth'})">お金</button><button onclick="document.getElementById('recovery-history')?.scrollIntoView({behavior:'smooth'})">履歴</button></div>
+  <div class="pj-block" id="recovery-location"><h3>位置・対象森林</h3><div class="detailgrid"><div class="detailitem"><div class="k">対象森林</div><div class="v"><b>${esc(targetName)}</b><br>${ha(targetArea)}／蒼谷村有林</div><div class="pj-near-actions"><button class="go" onclick="openForestFromMap('${targetName}')">森林台帳を見る</button><button onclick="load('map')">全体地図で見る</button></div></div><div class="detailitem"><div class="k">地図の意味</div><div class="v">この復帰工程がどの森林範囲に対するものかを固定します。境界・筆・作業範囲の詳細は森林台帳・地図へ接続します。</div></div></div><div id="soutaniRecoveryMiniMap" style="height:360px;border:1px solid #d8ded9;border-radius:12px;margin-top:12px;overflow:hidden;background:#eef2ef"></div><div class="pj-note">地図はCanonical Map Readの森林Geometryを使用します。Geometryが取得できない場合は位置を推測表示しません。</div></div>
+  <div class="pj-block" id="recovery-process"><h3>この森林の復帰工程</h3><div class="project-flow">${stageCards}</div><div class="pj-note"><b>工程はPJ全体ではなく、この森林に対する現在地です。</b> 後から別の森林が参加しても、この31.5haの工程を巻き戻しません。</div></div>
+  <div class="pj-block" id="recovery-rights"><h3>所有・権利・境界・現況</h3><div class="detailgrid"><div class="detailitem"><div class="k">所有・権利</div><div class="v">所有者、共有・相続、管理権限、意向を復帰判断の前提として確認します。</div><div class="pj-near-actions"><button class="go" onclick="openForestFromMap('${targetName}')">所有・権利を見る</button></div></div><div class="detailitem"><div class="k">境界・位置</div><div class="v">森林Geometryと境界確認状況を分けて管理し、未確定部分を確定扱いしません。</div><div class="pj-near-actions"><button onclick="load('map')">地図・境界を見る</button></div></div><div class="detailitem"><div class="k">現況</div><div class="v">森林状態、路網、過去施業、現地確認結果を事業性判定へ接続します。</div></div></div></div>
   ${blockerHtml}
-  <div class="pj-block"><h3>年度・作業履歴</h3><div class="pj-note">DBに対象森林へ紐付く年度付き作業がある場合だけ表示します。事実のない年度・施業面積は作りません。</div><div class="jc-timeline">${yearHtml||'<div class="empty">対象森林に紐付く年度付き作業記録は、現在この公開Readでは確認できません。</div>'}</div></div>
-  <div class="pj-block"><h3>復帰後の管理ルート</h3><div class="detailgrid"><div class="detailitem"><div class="k">通常管理</div><div class="v">巡視・施業等を継続し、地域森林として管理。</div></div><div class="detailitem"><div class="k">計画・施業</div><div class="v">森林経営計画等へ接続し、必要な施業を実施。</div></div><div class="detailitem"><div class="k">J-クレジット等</div><div class="v">条件を満たす場合のみ別PJとして接続。森林復帰PJの履歴は残します。</div><div class="pj-near-actions"><button onclick="openJcreditDetail('DEMO-JC-SOUTANI-001')">Jクレ詳細を見る</button></div></div></div></div>
-  <div class="pj-detail-bar"><span class="label">詳しく見る：</span><button class="go" onclick="openForestFromMap('蒼谷村有林・北峰団地')">森林・権利</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・履歴</button><button onclick="document.getElementById('soutaniRecoveryFinance')?.scrollIntoView({behavior:'smooth',block:'start'})">お金</button><button onclick="load('map')">地図</button></div>
- </section>${financeHtml}`;
+  <div class="pj-block" id="recovery-work"><h3>計画・作業</h3><div class="detailgrid"><div class="detailitem"><div class="k">計画</div><div class="v">復帰方針から森林経営計画等の計画へ接続し、対象・版・判断根拠を追います。</div><div class="pj-near-actions"><button class="go" onclick="load('planning')">計画を見る</button></div></div><div class="detailitem"><div class="k">作業・現場記録</div><div class="v">施業、巡視、調査等を作業案件と実績として記録し、この森林へ紐付けます。</div><div class="pj-near-actions"><button onclick="load('work')">作業・記録を見る</button></div></div></div></div>
+  <div class="pj-block" id="recovery-history"><h3>年度・作業履歴</h3><div class="pj-note">この森林に紐付く年度付き作業だけを表示します。事実のない年度・施業面積は作りません。</div><div class="jc-timeline">${yearHtml||'<div class="empty">対象森林に紐付く年度付き作業記録は、現在この公開Readでは確認できません。</div>'}</div></div>
+  <div class="pj-block"><h3>復帰判定とその後</h3><div class="detailgrid"><div class="detailitem"><div class="k">復帰判定</div><div class="v">工程を通過した事実と根拠を確認し、継続して管理できる状態になった時点で「継続管理」へ移します。</div></div><div class="detailitem"><div class="k">通常管理</div><div class="v">巡視・施業等を継続し、地域森林として管理します。</div></div><div class="detailitem"><div class="k">別事業への接続</div><div class="v">森林経営計画、施業案件、J-クレジット等へ必要に応じて接続します。森林復帰の履歴は残します。</div><div class="pj-near-actions"><button onclick="openJcreditDetail('DEMO-JC-SOUTANI-001')">Jクレ詳細を見る</button></div></div></div></div>
+ </section><div class="pj-note" style="margin:10px 0 0"><b>お金の表示について：</b> 森林復帰プールの金額が表示される場合も、この31.5haへの配賦額・山主負担とはみなしません。森林単位の費用・財源が正本で紐付いた時点で詳細表示します。</div>${financeHtml}`;
  document.getElementById('content').innerHTML=html;
  renderDemoContextBar();
+ setTimeout(()=>renderSoutaniRecoveryMiniMap(forestMapRows,targetName),0);
+}
+
+let soutaniRecoveryMiniMap=null;
+function renderSoutaniRecoveryMiniMap(rows,targetName){
+ const el=document.getElementById('soutaniRecoveryMiniMap');if(!el)return;
+ if(soutaniRecoveryMiniMap){try{soutaniRecoveryMiniMap.remove()}catch(_){}soutaniRecoveryMiniMap=null;}
+ if(!window.L){el.innerHTML='<div class="empty">地図ライブラリを読み込めませんでした。</div>';return;}
+ const usable=(rows||[]).map(r=>({r,gj:geoObj(r.geom_geojson)})).filter(x=>x.gj);
+ if(!usable.length){el.innerHTML='<div class="empty">この森林のCanonical Geometryを取得できないため、位置を推測表示しません。全体地図・森林台帳で確認してください。</div>';return;}
+ soutaniRecoveryMiniMap=L.map(el,{zoomControl:true,attributionControl:true,preferCanvas:true,minZoom:9,maxZoom:17});
+ L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',{maxZoom:18,maxNativeZoom:18,attribution:'背景地図：国土地理院 淡色地図'}).addTo(soutaniRecoveryMiniMap);
+ L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/hillshademap/{z}/{x}/{y}.png',{maxZoom:16,maxNativeZoom:16,opacity:.20,attribution:'陰影起伏：国土地理院'}).addTo(soutaniRecoveryMiniMap);
+ const group=L.featureGroup().addTo(soutaniRecoveryMiniMap);
+ usable.forEach(({r,gj})=>{const layer=L.geoJSON(gj,{style:()=>({weight:2,opacity:.95,fillOpacity:.24})}).addTo(group);layer.bindTooltip(r.display_name||targetName,{sticky:true});});
+ const bounds=group.getBounds();if(bounds.isValid())soutaniRecoveryMiniMap.fitBounds(bounds,{padding:[24,24],maxZoom:15});
+ setTimeout(()=>{try{soutaniRecoveryMiniMap.invalidateSize()}catch(_){}},100);
 }
 
 async function openJcreditDetail(code=''){
