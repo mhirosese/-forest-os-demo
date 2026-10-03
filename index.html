@@ -299,6 +299,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .finance-snapshot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px}.finance-snapshot>div{border:1px solid #e4e9e4;border-radius:8px;padding:10px;background:#fff}.finance-snapshot .k{font-size:10px;color:var(--muted)}.finance-snapshot .v{font-size:15px;font-weight:700;margin-top:3px}.finance-disclaimer{padding:9px 12px;border-top:1px solid #edf0ed;background:#fafbfa;font-size:11px;line-height:1.6;color:var(--muted)}
 @media(max-width:900px){.recovery-flow{grid-template-columns:1fr 1fr}.recovery-step:after{display:none}.finance-snapshot{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.recovery-flow{grid-template-columns:1fr 1fr}.recovery-status-grid{grid-template-columns:1fr 1fr}.finance-snapshot{grid-template-columns:1fr 1fr}}
+.authbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:9px;font-size:11px}.authbar button{font-size:11px;padding:6px 9px}.authbar .authstate{padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:#fff}.auth-login{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.auth-login input{font-size:11px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;min-width:190px}.auth-login input[type=password]{min-width:150px}
 
 /* v79 project hub */
 .projecthub-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px;padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
@@ -343,6 +344,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 <header>
 <h1>Forest OS <span style="font-weight:400">｜管理コンソール</span></h1>
 <div class="sub">地域・プロジェクト・関係者を横断し、森林管理・計画・作業・J-クレジットを同じデータから確認</div>
+<div id="authBar" class="authbar"></div>
 <div id="demoContextBar"></div>
 <nav id="roleNav"></nav>
 </header>
@@ -368,6 +370,31 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 // Forest OS frontend v79: regional forest portfolio + forest recovery + retained aggregation + project-scoped finance
 const SB_URL='https://otjkxkwvzfldvtkgskwt.supabase.co';
 const SB_KEY='sb_publishable_zjO6dLW97prGmZ7RablhMA_G1qfv1FQ';
+const AUTH_SESSION_KEY='forest_os_auth_session_v1';
+let authSession=(()=>{try{return JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null')}catch(_){return null}})();
+function authToken(){return authSession?.access_token||null;}
+function saveAuthSession(v){authSession=v||null;if(v)sessionStorage.setItem(AUTH_SESSION_KEY,JSON.stringify(v));else sessionStorage.removeItem(AUTH_SESSION_KEY);renderAuthBar();}
+function renderAuthBar(){
+ const e=document.getElementById('authBar');if(!e)return;
+ if(authToken()){e.innerHTML=`<span class="authstate"><b>認証済み</b>｜本番Access ScopeでAPI接続</span><button type="button" onclick="forestOsLogout()">ログアウト</button>`;return;}
+ e.innerHTML=`<span class="authstate">公開デモ</span><div class="auth-login"><input id="authEmail" type="email" autocomplete="username" placeholder="管理者メール"><input id="authPassword" type="password" autocomplete="current-password" placeholder="パスワード"><button type="button" onclick="forestOsLogin()">ログイン</button></div>`;
+}
+async function forestOsLogin(){
+ const email=document.getElementById('authEmail')?.value?.trim()||'';
+ const password=document.getElementById('authPassword')?.value||'';
+ if(!email||!password)return alert('メールアドレスとパスワードを入力してください。');
+ const r=await fetch(`${SB_URL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok||!j.access_token)return alert('ログインできませんでした。メールアドレスとパスワードを確認してください。');
+ saveAuthSession({access_token:j.access_token,refresh_token:j.refresh_token||null,expires_at:j.expires_at||null});
+ const pw=document.getElementById('authPassword');if(pw)pw.value='';
+ alert('森林OSにログインしました。');
+}
+async function forestOsLogout(){
+ const t=authToken();
+ if(t)await fetch(`${SB_URL}/auth/v1/logout`,{method:'POST',headers:{apikey:SB_KEY,Authorization:`Bearer ${t}`}}).catch(()=>{});
+ saveAuthSession(null);
+}
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
 const PM_UNIFIED_PARTY='【デモ】広域森林マネジメント一般社団法人';
 const PM_QUERY_PARTIES=[PM_LEGACY_PARTY,PM_UNIFIED_PARTY];
@@ -379,7 +406,8 @@ function normalizeDemoData(v){
 }
 async function q(view,params='select=*'){
  const fetchJson=async qp=>{
-  const r=await fetch(`${SB_URL}/rest/v1/${view}?${qp}`,{headers:{apikey:SB_KEY}});
+  const headers={apikey:SB_KEY};const token=authToken();if(token)headers.Authorization=`Bearer ${token}`;
+  const r=await fetch(`${SB_URL}/rest/v1/${view}?${qp}`,{headers});
   if(!r.ok)throw new Error(`${view}: ${r.status}`);
   return r.json();
  };
@@ -3649,6 +3677,8 @@ async function load(moduleCode){
  }catch(e){document.getElementById('notice').innerHTML=`<span class="warn">DB接続エラー：</span>${esc(e.message)}`;document.getElementById('content').innerHTML='<section><div class="empty">ネット接続またはSupabase側の公開設定を確認してください。</div></section>'}
 }
 (async()=>{renderDemoContextBar();applyPersonaAdminDefaults(currentPersona());await renderRoleNav();await load('home');})();
+
+renderAuthBar();
 </script>
 </body>
 </html>
