@@ -2725,7 +2725,7 @@ async function aggSelectParcel(id,el){
 }
 async function aggregationProject(){
  const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows]=await Promise.all([
+ const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows,financeScopes]=await Promise.all([
   q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${vq}&limit=1`),
   q('forest_os_ui_aggregation_persona_progress',`select=*&viewer_name=eq.${vq}&order=fiscal_year`),
   q('forest_os_ui_aggregation_persona_map_cells',`select=*&viewer_name=eq.${vq}&order=grid_y,grid_x`),
@@ -2733,7 +2733,8 @@ async function aggregationProject(){
   q('forest_os_ui_aggregation_persona_issue_summary',`select=*&viewer_name=eq.${vq}&order=sort_order`),
   q('forest_os_demo_public_aggregation_year_summary','select=*&order=fiscal_year'),
   q('forest_os_demo_public_aggregation_budget_breakdown','select=*&order=fiscal_year,sort_order'),
-  q('forest_os_demo_public_aggregation_year_map','select=*&order=fiscal_year,parcel_no')
+  q('forest_os_demo_public_aggregation_year_map','select=*&order=fiscal_year,parcel_no'),
+  q('forest_os_demo_public_aggregation_finance_scope','select=*&order=fiscal_year,scope_code')
  ]);
  const s=summaries[0];
  if(!s){cards([['集約プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者は私有林集約プロジェクトの対象ではありません。</div></section>';return;}
@@ -2759,9 +2760,9 @@ async function aggregationProject(){
  const prevFormation=(prev&&prev.business_unit_area_ha!=null)?Number(prev.business_unit_area_ha):null;
  const compactDelta=prev?`<div class="pj-year-delta">前年度末比：状況把握 ${fmtDelta(prev.known_area_ha,y.known_area_ha)} ／ 事業候補 ${fmtDelta(prev.ready_area_ha,y.ready_area_ha)} ／ まとまり形成 ${fmtDelta(prevFormation,currentUnit)}</div>`:'';
  const sourceText=`森林環境譲与税 ${yen(y.transfer_tax_budget_jpy)} ／ 一般財源 ${yen(y.general_budget_jpy)}`;
- const expenseLines=(budgetBreakdown||[]).filter(x=>Number(x.fiscal_year)===selectedYear);
- const expenseHtml=expenseLines.map(x=>`<div class="pj-money-line"><span>${esc(x.label)}</span><b>${yen(x.planned_amount)}</b></div>`).join('')||'<div class="pj-note">予算内訳未登録</div>';
- const fundingHtml=`<div class="pj-money-line"><span>森林環境譲与税</span><b>${yen(y.transfer_tax_budget_jpy)}</b></div><div class="pj-money-line"><span>一般財源</span><b>${yen(y.general_budget_jpy)}</b></div>`;
+ const scopeRows=(financeScopes||[]).filter(x=>Number(x.fiscal_year)===selectedYear);
+ const scopeOrder=['AOMINE','SOUTANI','SHARED'];
+ const scopeHtml=scopeOrder.map(code=>scopeRows.find(x=>x.scope_code===code)).filter(Boolean).map(x=>`<div class="pj-money-box"><div class="title">${esc(x.scope_label)}</div><div class="pj-money-line"><span>予算</span><b>${yen(x.budget_jpy)}</b></div><div class="pj-money-line"><span>執行</span><b>${yen(x.executed_jpy)}</b></div><div class="pj-money-line"><span>残額</span><b>${yen(x.remaining_jpy)}</b></div><div class="pj-note">財源：森林環境譲与税 ${yen(x.transfer_tax_jpy)} ／ 一般財源 ${yen(x.general_jpy)}</div></div>`).join('')||'<div class="pj-note">負担区分未登録</div>';
  const execRate=Number(y.budget_jpy)>0?(Number(y.executed_jpy)/Number(y.budget_jpy)*100).toFixed(1):'—';
  const selectedYearMap=(yearMapRows||[]).filter(r=>Number(r.fiscal_year)===selectedYear).map(r=>{
   if(isCurrent){const cur=mapRows.find(x=>String(x.forest_unit_id)===String(r.forest_unit_id));return cur||r;}
@@ -2775,7 +2776,7 @@ async function aggregationProject(){
    <div class="pj-sheet-head"><div><div class="eyebrow">広域集約プロジェクト</div><h2>私有林集約PJ｜${y.fiscal_year}年度</h2><div class="desc">分散する私有林について、状況把握から事業候補の抽出、実行可能なまとまり形成までを追うプロジェクトです。年度を切り替えると、その年度の確定値／現在値と会計を同じ画面で確認できます。</div></div><div class="pj-sheet-status">${statusLabel}｜${asof}</div></div>
    <div class="projecthub-tabs" style="margin:12px 0 16px">${yearButtons}</div>
    <div class="pj-block"><h3>${isCurrent?'現在地点':'年度末の確定状況'}</h3>${pipeline}${compactDelta}<div class="pj-note">${y.fiscal_year}年度：対象 ${ha(y.target_area_ha)} → 状況把握 ${ha(y.known_area_ha)} → 事業候補 ${ha(y.ready_area_ha)} → まとまり形成 ${formationValue}。${isCurrent?'現在値で、年度末締めまでは未確定です。':'年度末締め後の確定スナップショットです。'}</div></div>
-   <div class="pj-block" style="margin-top:12px"><h3>このPJのお金｜${y.fiscal_year}年度</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">年度予算</div><div class="v">${yen(y.budget_jpy)}</div></div><div class="pj-kpi"><div class="k">執行額</div><div class="v">${yen(y.executed_jpy)}</div></div><div class="pj-kpi"><div class="k">残額</div><div class="v">${yen(y.remaining_jpy)}</div></div></div><div class="pj-exec-rate">執行率 ${execRate}%</div><div class="pj-money-split"><div class="pj-money-box"><div class="title">予算内訳｜何に使うか</div>${expenseHtml}</div><div class="pj-money-box"><div class="title">財源内訳｜何のお金か</div>${fundingHtml}</div></div><div class="pj-note">${isCurrent?'執行額は現在までのデモ記録。':'年度末確定値。'} 予算内訳・財源内訳ともDBのこの集約PJ年度予算から表示しています。</div></div>
+   <div class="pj-block" style="margin-top:12px"><h3>このPJのお金｜${y.fiscal_year}年度</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">広域PJ全体予算</div><div class="v">${yen(y.budget_jpy)}</div></div><div class="pj-kpi"><div class="k">執行額</div><div class="v">${yen(y.executed_jpy)}</div></div><div class="pj-kpi"><div class="k">残額</div><div class="v">${yen(y.remaining_jpy)}</div></div></div><div class="pj-exec-rate">執行率 ${execRate}%</div><div class="pj-money-split pj-money-scope">${scopeHtml}</div><div class="pj-note">ここでは負担区分の大枠だけ表示。費目・財源・負担主体・按分根拠などの細目は「契約・お金」で管理します。${isCurrent?' 執行額は現在までのデモ記録です。':' 年度末確定値です。'}</div></div>
    <div class="pj-block"><h3>特記事項</h3><textarea id="aggProjectNotes" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;padding:10px 12px;border:1px solid #cfd6dc;border-radius:8px;font:inherit;line-height:1.55" placeholder="PJ全体で共有したい留意事項、今後の対応、説明時の補足などを入力">${esc(loadAggregationProjectNotes())}</textarea><div class="pj-detail-bar" style="margin-top:8px"><button type="button" class="go" onclick="saveAggregationProjectNotes()">特記事項を保存</button><span id="aggProjectNotesStatus" class="pj-note">この端末のデモ画面に保存します。DB正本にはまだ書き込みません。</span></div></div>
    <div class="pj-detail-bar"><span class="label">詳しく見る：</span><button class="go" onclick="document.getElementById('aggMapDetail').scrollIntoView({behavior:'smooth'})">対象森林・地図</button><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button></div>
   </section>`+
