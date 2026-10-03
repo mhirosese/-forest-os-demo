@@ -2109,6 +2109,7 @@ async function townMap(){
   q('forest_os_ui_forest_data_coverage','select=*&order=forest_name'),
   q('forest_os_demo_public_map_filter_current','select=*&order=forest_name'),
   q('forest_os_demo_public_persona_forest_scope','select=*&order=viewer_name,region_name,forest_name'),
+  q('forest_os_ui_aggregation_persona_map_cells',`select=*&viewer_name=eq.${encodeURIComponent(viewerName)}&order=grid_y,grid_x`),
   q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
   q('forest_os_demo_public_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
   q('forest_os_demo_public_parcel_display_compat','select=*&order=forest_code,parcel_code'),
