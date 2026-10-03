@@ -3281,6 +3281,17 @@ async function personaFinanceScreen(){
  const distributionPlanned=canonicalFinance.dists.reduce((a,x)=>a+Number(x.finalized_distribution_jpy||x.planned_distribution_jpy||0),0);
  cards([['現在のPJ',esc(cur.story_label||'—')],['正式予算',officialBudget?yen(officialBudget):'未登録'],['執行実績',executed?yen(executed):'未登録'],['登録済み見込費用',registeredForecast?yen(registeredForecast):'未登録'],['入金記録',recordedIncome?yen(recordedIncome):'—'],['分配予定',distributionPlanned?yen(distributionPlanned):'—']]);
  let html=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
+ if(p.kind==='pm'&&projectHubType==='aggregation'){
+  const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
+  const [aggScopes,aggDetails]=await Promise.all([
+   q('forest_os_demo_public_aggregation_finance_scope',`select=*&fiscal_year=eq.${aggYear}&order=scope_code`),
+   q('forest_os_demo_public_aggregation_finance_detail',`select=*&fiscal_year=eq.${aggYear}&order=scope_code,expense_code,funding_code`)
+  ]);
+  const scopeOrder=['AOMINE','SOUTANI','SHARED'];
+  const scopeCards=scopeOrder.map(c=>aggScopes.find(x=>x.scope_code===c)).filter(Boolean).map(x=>`<div class="pj-money-box"><div class="title">${esc(x.scope_label)}</div><div class="pj-money-line"><span>予算</span><b>${yen(x.budget_jpy)}</b></div><div class="pj-money-line"><span>執行</span><b>${yen(x.executed_jpy)}</b></div><div class="pj-money-line"><span>残額</span><b>${yen(x.remaining_jpy)}</b></div></div>`).join('');
+  html+=`<section><h2>広域集約PJ｜${aggYear}年度の負担区分</h2><div class="pj-money-split pj-money-scope">${scopeCards}</div><div class="finance-disclaimer">上段はPJ説明用の大区分です。以下の詳細収支は、負担主体・費目・財源を分離して保持しています。</div></section>`;
+  if(aggDetails.length)html+=table('広域集約PJ｜詳細収支',['負担区分','負担主体','費目','財源','予算','執行','按分根拠'],aggDetails.map(x=>[esc(x.scope_label),esc(x.burden_party_label),esc(x.expense_label),esc(x.funding_label),yen(x.budget_jpy),yen(x.executed_jpy),esc(x.allocation_rule)]));
+ }
  if(p.kind==='forest_coop'&&extras[0]?.length)html+=ownOrgFinanceSection(p,extras[0][0]);
  if(p.kind==='pm'){
   const b=(extras[0]||[])[0];
