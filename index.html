@@ -544,7 +544,7 @@ function table(title,headers,rows){
 async function municipality(){
  const p=currentPersona();
  const [scopes,matrix,mapFeatures,j,t,allc]=await Promise.all([
-   q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
+   q('forest_os_demo_public_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`),
    q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
    q('forest_os_ui_map_feature','select=*'),
    q('forest_os_demo_public_jcredit_project'),
@@ -765,7 +765,7 @@ async function ownerComplexRights(){
  const p=currentPersona();
  const [matrix,scopes]=await Promise.all([
    q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
-   q('forest_os_ui_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`)
+   q('forest_os_demo_public_persona_forest_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=region_name,forest_name`)
  ]);
  const ids=new Set(scopes.map(x=>String(x.forest_unit_id)));
  const rows=matrix.filter(x=>ids.has(String(x.forest_unit_id)));
@@ -1127,7 +1127,7 @@ async function forestView(){
    q('forest_os_demo_public_forest_detail_compat','select=*&order=name'),
    q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
    q('forest_os_demo_public_work_evidence_compat','select=*'),
-   q('forest_os_ui_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
+   q('forest_os_demo_public_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
    q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name')
  ]);
  const viewer=personaScopePartyName();
@@ -2051,12 +2051,12 @@ async function townMap(){
   q('forest_os_ui_work_spatial_scope','select=*&order=work_code'),
   q('forest_os_ui_reference_forest_display','select=*&order=feature_code'),
   q('forest_os_ui_forest_data_coverage','select=*&order=forest_name'),
-  q('forest_os_ui_map_filter','select=*&order=forest_name'),
-  q('forest_os_ui_persona_forest_scope','select=*&order=viewer_name,region_name,forest_name'),
+  q('forest_os_demo_public_map_filter_current','select=*&order=forest_name'),
+  q('forest_os_demo_public_persona_forest_scope','select=*&order=viewer_name,region_name,forest_name'),
   q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
-  q('forest_os_ui_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
+  q('forest_os_demo_public_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
   q('forest_os_demo_public_parcel_display_compat','select=*&order=forest_code,parcel_code'),
-  q('forest_os_ui_forest_display','select=*&order=region_name,forest_name'),
+  q('forest_os_demo_public_forest_display','select=*&order=region_name,forest_name'),
   q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name')
  ]);
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
@@ -2462,7 +2462,7 @@ function adminRender(){
 }
 async function adminConsole(rebuild=false){
  if(!adminData||rebuild){
-  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities]=await Promise.all([q('forest_os_ui_map_filter','select=*&order=forest_name'),q('forest_os_demo_public_jcredit_project','select=*&order=project_code'),q('forest_os_demo_public_work_core_current','select=*&order=work_title').then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,work_type_name:x.work_type_name||x.work_type_code,responsible_party_name:x.responsible_party_name||x.performed_by_party_name}))),q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code')]);
+  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities]=await Promise.all([q('forest_os_demo_public_map_filter_current','select=*&order=forest_name'),q('forest_os_demo_public_jcredit_project','select=*&order=project_code'),q('forest_os_demo_public_work_core_current','select=*&order=work_title').then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,work_type_name:x.work_type_name||x.work_type_code,responsible_party_name:x.responsible_party_name||x.performed_by_party_name}))),q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),q('forest_os_ui_jcredit_growth','select=*&order=area_version_no,forest_name'),q('forest_os_ui_jcredit_program_activity','select=*&order=activity_code')]);
   const mapRows=[...baseMapRows];for(const r of neighborDemo.mapRows)if(!mapRows.some(x=>String(x.forest_unit_id)===String(r.forest_unit_id)))mapRows.push(r);
   const projects=[...baseProjects];for(const p of neighborDemo.projects)if(!projects.some(x=>x.project_code===p.project_code))projects.push(p);
   const works=[...baseWorks];for(const w of neighborDemo.works)if(!works.some(x=>x.title===w.title))works.push(w);
@@ -2482,7 +2482,7 @@ async function adminConsole(rebuild=false){
 async function ensurePartyData(){
  if(adminData)return adminData;
  const [baseMapRows,baseProjects,baseWorks,costs,growth,activities]=await Promise.all([
-  q('forest_os_ui_map_filter','select=*&order=forest_name'),
+  q('forest_os_demo_public_map_filter_current','select=*&order=forest_name'),
   q('forest_os_demo_public_jcredit_project','select=*&order=project_code'),
   q('forest_os_demo_public_work_core_current','select=*&order=work_title').then(rows=>(rows||[]).map(x=>({...x,title:x.work_title,work_type_name:x.work_type_name||x.work_type_code,responsible_party_name:x.responsible_party_name||x.performed_by_party_name}))),
   q('forest_os_ui_accounting_cost_detail','select=*&order=forecast_year,parent_category,cost_category_code'),
