@@ -417,19 +417,11 @@ function normalizeDemoData(v){
 }
 async function q(view,params='select=*'){
  const fetchJson=async qp=>{
-  const headers={apikey:SB_KEY};const token=authToken();if(token)headers.Authorization=`Bearer ${token}`;
-  let r=await fetch(`${SB_URL}/rest/v1/${view}?${qp}`,{headers});
-  // These legacy scope views drive only the public demo navigation.
-  // Some are intentionally anon-readable but not exposed to authenticated JWTs.
-  // Retry those reads as public demo data without weakening production Access Scope/RPCs.
-  const demoScopeFallback=new Set([
-   'forest_os_ui_persona_module_scope',
-   'forest_os_ui_aggregation_access_scope',
-   'forest_os_ui_persona_forest_portfolio_scope'
-  ]);
-  if(token&&(r.status===401||r.status===403)&&demoScopeFallback.has(view)){
-   r=await fetch(`${SB_URL}/rest/v1/${view}?${qp}`,{headers:{apikey:SB_KEY}});
-  }
+  // q() is the public-demo read channel. Keep it anonymous even while a user is
+  // logged in; authenticated production access and writes use rpc() below.
+  // This prevents a valid Auth session from being applied to demo-only views
+  // whose grants intentionally differ from production Access Scope.
+  const r=await fetch(`${SB_URL}/rest/v1/${view}?${qp}`,{headers:{apikey:SB_KEY}});
   if(!r.ok)throw new Error(`${view}: ${r.status}`);
   return r.json();
  };
