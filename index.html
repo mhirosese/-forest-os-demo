@@ -478,8 +478,8 @@ const DEMO_PERSONAS=[
  {id:'platform_admin',kind:'admin',roleLabel:'運営管理者',party:'Forest OS運営（デモ）',scopeParty:'【デモ】森林OS全国運営株式会社',scope:'全地域・全プロジェクト・関係主体を横断',startRole:'admin'},
  {id:'municipality_aomine',kind:'municipality',roleLabel:'自治体',party:'【デモ】青嶺町',scope:'青嶺町の地域森林・事業・集計',region:'【デモ】青嶺町',startRole:'municipality'},
  {id:'municipality_soutani',kind:'municipality',roleLabel:'自治体',party:'【デモ】蒼谷村',scope:'蒼谷村の管内森林・村有林・施業・J-クレジットを確認',region:'【デモ】蒼谷村',startRole:'municipality'},
- {id:'coop_aomine',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】青嶺町森林組合',scope:'自組合が管理・施業・PJ運営等で関係する森林',startRole:'forest_coop'},
- {id:'coop_soutani',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】蒼谷村森林組合',scope:'自組合が管理・PJ運営等で関係する蒼谷村森林',startRole:'forest_coop'},
+ {id:'coop_aomine',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】青嶺町森林組合',scope:'自組合が管理・施業・PJ運営等で関係する森林',region:'【デモ】青嶺町',startRole:'forest_coop'},
+ {id:'coop_soutani',kind:'forest_coop',roleLabel:'森林組合',party:'【デモ】蒼谷村森林組合',scope:'自組合が管理・PJ運営等で関係する蒼谷村森林',region:'【デモ】蒼谷村',startRole:'forest_coop'},
  {id:'forestry_kitamine',kind:'forestry_company',roleLabel:'林業会社',party:'【デモ】北峰林業株式会社',scope:'自社が受託・実施する施業案件と対象森林',startRole:'forestry_company'},
  {id:'pm_integrated',kind:'pm',roleLabel:'PM／広域運営法人',party:PM_UNIFIED_PARTY,scope:'青嶺町PJ・蒼谷村PJ・広域PJの運営／支援／調整案件',startRole:'pm'},
  {id:'owner_a',kind:'owner',roleLabel:'山主本人',party:'山主A（デモ）',scope:'本人が権利を持つ森林・分配・関係契約',startRole:'owner'},
@@ -501,65 +501,36 @@ function personaOptionLabel(p){return `${p.roleLabel}｜${p.party}`}
 function renderDemoContextBar(){
  const p=currentPersona(),el=document.getElementById('demoContextBar');if(!el)return;
  const badge=p.kind==='owner_proxy'?'<span class="ctxdelegate">代理管理</span>':'<span class="ctxbadge">デモ視点</span>';
- const projectContext=(typeof currentModuleCode!=='undefined'&&currentModuleCode==='projects'&&typeof projectHubType!=='undefined');
- const portfolioContext=projectContext&&projectHubType==='portfolio';
- const aggregationContext=projectContext&&projectHubType==='aggregation';
- const recoveryContext=projectContext&&projectHubType==='soutani_recovery';
- const projectField=['owner','owner_proxy'].includes(p.kind)?
-  `<div class="ctxfield"><label>プロジェクト</label><div class="ctxvalue">山主画面はPJ選択を前面に出さず、森林・年度・収支から確認</div></div>`:
-  portfolioContext?
-  `<div class="ctxfield"><label>現在の対象</label><div class="ctxvalue"><strong>地域森林ポートフォリオ｜森林復帰</strong><div class="context-inline-note">地域森林全体を見て、集約・出口判断・継続管理へつなぐ上位レイヤー</div></div></div>`:
-  aggregationContext?
-  `<div class="ctxfield"><label>現在のPJ</label><div class="ctxvalue"><strong>私有林集約｜青嶺町・蒼谷村</strong><div class="context-inline-note">森林復帰の中核工程。所有者・権利・境界を整理し事業単位を形成</div></div></div>`:
-  recoveryContext?
-  `<div class="ctxfield"><label>現在の対象</label><div class="ctxvalue"><strong>森林復帰｜蒼谷村有林・北峰団地 31.5ha</strong><div class="context-inline-note">J-クレジットPJとは別。森林単位で管理ラインへの復帰工程を追跡</div></div></div>`:
-  projectContext?
-  `<div class="ctxfield"><label>プロジェクト</label><div id="demoProjectField" class="ctxvalue"><span class="project-context-loading">関係PJを読み込み中...</span></div></div>`:
-  `<div class="ctxfield"><label>現在の対象</label><div class="ctxvalue"><strong>${esc(p.region||p.party)}</strong><div class="context-inline-note">PJを選択しなくても森林・業務・お金を確認できます。</div></div></div>`;
- el.innerHTML=`<div class="demo-context">
-  <div class="ctxfield"><label>誰の目線で見る？</label><select id="demoPersonaSelect" onchange="setDemoPersona(this.value)">${visibleDemoPersonas().map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(personaOptionLabel(x))}</option>`).join('')}</select><div class="context-inline-note"><b>デモ表示切替</b>：この選択はログイン権限ではありません。本番では user_memberships・Access Scope・RLS で判定します。</div></div>
-  <div class="ctxfield"><label>現在の立場</label><div class="ctxvalue">${badge}<strong>${esc(p.roleLabel)}</strong><br>${esc(p.party)}</div></div>
-  ${projectField}
-  <div class="ctxfield"><label>主な表示範囲</label><div class="ctxvalue">${esc(p.scope)}${p.principal?`<br><span class="mini">権利者：${esc(p.principal)}</span>`:''}</div></div>
- </div>`;
- if(projectContext&&!['owner','owner_proxy'].includes(p.kind)&&!aggregationContext&&!portfolioContext&&!recoveryContext)hydrateProjectContext();
+ const module=typeof currentModuleCode!=='undefined'?currentModuleCode:'home';
+ const projectAware=['projects','business','finance'].includes(module);
+ const projectField=['owner','owner_proxy'].includes(p.kind)?`<div class="ctxfield"><label>対象</label><div class="ctxvalue">自分の森林・精算</div></div>`:projectAware?`<div class="ctxfield"><label>対象PJ</label><div id="demoProjectField" class="ctxvalue"><span class="project-context-loading">関係PJを読み込み中...</span></div></div>`:`<div class="ctxfield"><label>表示範囲</label><div class="ctxvalue"><strong>${esc(p.region||p.party)}</strong><div class="context-inline-note">${esc(p.scope)}</div></div></div>`;
+ el.innerHTML=`<div class="demo-context"><div class="ctxfield"><label>操作主体</label><select id="demoPersonaSelect" onchange="setDemoPersona(this.value)">${visibleDemoPersonas().map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(personaOptionLabel(x))}</option>`).join('')}</select><div class="context-inline-note">デモ表示切替。本番権限は user_memberships・Access Scope・RLS/RPC で判定。</div></div><div class="ctxfield"><label>現在の立場</label><div class="ctxvalue">${badge}<strong>${esc(p.roleLabel)}</strong><br>${esc(p.party)}</div></div>${projectField}</div>`;
+ if(projectAware&&!['owner','owner_proxy'].includes(p.kind))hydrateProjectContext();
 }
 const PROJECT_SELECTION_KEY='forest_os_v65_project_selection';
 let projectPortfolioCache=new Map();
 function projectSelectionMap(){try{return JSON.parse(localStorage.getItem(PROJECT_SELECTION_KEY)||'{}')}catch(_){return {}}}
 function storedProjectCode(p=currentPersona()){return projectSelectionMap()[p.id]||''}
 function saveSelectedProjectCode(code,p=currentPersona()){const m=projectSelectionMap();m[p.id]=code;localStorage.setItem(PROJECT_SELECTION_KEY,JSON.stringify(m));}
-function preferredProjectCode(p,rows){
- const pref={platform_admin:'DEMO-JC-001',municipality_aomine:'DEMO-JC-001',municipality_soutani:'DEMO-JC-SOUTANI-001',coop_aomine:'DEMO-JC-001',coop_soutani:'DEMO-JC-SOUTANI-001',forestry_kitamine:'DEMO-JC-WIDE-001',pm_integrated:'DEMO-JC-WIDE-001'}[p.id];
- return rows.some(x=>x.project_code===pref)?pref:(rows[0]?.project_code||'');
+function preferredProjectCode(p,rows){return rows[0]?.project_code||'';}
+function initiativeVisibleToPersona(row,p){
+ if(p.kind==='admin')return true;
+ const names=(Array.isArray(row.participants)?row.participants:[]).map(x=>String(x?.name||x?.participant_name||''));
+ if(names.includes(personaScopePartyName(p))||names.includes(p.party))return true;
+ if(p.kind==='municipality'&&p.region&&row.region_name===p.region)return true;
+ if(p.kind==='forest_coop'&&p.region&&row.region_name===p.region&&Number(row.work_case_count||0)>0)return true;
+ return false;
 }
+function normalizeInitiativeProject(x){return {...x,project_type:x.project_type||x.initiative_type||'initiative',project_status:x.project_status||x.initiative_status,visible_forest_count:x.project_active_forest_count??x.forest_membership_count??0,visible_area_ha:x.project_active_area_ha??x.forest_area_ha??null,can_view_project_finance:true,can_view_project_totals:true,access_level:x.access_level||'project'};}
 async function personaProjectPortfolio(p=currentPersona(),force=false){
- const key=p.id;if(!force&&projectPortfolioCache.has(key))return projectPortfolioCache.get(key);
- let rows=[];
- if(p.kind==='admin'){
-  const all=await q('forest_os_ui_project_story_summary','select=*&project_code=in.(DEMO-JC-001,DEMO-JC-SOUTANI-001,DEMO-JC-WIDE-001)&order=project_code');
-  rows=all.map(x=>({...x,visible_forest_count:x.active_forest_count,visible_area_ha:x.active_area_ha,project_active_forest_count:x.active_forest_count,project_active_area_ha:x.active_area_ha,project_candidate_forest_count:x.candidate_forest_count,project_candidate_area_ha:x.candidate_area_ha,viewer_project_count:all.length,can_view_project_finance:true,can_view_project_totals:true,access_level:'project'}));
- }else{
-  rows=await q('forest_os_ui_project_portfolio',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=project_code`);
- }
- // 中核3ストーリーだけを現在の事業画面に出し、project_code単位で必ず1件に正規化する。
- const core=new Set(['DEMO-JC-001','DEMO-JC-SOUTANI-001','DEMO-JC-WIDE-001']);
- const coreRows=rows.filter(x=>core.has(x.project_code)); if(coreRows.length)rows=coreRows;
- const byProject=new Map();
- for(const row of rows){
-  const code=row?.project_code||'';
-  if(!code)continue;
-  if(!byProject.has(code))byProject.set(code,row);
- }
- rows=[...byProject.values()].sort((a,b)=>String(a.project_code).localeCompare(String(b.project_code)));
- projectPortfolioCache.set(key,rows);return rows;
+ const key=p.id;if(!force&&projectPortfolioCache.has(key))return projectPortfolioCache.get(key);let rows=[];
+ if(p.kind==='admin'){const all=await q('forest_os_ui_project_story_summary','select=*&order=project_code');rows=all.map(x=>({...x,visible_forest_count:x.active_forest_count,visible_area_ha:x.active_area_ha,project_active_forest_count:x.active_forest_count,project_active_area_ha:x.active_area_ha,project_candidate_forest_count:x.candidate_forest_count,project_candidate_area_ha:x.candidate_area_ha,can_view_project_finance:true,can_view_project_totals:true,access_level:'project'}));}
+ else rows=await q('forest_os_ui_project_portfolio',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=project_code`);
+ try{const initiatives=await q('forest_os_demo_public_initiative_directory','select=*&order=project_code');for(const raw of initiatives){if(raw.project_type==='regional_forest_portfolio'||!initiativeVisibleToPersona(raw,p))continue;rows.push(normalizeInitiativeProject(raw));}}catch(_){}
+ try{const agg=await q('forest_os_ui_aggregation_access_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&limit=1`);if(agg.length&&!rows.some(x=>x.project_code==='DEMO-PRIVATE-AGG-2022')){const sum=await q('forest_os_ui_aggregation_project_summary','select=*&limit=1');const a=sum[0]||{};rows.push({project_code:a.project_code||'DEMO-PRIVATE-AGG-2022',project_name:a.project_name||'【デモ】青嶺町・蒼谷村 私有林集約プロジェクト',project_type:'private_forest_aggregation',project_status:a.status||'active',visible_area_ha:a.target_area_ha,project_active_area_ha:a.target_area_ha,access_level:agg[0].all_regions?'full_project':'region',can_view_project_finance:true,can_view_project_totals:true});}}catch(_){}
+ const m=new Map();for(const row of rows){const code=row?.project_code||'';if(!code)continue;if(!m.has(code))m.set(code,row);else m.set(code,{...row,...m.get(code)});}rows=[...m.values()].sort((a,b)=>String(a.project_name||a.project_code).localeCompare(String(b.project_name||b.project_code),'ja'));projectPortfolioCache.set(key,rows);return rows;
 }
-async function currentProjectRow(p=currentPersona()){
- if(['owner','owner_proxy'].includes(p.kind))return null;
- const rows=await personaProjectPortfolio(p);let code=storedProjectCode(p);
- if(!rows.some(x=>x.project_code===code)){code=preferredProjectCode(p,rows);if(code)saveSelectedProjectCode(code,p)}
- return rows.find(x=>x.project_code===code)||rows[0]||null;
-}
+async function currentProjectRow(p=currentPersona()){if(['owner','owner_proxy'].includes(p.kind))return null;const rows=await personaProjectPortfolio(p);let code=storedProjectCode(p);if(!rows.some(x=>x.project_code===code)){code=preferredProjectCode(p,rows);if(code)saveSelectedProjectCode(code,p)}return rows.find(x=>x.project_code===code)||rows[0]||null;}
 async function hydrateProjectContext(){
  const p=currentPersona(),field=document.getElementById('demoProjectField');if(!field)return;
  try{
@@ -568,7 +539,9 @@ async function hydrateProjectContext(){
   field.innerHTML=`<select id="demoProjectSelect" onchange="setSelectedProject(this.value)">${rows.map(x=>`<option value="${esc(x.project_code)}" ${cur&&x.project_code===cur.project_code?'selected':''}>${esc(projectShortName(x))}</option>`).join('')}</select><div class="context-inline-note">${rows.length}PJ中の1PJを表示。下のPJカードからも切替できます。</div>`;
  }catch(e){field.innerHTML='<span class="warn">PJ取得エラー</span>';}
 }
-async function setSelectedProject(code){saveSelectedProjectCode(code);await hydrateProjectContext();await load(currentModuleCode||'home');}
+function projectRouteType(row){const code=row?.project_code||'',type=row?.project_type||row?.initiative_type||'';if(code==='DEMO-PRIVATE-AGG-2022'||type==='private_forest_aggregation')return 'aggregation';if(code.startsWith('DEMO-JC-')||type==='jcredit')return 'jcredit';return 'generic';}
+async function setSelectedProject(code){const p=currentPersona(),rows=await personaProjectPortfolio(p),row=rows.find(x=>x.project_code===code);saveSelectedProjectCode(code,p);if(currentModuleCode==='projects'&&row)projectHubType=projectRouteType(row);await hydrateProjectContext();await load(currentModuleCode||'home');}
+async function openProjectByCode(code){const p=currentPersona(),rows=await personaProjectPortfolio(p),row=rows.find(x=>x.project_code===code);if(!row)return;saveSelectedProjectCode(code,p);projectHubType=projectRouteType(row);localStorage.setItem('forest_os_project_hub_v79',projectHubType);await load('projects');}
 
 function applyPersonaAdminDefaults(p){
  if(typeof adminState==='undefined')return;
@@ -3038,26 +3011,10 @@ async function businessHub(){
    c.insertAdjacentHTML('afterbegin',intro);
  }
 }
-function projectDirectoryHtml(p){
- const cards=[];
- if(p.kind==='pm'||p.kind==='admin'){
-   cards.push(['集約','公益PM｜私有林集約','青嶺町・蒼谷村の分散森林を状況把握から事業単位形成まで追跡',"projectHubType='aggregation';load('projects')"]);
-   cards.push(['J-クレジット','青嶺町｜森林J-クレジット','稼働中PJと追加候補森林を分離して管理',"projectHubType='jcredit';load('projects')"]);
-   cards.push(['森林復帰','蒼谷村｜森林復帰','管理が届いていない森林を森林単位で管理ラインへ戻す',"projectHubType='soutani_recovery';load('projects')"]);
- }else if(p.id==='municipality_soutani'||p.id==='coop_soutani'){
-   cards.push(['森林復帰','蒼谷村｜森林復帰','対象森林ごとの復帰工程を管理',"projectHubType='soutani_recovery';load('projects')"]);
-   cards.push(['J-クレジット','蒼谷村｜森林J-クレジット','森林復帰とは別PJ。条件を満たす森林のみ接続',"projectHubType='jcredit';load('projects')"]);
- }else if(p.kind==='municipality'||p.kind==='forest_coop'){
-   cards.push(['J-クレジット','青嶺町｜森林J-クレジット',p.kind==='forest_coop'?'担当森林・施業・モニタリングを確認':'稼働中PJと追加候補森林を管理',"projectHubType='jcredit';load('projects')"]);
-   cards.push(['広域集約','広域私有林集約PJ',p.kind==='forest_coop'?'自組合の担当森林・所有者対応・現場工程を確認':'PJ全体と自自治体・担当範囲の進捗・資金を確認',"projectHubType='aggregation';load('projects')"]);
- }
- if(!cards.length)return '<div class="empty">現在の代表デモでは、この立場のPJ一覧は省略しています。森林から関係PJを確認できます。</div>';
- return `<div class="project-directory">${cards.map(x=>`<div class="pd-card"><div class="pd-type">${esc(x[0])}</div><h3>${esc(x[1])}</h3><div class="pd-meta">${esc(x[2])}</div><button type="button" onclick="${x[3]}">PJを開く</button></div>`).join('')}</div>`;
-}
-async function projectDirectory(){
- const p=currentPersona();cards([['プロジェクト','一覧'],['主語','事業・案件'],['森林との関係','多対多'],['入口','組織→PJ→対象森林']]);
- document.getElementById('content').innerHTML=personaNoteHtml()+`<section><h2>プロジェクト一覧</h2><div class="ia-note">ここは事業・案件の一覧です。森林台帳そのものではありません。PJを開くと対象森林へ、森林を開くと関係PJへ双方向に辿れます。</div>${projectDirectoryHtml(p)}</section>`;
-}
+function projectTypeLabel(x){const t=x?.project_type||'';const map={private_forest_aggregation:'私有林集約',reforestation_program:'再造林',regional_forest_management:'地域森林管理',wide_area_forest_management:'広域森林管理'};if(x?.project_code?.startsWith('DEMO-JC-'))return '森林J-クレジット';return map[t]||'プロジェクト';}
+async function projectDirectory(){const p=currentPersona(),rows=await personaProjectPortfolio(p,true);cards([['関与PJ',`${rows.length}件`],['主語','事業・案件'],['森林との関係','多対多'],['入口','組織→PJ→対象森林']]);const list=rows.length?`<div class="project-directory">${rows.map(x=>`<div class="pd-card"><div class="pd-type">${esc(projectTypeLabel(x))}</div><h3>${esc(projectShortName(x))}</h3><div class="pd-meta">${esc(x.project_name||'')}${x.region_name?`<br>${esc(x.region_name)}`:''}<br>${projectCardMeta(x)}</div><button type="button" onclick="openProjectByCode('${esc(x.project_code)}')">PJを開く</button></div>`).join('')}</div>`:'<div class="empty">現在の立場で表示できるプロジェクトはありません。</div>';document.getElementById('content').innerHTML=personaNoteHtml()+`<section><h2>プロジェクト一覧</h2><div class="ia-note">運営・参加・担当関係のある事業・案件を表示します。J-クレジットだけに限定しません。</div>${list}</section>`;}
+
+async function genericProjectSummary(){const p=currentPersona(),rows=await personaProjectPortfolio(p),cur=await currentProjectRow(p);if(!cur){document.getElementById('content').innerHTML='<div class="empty">表示できるPJがありません。</div>';return;}const type=projectTypeLabel(cur);cards([['PJ種別',type],['対象森林',`${num(cur.project_active_forest_count||cur.visible_forest_count||0)}件`],['対象面積',cur.project_active_area_ha!=null?ha(cur.project_active_area_ha):'—'],['状態',projectStatusLabel(cur.project_status)]]);document.getElementById('content').innerHTML=personaNoteHtml()+projectBanner(cur)+`<section><h2>${esc(cur.project_name||projectShortName(cur))}</h2><div class="map-summary-note"><b>${esc(type)}</b>。J-クレジット専用画面ではありません。対象森林・業務・お金へ同じPJ選択を維持して移動します。</div><div class="summary-links"><button onclick="load('map')">対象森林・地図</button><button onclick="load('business')">業務</button><button onclick="load('finance')">お金</button></div></section>`;}
 
 /* ---------------- v79 立場別ナビ・プロジェクト統合 ---------------- */
 let currentModuleCode='home';
@@ -3071,17 +3028,18 @@ async function projectHub(){
  const children=Array.isArray(pm?.project_children)?pm.project_children:[];
  if(projectHubType==='directory'){await projectDirectory();renderDemoContextBar();return;}
  if(p.kind==='pm'){
-  const allowed=['aggregation','jcredit','soutani_recovery'];
+  const allowed=['aggregation','jcredit','soutani_recovery','generic'];
   if(!allowed.includes(projectHubType))projectHubType='directory';
-  if(projectHubType==='aggregation')await aggregationProject();else if(projectHubType==='jcredit')await aomineJcreditSummary();else await soutaniRecoveryProjectSummary();
+  if(projectHubType==='aggregation')await aggregationProject();else if(projectHubType==='jcredit'){const cur=await currentProjectRow(p);if(cur?.project_code==='DEMO-JC-001')await aomineJcreditSummary();else await jcreditProject();}else if(projectHubType==='generic')await genericProjectSummary();else await soutaniRecoveryProjectSummary();
   const content=document.getElementById('content');if(content)content.insertAdjacentHTML('afterbegin',projectHubTabsHtml(allowed));
   renderDemoContextBar();return;
  }
  if(!children.length){cards([['プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者に表示できるプロジェクト画面はありません。</div></section>';return;}
- if(!children.includes(projectHubType)&&!['aggregation','jcredit','soutani_recovery'].includes(projectHubType))projectHubType='directory';
+ if(!children.includes(projectHubType)&&!['aggregation','jcredit','soutani_recovery','generic'].includes(projectHubType))projectHubType='directory';
  if(projectHubType==='portfolio')await forestPortfolio();
  else if(projectHubType==='aggregation')await aggregationProject();
  else if(projectHubType==='soutani_recovery')await soutaniRecoveryProjectSummary();
+ else if(projectHubType==='generic')await genericProjectSummary();
  else {
   const cur=await currentProjectRow(p);
   if(cur?.project_code==='DEMO-JC-001')await aomineJcreditSummary();
@@ -3194,7 +3152,7 @@ async function personaWorkScreen(){
   `<b>${esc(x.title)}</b><br><span class="mini">${esc(x.work_code)}</span>`,esc(x.region_name),esc(x.forest_names||'—'),partyLink(x.responsible_party),`${date(x.planned_start_on)}〜${date(x.planned_end_on)}`,ha(x.planned_area_ha||x.target_area_ha),workflowStatusLabel(x.work_status),accessBadge(x)
  ]))+`<section><h2>計画から実施・証拠へ</h2><div class="map-summary-note">計画した森林を作業案件へ落とし、実施日・担当・面積・実績を記録します。契約、写真、報告書、検収等の証拠は作業案件に紐づけて追跡します。</div></section><section><h2>権限の考え方</h2><div class="map-summary-note">閲覧できる案件と、更新・実績入力できる案件を分離しています。${p.kind==='forestry_company'?'林業会社は自社が受託・実施する案件だけ更新・実績入力できます。':p.kind==='owner_proxy'?'代理人は委任された森林の連絡・調整だけを行い、施業実績そのものの確定はしません。':'担当主体・明示された作業関係がある場合だけ更新します。'}</div></section>`;
  const cur=await currentProjectRow(p).catch(()=>null);
- const ctx=document.createElement('section');ctx.innerHTML=`<h2>現在の対象</h2><div class="map-summary-note"><b>${esc(cur?projectShortName(cur):'地域・森林')}</b> を起点に作業・現場記録を確認します。作業案件はPJ名だけで絞らず、DB上の担当・対象森林・Access Scopeで判定します。</div>`;
+ const ctx=document.createElement('section');ctx.innerHTML=`<h2>表示コンテキスト</h2><div class="map-summary-note"><b>${esc(cur?projectShortName(cur):'地域・森林')}</b>。作業案件はPJ名だけで絞らず、DB上の担当・対象森林・Access Scopeで判定します。上部の対象PJから切替できます。</div>`;
  document.getElementById('content').insertBefore(ctx,document.getElementById('content').firstChild);
  const eventHtml=await eventEntrySection();
  document.getElementById('content').insertAdjacentHTML('beforeend',eventHtml);
@@ -3287,15 +3245,7 @@ function contractRoleLabel(v){
  const map={owner:'山主',owner_consignor:'山主・委託者',agent:'管理代理',contractor:'受託者・施工者',pm_contractor:'PM支援',forest_manager_contractor:'森林管理受託',ordering_party:'発注者',project_aggregator:'PJ取りまとめ',representative_implementer:'申請主体',beneficiary:'受益者'};
  return map[v]||workflowStatusLabel(v);
 }
-function projectShortName(x){
- const code=typeof x==='string'?x:(x?.project_code||'');
- const map={
-  'DEMO-JC-001':'青嶺町｜水源地整備',
-  'DEMO-JC-SOUTANI-001':'蒼谷村｜放置森林再生',
-  'DEMO-JC-WIDE-001':'広域｜水源地＋再造林'
- };
- return map[code]||(x?.story_label||x?.project_name||code||'PJ');
-}
+function projectShortName(x){const code=typeof x==='string'?x:(x?.project_code||'');const map={'DEMO-JC-001':'青嶺町｜森林J-クレジット','DEMO-JC-SOUTANI-001':'蒼谷村｜森林J-クレジット','DEMO-JC-WIDE-001':'広域｜森林J-クレジット','DEMO-PRIVATE-AGG-2022':'広域｜私有林集約'};return map[code]||(x?.project_name||x?.story_label||code||'PJ');}
 function projectStatusLabel(v){return ({active:'運用中',registered:'登録済',pre_certification:'認証前',planning:'計画中',approved:'承認済',draft:'下書き'}[v]||workflowStatusLabel(v));}
 function workflowStatusLabel(v){return ({active:'運用中',planned:'予定',completed:'完了',pre_certification:'認証前',registered:'登録済',planning:'計画中',approved:'承認済',draft:'下書き',pending:'確認中',cancelled:'取消',settled:'精算済',paid:'支払済',issued:'発行済',forecast:'見込',provisional:'仮置き',reference:'参考',estimate_confirmed:'積算確認済',decided:'決定済',actual:'実績',estimating:'積算中',estimated:'積算確定',contracted:'契約済'}[v]||txt(v));}
 function accessLevelLabel(v){return ({project:'PJ全体',full_project:'PJ全体',region:'地域範囲',region_detail:'地域詳細',forest:'森林単位',forest_detail:'担当森林',work_context:'担当作業に必要な範囲',self:'本人範囲',forest_self:'自分の森林',summary:'概要'}[v]||txt(v));}
@@ -3307,19 +3257,11 @@ function cleanRoleText(v){
  const map={pm_contractor:'PM支援',owner_consignor:'山主・委託者',forest_manager_contractor:'森林管理受託',contractor:'施工者',ordering_party:'発注者',project_aggregator:'PJ取りまとめ',representative_implementer:'申請主体'};
  return esc(String(v||'—').replace(/\[([a-z_]+)\]/g,(_,k)=>map[k]?`［${map[k]}］`:'').replace(/\s+,/g,',').replace(/,\s*,/g,',').replace(/\s{2,}/g,' ').trim());
 }
-function projectCardMeta(x){
- const active=x.project_active_area_ha??x.visible_area_ha;
- if(x.project_code==='DEMO-JC-001')return `対象 ${ha(x.core_target_area_ha??x.final_target_area_ha??active)} / ${num(x.project_active_forest_count||3)}森林 / 固定<br>状態 ${esc(projectStatusLabel(x.project_status))}`;
- if(x.project_code==='DEMO-JC-SOUTANI-001')return `中核 ${ha(x.core_target_area_ha??31.5)} / 同一森林内で年次施工拡大<br>状態 ${esc(projectStatusLabel(x.project_status))}`;
- return `現在 ${ha(active)} / 最終目標 ${ha(x.final_target_area_ha??active)}<br>${x.project_candidate_area_ha?`候補 ${ha(x.project_candidate_area_ha)} / `:''}状態 ${esc(projectStatusLabel(x.project_status))}`;
-}
-function projectChoiceSection(rows,cur){
- if(rows.length<=1)return '';
- return `<section><h2>関与プロジェクト</h2><div class="project-list">${rows.map(x=>`<button type="button" class="project-choice ${cur&&x.project_code===cur.project_code?'active':''}" onclick="saveSelectedProjectCode('${esc(x.project_code)}');projectHubType='jcredit';load('projects')"><div class="pc-title">${esc(projectShortName(x))}${cur&&x.project_code===cur.project_code?' <span class="tag">選択中</span>':''}</div><div class="pc-story">${esc(x.project_name||x.story_label||'プロジェクト')}</div><div class="pc-meta">${projectCardMeta(x)}</div></button>`).join('')}</div></section>`;
-}
+function projectCardMeta(x){const active=x.project_active_area_ha??x.visible_area_ha,type=x.project_type||'';if(x.project_code==='DEMO-PRIVATE-AGG-2022'||type==='private_forest_aggregation')return `対象 ${ha(active)}<br>状態 ${esc(projectStatusLabel(x.project_status))}`;if(x.project_code==='DEMO-JC-001')return `対象 ${ha(x.core_target_area_ha??x.final_target_area_ha??active)} / ${num(x.project_active_forest_count||3)}森林<br>状態 ${esc(projectStatusLabel(x.project_status))}`;if(x.project_code==='DEMO-JC-SOUTANI-001')return `中核 ${ha(x.core_target_area_ha??31.5)}<br>状態 ${esc(projectStatusLabel(x.project_status))}`;const fc=Number(x.project_active_forest_count||x.visible_forest_count||0);return `${active!=null?`対象 ${ha(active)}`:'対象面積 —'}${fc?` / ${num(fc)}森林`:''}<br>状態 ${esc(projectStatusLabel(x.project_status))}`;}
+function projectChoiceSection(rows,cur){if(rows.length<=1)return '';return `<section><h2>関与プロジェクト</h2><div class="project-list">${rows.map(x=>`<button type="button" class="project-choice ${cur&&x.project_code===cur.project_code?'active':''}" onclick="openProjectByCode('${esc(x.project_code)}')"><div class="pc-title">${esc(projectShortName(x))}${cur&&x.project_code===cur.project_code?' <span class="tag">選択中</span>':''}</div><div class="pc-story">${esc(x.project_name||x.story_label||'プロジェクト')}</div><div class="pc-meta">${projectCardMeta(x)}</div></button>`).join('')}</div></section>`;}
 function projectBanner(row){
  if(!row)return '<div class="notice">現在のPJがありません。</div>';
- const meta=row.project_code==='DEMO-JC-001'?`対象 ${ha(row.core_target_area_ha??row.final_target_area_ha??row.project_active_area_ha??row.visible_area_ha)}（開始時3森林で固定）`:row.project_code==='DEMO-JC-SOUTANI-001'?`中核 ${ha(row.core_target_area_ha??31.5)}（同一森林内で年次施工拡大）`:`現在 ${ha(row.project_active_area_ha??row.visible_area_ha)}　最終目標 ${ha(row.final_target_area_ha??row.project_active_area_ha??row.visible_area_ha)}`;
+ const type=row.project_type||'';const meta=row.project_code==='DEMO-JC-001'?`対象 ${ha(row.core_target_area_ha??row.final_target_area_ha??row.project_active_area_ha??row.visible_area_ha)}`:row.project_code==='DEMO-JC-SOUTANI-001'?`中核 ${ha(row.core_target_area_ha??31.5)}`:(row.project_code==='DEMO-PRIVATE-AGG-2022'||type==='private_forest_aggregation')?`対象 ${ha(row.project_active_area_ha??row.visible_area_ha)}｜広域集約`:`${row.project_active_area_ha!=null||row.visible_area_ha!=null?`対象 ${ha(row.project_active_area_ha??row.visible_area_ha)}`:'対象面積 —'}`;
  return `<div class="project-banner"><div><div class="pb-title">現在のPJ：${esc(projectShortName(row))}</div><div class="pb-meta">正式名称：${esc(row.project_name||'—')}<br>${meta}</div></div><span class="tag">${esc(projectStatusLabel(row.project_status))}</span></div>`;
 }
 function periodDraft(code,db){const store=loadJsonStore(PROJECT_DRAFT_KEY);return {...db,...(store[code]||{})}}
@@ -3519,7 +3461,7 @@ async function jcreditProject(){
  ]);
  const st=storyRows[0]||{},pr=periodRows[0]||{};
  cards([['現在のPJ',esc(st.story_label||cur.story_label||'—')],['現在対象',ha(st.active_area_ha??cur.project_active_area_ha)],['最終目標',ha(st.final_target_area_ha??cur.final_target_area_ha)],['候補',ha(st.candidate_area_ha??cur.project_candidate_area_ha)],['認証期間',pr.crediting_period_years!=null?`${num(pr.crediting_period_years)}年`:'—'],['認証サイクル',pr.certification_cycle_years!=null?`${num(pr.certification_cycle_years)}年`:'—']]);
- let html=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+detailSection(`${esc(st.story_label||cur.story_label||'PJ')}｜事業ストーリー`,storyRuleRows(code));
+ let html=personaNoteHtml()+projectBanner(cur)+detailSection(`${esc(st.story_label||cur.story_label||'PJ')}｜事業ストーリー`,storyRuleRows(code));
  if(code==='DEMO-JC-SOUTANI-001'&&sponsorRows.length){const x=sponsorRows[0];html+=detailSection('スポンサー基本条件（デモ仮値）',[['スポンサー',partyLink(x.sponsor_name)],['入り方',esc(x.pattern_name)],['優先購入枠',`${num(x.priority_purchase_share_percent)}%`],['通常直販単価',yen(x.standard_direct_unit_price_jpy)+'/t'],['スポンサー単価',yen(x.sponsor_unit_price_jpy)+'/t'],['仲介経由PJ手取り',yen(x.intermediary_net_unit_price_jpy)+'/t'],['収益配賦権',x.revenue_share_right?'あり':'なし']]);}
  if(code==='DEMO-JC-WIDE-001'&&storyTargets.length)html+=table('広域PJ｜計画参加ケース',['地域','森林・ケース','所有者','区分','ストーリー','履歴','参加','予定面積','予定年度'],storyTargets.map(x=>[esc(x.region_name),esc(x.target_name),partyLink(x.owner_name),esc(ownershipClassLabel(x.ownership_class)),esc(storyComponentLabel(x.story_component)),esc(forestHistoryLabel(x.forest_history_class)),esc(participationLabel(x.participation_model)),ha(x.planned_area_ha),esc(x.planned_join_fiscal_year)]));
  html+=projectPeriodForm(code,pr);
@@ -3620,7 +3562,7 @@ async function personaFinanceScreen(){
   const ownBudget=budgets.reduce((a,x)=>a+Number(x.total_amount||0),0),ownDist=dists.reduce((a,x)=>a+Number(x.planned_amount||0),0);
   if(p.kind==='municipality')cards([['現在のPJ',esc(cur.story_label||'—')],['自地域の予算・執行枠',budgets.length?yen(ownBudget):'未積算'],['自治体への配賦予定',dists.length?yen(ownDist):'未確定'],['自組織の入出金',`${txs.length}件`],['関係契約',`${contracts.length}件`],['PJ全体財務','非表示']]);
   else cards([['現在のPJ',esc(cur.story_label||'—')],['PJ全体財務','非表示'],['このPJの自組織取引',`${txs.length}件`],['このPJの費用明細',`${costs.length}件`],['このPJの関係契約',`${contracts.length}件`]]);
-  let scoped=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+`<section><div class="map-summary-note"><b>デモ説明用｜事業全体会計</b>　吉野町・天理市など説明先にかかわらず、同じCanonical事業会計を確認できます。本番では所属・権限に応じて表示範囲を制御します。</div></section>`+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
+  let scoped=personaNoteHtml()+projectBanner(cur)+`<section><div class="map-summary-note"><b>デモ説明用｜事業全体会計</b>　吉野町・天理市など説明先にかかわらず、同じCanonical事業会計を確認できます。本番では所属・権限に応じて表示範囲を制御します。</div></section>`+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
   if(p.kind==='municipality'){
    scoped+=`<section><h2>自治体自身の会計</h2><div class="map-summary-note"><b>選択中PJについて、自地域の予算・公費支出と自治体所有林への配賦だけを表示します。</b> 他主体の原価・販売条件などPJ全体の内部財務は表示しません。<br><b>デモPersona補完：</b>この画面の予算・費用スコープには旧デモ表示値が含まれます。本番Access Scope未接続のため、正本実績とは扱いません。</div></section>`;
    if(budgets.length)scoped+=table('自地域の予算・執行枠',['年度','内容','金額','状態'],budgets.map(x=>[esc(x.fiscal_year),esc(x.context_name),yen(x.total_amount),esc(demoStatusLabel(x.status))]));
@@ -3653,7 +3595,7 @@ async function personaFinanceScreen(){
  const recordedIncome=canonicalFinance.txs.filter(x=>x.direction==='in').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
  const distributionPlanned=canonicalFinance.dists.reduce((a,x)=>a+Number(x.finalized_distribution_jpy||x.planned_distribution_jpy||0),0);
  cards([['現在のPJ',esc(cur.story_label||'—')],['正式予算',officialBudget?yen(officialBudget):'未登録'],['執行実績',executed?yen(executed):'未登録'],['登録済み見込費用',registeredForecast?yen(registeredForecast):'未登録'],['入金記録',recordedIncome?yen(recordedIncome):'—'],['分配予定',distributionPlanned?yen(distributionPlanned):'—']]);
- let html=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
+ let html=personaNoteHtml()+projectBanner(cur)+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
  if(p.kind==='pm'&&projectHubType==='aggregation'){
   const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
   const [aggScopes,aggDetails]=await Promise.all([
@@ -3862,7 +3804,7 @@ async function personaHome(){
  if(cur.project_code==='DEMO-JC-001')cards([['関与PJ',`${rows.length}件`],['現在のPJ',esc(story)],['対象面積',ha(cur.core_target_area_ha??cur.final_target_area_ha??cur.project_active_area_ha??cur.visible_area_ha)],['対象森林',`${num(cur.project_active_forest_count||3)}件`],['対象範囲','稼働中PJ＋追加候補を個別判断'],['閲覧レベル',esc(accessLevelLabel(cur.access_level))]]);
  else if(cur.project_code==='DEMO-JC-SOUTANI-001')cards([['関与PJ',`${rows.length}件`],['現在のPJ',esc(story)],['中核森林',ha(cur.core_target_area_ha??31.5)],['施工方針','同一森林内で年次拡大'],['認証期間','8年（デモ初期値）'],['閲覧レベル',esc(accessLevelLabel(cur.access_level))]]);
  else cards([['関与PJ',`${rows.length}件`],['現在のPJ',esc(story)],['現在対象',ha(cur.project_active_area_ha??cur.visible_area_ha)],['最終目標',ha(cur.final_target_area_ha??cur.project_active_area_ha??cur.visible_area_ha)],['候補',ha(cur.project_candidate_area_ha??0)],['閲覧レベル',esc(accessLevelLabel(cur.access_level))]]);
- document.getElementById('content').innerHTML=personaNoteHtml()+projectBanner(cur)+projectChoiceSection(rows,cur)+detailSection('この画面の見方',[
+ document.getElementById('content').innerHTML=personaNoteHtml()+projectBanner(cur)+detailSection('この画面の見方',[
   ['PJ切替','上部の「現在のPJ」とPJカードは同じ選択状態に連動。カードを押しても切替できます。面積・Jクレ・会計を別PJと混ぜません。'],
   ['J-クレジット','選択中PJのストーリー、期間、認証サイクル、途中参加等を確認。'],
   ['会計・収支','選択中PJの年度別未来金額、総事業費、版履歴、公費使途とJクレ配賦を確認。'],
