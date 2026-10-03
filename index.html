@@ -395,6 +395,14 @@ async function forestOsLogout(){
  if(t)await fetch(`${SB_URL}/auth/v1/logout`,{method:'POST',headers:{apikey:SB_KEY,Authorization:`Bearer ${t}`}}).catch(()=>{});
  saveAuthSession(null);
 }
+
+async function rpc(fn,body={}){
+ const token=authToken();if(!token)throw new Error('authentication required');
+ const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:{apikey:SB_KEY,Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const j=await r.json().catch(()=>null);
+ if(!r.ok)throw new Error((j&&j.message)||`${fn}: ${r.status}`);
+ return j;
+}
 const PM_LEGACY_PARTY='【デモ】青嶺森林PM合同会社';
 const PM_UNIFIED_PARTY='【デモ】広域森林マネジメント一般社団法人';
 const PM_QUERY_PARTIES=[PM_LEGACY_PARTY,PM_UNIFIED_PARTY];
@@ -2650,65 +2658,77 @@ function planAdopt(){const p=currentPlan();if(!p.rows.length)return alert('作�
 function renderPlanningScreen(){const p=currentPlan();cards([['保存計画',`${planState.plans.length}案`],['現在の状態',`<span class="plan-status ${p.status}">${p.status==='adopted'?'確定済':p.status==='comparing'?'比較中':'下書き'}</span>`],['対象地域',p.region],['対象PJ',p.project||'—']]);document.getElementById('content').innerHTML=`<section><h2>施業計画を組み立てる</h2><div class="plan-top"><div class="planfield"><label>保存した計画案</label><select onchange="planSelect(this.value)">${planState.plans.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div><div class="planfield"><label>地域</label><select onchange="planChangeRegion(this.value)">${Object.keys(planForestsByRegion).map(x=>`<option value="${esc(x)}" ${p.region===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div><div class="planfield"><label>関連PJ</label><select onchange="currentPlan().project=this.value;savePlans()">${planProjectOptions(p)}</select></div><div class="planfield"><label>計画名</label><input value="${esc(p.name)}" onchange="planRename(this.value)"></div></div><div id="planSummary" class="plan-summary"></div><div class="plan-actions"><button class="primarybtn" type="button" onclick="savePlans();alert('保存しました（このブラウザ内の画面操作デモ）。')">保存</button><button type="button" onclick="planDuplicate()">別案として保存</button><button type="button" onclick="planNew()">新しい計画案</button><button type="button" onclick="planAddRow()">作業を追加</button><button type="button" onclick="planAdopt()">確定して作業予定へ</button></div><div id="planRows"></div><div class="plan-note"><b>検討と実作業を分離：</b>ここでは森林を複数選び、施業・年度・担当・予定費用・補助金・木材・Jクレ・炭素以外の価値を何度でも調整します。確定した作業だけが「作業予定」へ入る想定です。正式な森林経営計画やJ-クレジット申請は、この意思決定結果から別途つなぎます。</div></section>`;renderPlanningBody();}
 async function planning(){renderPlanningScreen();}
 
-/* ---------------- v80 現場イベント入力（Auth接続前確認） ---------------- */
-let eventEntryData={contracts:[],forests:[],parcels:[]};
-function eventEntryTargetOptions(type){
- const rows=type==='land_parcel'?eventEntryData.parcels:eventEntryData.forests;
- return rows.map(x=>{
+/* ---------------- v81 現場イベント入力（Authenticated guarded RPC） ---------------- */
+let eventEntryData={contracts:[],forests:[],parcels:[],bases:[],targets:[]};
+function eventContract(code){return eventEntryData.contracts.find(x=>x.entry_code===code)||{};}
+function eventBases(code){return eventEntryData.bases.filter(x=>x.entry_type===code);}
+function eventTargetOptions(type){
+ const rows=authToken()?eventEntryData.targets:(type==='land_parcel'?eventEntryData.parcels:eventEntryData.forests);
+ return rows.filter(x=>!authToken()||x.target_type===type).map(x=>{
+  if(authToken())return `<option value="${esc(x.target_id)}">${esc(x.target_label||x.target_id)}</option>`;
   const id=type==='land_parcel'?x.parcel_id:x.forest_unit_id;
   const name=type==='land_parcel'?`${x.region_name||''} ${x.parcel_code||x.lot_number||'筆'}${x.forest_name?'｜'+x.forest_name:''}`:`${x.region_name||''}｜${x.forest_name||x.forest_code||id}`;
   return `<option value="${esc(id)}">${esc(name)}</option>`;
  }).join('');
 }
-function eventEntryFields(){
+async function loadEventTargets(){
+ if(!authToken())return;
  const code=document.getElementById('eventEntryType')?.value||'patrol';
- const c=eventEntryData.contracts.find(x=>x.entry_code===code)||{};
- const fallen=code==='fallen_tree_observation', thinning=code==='thinning';
- const targetTypes=Array.isArray(c.allowed_target_types)?c.allowed_target_types:['forest_unit','land_parcel'];
+ const basisId=document.getElementById('eventBasisId')?.value||'';
+ eventEntryData.targets=basisId?await rpc('forest_os_my_event_entry_targets',{p_entry_type:code,p_basis_id:basisId}):[];
+ const tt=document.getElementById('eventTargetType');
+ const available=[...new Set(eventEntryData.targets.map(x=>x.target_type))];
+ if(tt){tt.innerHTML=available.map(t=>`<option value="${esc(t)}">${t==='land_parcel'?'筆':'森林'}</option>`).join('');}
+ const target=document.getElementById('eventTargetId');if(target)target.innerHTML='<option value="">選択してください</option>'+eventTargetOptions(tt?.value||available[0]||'forest_unit');
+}
+async function eventBasisChanged(){try{await loadEventTargets();}catch(e){alert(`入力対象を取得できません：${e.message}`);}}
+function eventEntryFields(){
+ const code=document.getElementById('eventEntryType')?.value||eventEntryData.contracts[0]?.entry_code||'patrol';
+ const c=eventContract(code),fallen=code==='fallen_tree_observation',thinning=code==='thinning';
+ const contractTargets=String(c.allowed_target_types||'forest_unit,land_parcel').split(',').filter(Boolean);
+ const bases=eventBases(code);const basis=authToken()?`<div><label>入力権限・作業案件</label><select id="eventBasisId" onchange="eventBasisChanged()"><option value="">選択してください</option>${bases.map(x=>`<option value="${esc(x.basis_id)}">${esc(x.basis_type==='work_case'?'作業案件 '+x.basis_id.slice(0,8):x.basis_note||x.basis_type)}</option>`).join('')}</select></div>`:'';
  return `<div class="workfilter">
   <div><label>記録種別</label><select id="eventEntryType" onchange="renderEventEntryForm()">${eventEntryData.contracts.map(x=>`<option value="${esc(x.entry_code)}" ${x.entry_code===code?'selected':''}>${esc(x.display_name)}</option>`).join('')}</select></div>
-  <div><label>対象単位</label><select id="eventTargetType" onchange="renderEventEntryForm()">${targetTypes.map(t=>`<option value="${esc(t)}">${t==='land_parcel'?'筆':'森林'}</option>`).join('')}</select></div>
-  <div><label>対象</label><select id="eventTargetId"><option value="">選択してください</option>${eventEntryTargetOptions(document.getElementById('eventTargetType')?.value||targetTypes[0]||'forest_unit')}</select></div>
+  ${basis}
+  <div><label>対象単位</label><select id="eventTargetType" onchange="eventTargetTypeChanged()">${contractTargets.map(t=>`<option value="${esc(t)}">${t==='land_parcel'?'筆':'森林'}</option>`).join('')}</select></div>
+  <div><label>対象</label><select id="eventTargetId"><option value="">選択してください</option>${authToken()?'':eventEntryTargetOptions(contractTargets[0]||'forest_unit')}</select></div>
   <div><label>${fallen?'発生日':'実施日'}</label><input id="eventDate" type="date"></div>
   ${fallen?`<div><label>把握日</label><input id="eventKnownDate" type="date"></div><div><label>重要度</label><select id="eventSeverity"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option></select></div>`:''}
   ${(fallen||thinning)?`<div><label>${fallen?'影響面積':'実施面積'}（ha）</label><input id="eventArea" type="number" min="0" step="0.01"></div>`:''}
   <div><label>${fallen?'状況':'結果・メモ'}</label><input id="eventSummary" type="text" placeholder="現場で確認した内容"></div>
  </div>
- <div class="map-note"><b>現場入力：</b>保存RPCはDB側に実装済みです。現在の公開デモは未ログインのため保存せず、入力内容を確認します。認証後は担当作業案件・地域担当の権限確認を通過した場合だけ保存できます。</div>
- <div class="admin-filter-actions"><button type="button" onclick="previewEventEntry()">登録内容を確認</button></div>
- <div id="eventEntryPreview"></div>`;
+ <div class="map-note"><b>現場入力：</b>${authToken()?'認証済みです。DBが返した入力権限・対象だけを選択でき、保存時にもguarded RPCで再検証します。':'公開デモでは保存しません。ログイン後、担当作業案件・地域担当・明示権限に基づく対象だけ保存できます。'}</div>
+ <div class="admin-filter-actions"><button type="button" onclick="previewEventEntry()">登録内容を確認</button></div><div id="eventEntryPreview"></div>`;
 }
-function renderEventEntryForm(){
- const host=document.getElementById('eventEntryForm');if(!host)return;
- const oldType=document.getElementById('eventEntryType')?.value;
- const oldTargetType=document.getElementById('eventTargetType')?.value;
- host.innerHTML=eventEntryFields();
- if(oldType&&document.getElementById('eventEntryType'))document.getElementById('eventEntryType').value=oldType;
- if(oldTargetType&&document.getElementById('eventTargetType'))document.getElementById('eventTargetType').value=oldTargetType;
- const target=document.getElementById('eventTargetId');if(target)target.innerHTML='<option value="">選択してください</option>'+eventEntryTargetOptions(document.getElementById('eventTargetType')?.value||'forest_unit');
+function eventTargetTypeChanged(){const t=document.getElementById('eventTargetType')?.value||'forest_unit';const e=document.getElementById('eventTargetId');if(e)e.innerHTML='<option value="">選択してください</option>'+eventEntryTargetOptions(t);}
+async function renderEventEntryForm(){
+ const host=document.getElementById('eventEntryForm');if(!host)return;const oldType=document.getElementById('eventEntryType')?.value;
+ host.innerHTML=eventEntryFields();if(oldType&&document.getElementById('eventEntryType'))document.getElementById('eventEntryType').value=oldType;
+ eventEntryData.targets=[];if(authToken()){const b=document.getElementById('eventBasisId');if(b&&b.options.length===2){b.selectedIndex=1;await eventBasisChanged();}}
+}
+function eventPayload(){
+ const code=document.getElementById('eventEntryType')?.value||'',fallen=code==='fallen_tree_observation';
+ return {p_entry_type:code,p_basis_id:document.getElementById('eventBasisId')?.value||null,p_target_type:document.getElementById('eventTargetType')?.value||'',p_target_id:document.getElementById('eventTargetId')?.value||null,p_event_date:document.getElementById('eventDate')?.value||null,p_known_at:fallen?(document.getElementById('eventKnownDate')?.value||document.getElementById('eventDate')?.value||null):null,p_severity:fallen?(document.getElementById('eventSeverity')?.value||'medium'):null,p_area_ha:(fallen||code==='thinning')?(Number(document.getElementById('eventArea')?.value||0)||null):null,p_summary:document.getElementById('eventSummary')?.value||null};
 }
 function previewEventEntry(){
- const code=document.getElementById('eventEntryType')?.value||'';
- const c=eventEntryData.contracts.find(x=>x.entry_code===code)||{};
- const targetType=document.getElementById('eventTargetType')?.value||'';
- const targetId=document.getElementById('eventTargetId')?.value||'';
- const targetLabel=document.getElementById('eventTargetId')?.selectedOptions?.[0]?.textContent||'';
- const eventDate=document.getElementById('eventDate')?.value||null;
- const summary=document.getElementById('eventSummary')?.value||'';
- if(!targetId||!eventDate){document.getElementById('eventEntryPreview').innerHTML='<div class="empty">対象と日付を選択してください。</div>';return;}
- const fallen=code==='fallen_tree_observation';
- const payload={entry_type:code,target_type:targetType,target_id:targetId,event_date:eventDate,known_at:fallen?(document.getElementById('eventKnownDate')?.value||eventDate):null,severity:fallen?(document.getElementById('eventSeverity')?.value||'medium'):null,area_ha:(fallen||code==='thinning')?(Number(document.getElementById('eventArea')?.value||0)||null):null,summary:summary};
- const route=fallen?'incidents → incident_impacts':'既存の担当 work_case → work_events';
- document.getElementById('eventEntryPreview').innerHTML=`<section><h3>登録内容確認</h3><div class="map-summary-note"><b>種別：</b>${esc(c.display_name||code)}<br><b>対象：</b>${esc(targetLabel)}<br><b>登録先：</b>${esc(route)}<br><b>状態：</b>公開デモは未保存<br>${fallen?'':'<b>本番条件：</b>認証ユーザーが対象を含む担当作業案件を持つこと'}</div><details><summary>入力データ</summary><pre style="white-space:pre-wrap;overflow:auto">${esc(JSON.stringify(payload,null,2))}</pre></details></section>`;
+ const payload=eventPayload(),code=payload.p_entry_type,c=eventContract(code),targetLabel=document.getElementById('eventTargetId')?.selectedOptions?.[0]?.textContent||'';
+ if(!payload.p_target_id||!payload.p_event_date||authToken()&&!payload.p_basis_id){document.getElementById('eventEntryPreview').innerHTML='<div class="empty">入力権限・対象・日付を選択してください。</div>';return;}
+ const route=code==='fallen_tree_observation'?'incidents → incident_impacts':'既存 work_case → work_events';
+ document.getElementById('eventEntryPreview').innerHTML=`<section><h3>登録内容確認</h3><div class="map-summary-note"><b>種別：</b>${esc(c.display_name||code)}<br><b>対象：</b>${esc(targetLabel)}<br><b>登録先：</b>${esc(route)}<br><b>状態：</b>${authToken()?'保存可能（保存時に権限再検証）':'公開デモ・未保存'}</div><details><summary>入力データ</summary><pre style="white-space:pre-wrap;overflow:auto">${esc(JSON.stringify(payload,null,2))}</pre></details>${authToken()?'<div class="admin-filter-actions"><button class="primarybtn" type="button" onclick="saveEventEntry(this)">DBへ保存</button></div>':''}</section>`;
+}
+async function saveEventEntry(btn){
+ if(!authToken())return alert('ログインが必要です。');if(!confirm('この現場記録をDBへ保存します。よろしいですか？'))return;
+ btn.disabled=true;
+ try{const r=await rpc('forest_os_submit_event_entry',eventPayload());document.getElementById('eventEntryPreview').innerHTML=`<div class="map-summary-note"><b>保存しました。</b> ${esc(r.record_type||'record')} / ${esc(r.id||'')}</div>`;}
+ catch(e){alert(`保存できませんでした：${e.message}`);btn.disabled=false;}
 }
 async function eventEntrySection(){
  try{
-  const [contracts,forests,parcels]=await Promise.all([
-   q('forest_os_ui_event_entry_contract','select=*&order=entry_code'),
-   q('forest_os_demo_public_forest_core_current','select=forest_unit_id,forest_code,forest_name,region_name&order=region_name,forest_name'),
-   q('forest_os_demo_public_parcel_core_current','select=parcel_id,parcel_code,lot_number,region_name,forest_name&order=region_name,parcel_code')
-  ]);
-  eventEntryData={contracts,forests,parcels};
+  const contracts=await q('forest_os_ui_event_entry_contract','select=*&order=entry_code');
+  let forests=[],parcels=[],bases=[];
+  if(authToken())bases=await rpc('forest_os_my_event_entry_basis',{});
+  else [forests,parcels]=await Promise.all([q('forest_os_demo_public_forest_core_current','select=forest_unit_id,forest_code,forest_name,region_name&order=region_name,forest_name'),q('forest_os_demo_public_parcel_core_current','select=parcel_id,parcel_code,lot_number,region_name,forest_name&order=region_name,parcel_code')]);
+  eventEntryData={contracts,forests,parcels,bases,targets:[]};
   if(!contracts.length)return '<section><h2>現場記録入力</h2><div class="empty">入力契約がありません。</div></section>';
   return `<section><h2>現場記録入力</h2><div id="eventEntryForm">${eventEntryFields()}</div></section>`;
  }catch(e){return `<section><h2>現場記録入力</h2><div class="empty">入力定義を取得できません：${esc(e.message)}</div></section>`;}
