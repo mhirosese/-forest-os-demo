@@ -3109,6 +3109,12 @@ async function personaWorkScreen(){
  document.getElementById('content').innerHTML=personaNoteHtml()+table(title,['作業','地域','対象森林','担当','予定','面積','状態','権限'],rows.map(x=>[
   `<b>${esc(x.title)}</b><br><span class="mini">${esc(x.work_code)}</span>`,esc(x.region_name),esc(x.forest_names||'—'),partyLink(x.responsible_party),`${date(x.planned_start_on)}〜${date(x.planned_end_on)}`,ha(x.planned_area_ha||x.target_area_ha),workflowStatusLabel(x.work_status),accessBadge(x)
  ]))+`<section><h2>計画から実施・証拠へ</h2><div class="map-summary-note">計画した森林を作業案件へ落とし、実施日・担当・面積・実績を記録します。契約、写真、報告書、検収等の証拠は作業案件に紐づけて追跡します。</div></section><section><h2>権限の考え方</h2><div class="map-summary-note">閲覧できる案件と、更新・実績入力できる案件を分離しています。${p.kind==='forestry_company'?'林業会社は自社が受託・実施する案件だけ更新・実績入力できます。':p.kind==='owner_proxy'?'代理人は委任された森林の連絡・調整だけを行い、施業実績そのものの確定はしません。':'担当主体・明示された作業関係がある場合だけ更新します。'}</div></section>`;
+ const eventHtml=await eventEntrySection();
+ document.getElementById('content').insertAdjacentHTML('beforeend',eventHtml);
+ if(authToken()){
+  const b=document.getElementById('eventBasisId');
+  if(b&&b.options.length===2){b.selectedIndex=1;await eventBasisChanged();}
+ }
 }
 function groupCosts(rows){
  const m=new Map();
