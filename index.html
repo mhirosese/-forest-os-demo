@@ -3350,40 +3350,94 @@ async function aomineJcreditSummary(){
 }
 
 let recoveryProjectStageFilter='all',recoveryProjectForestRows=[];
-function recoveryProjectStageCounts(rows){return ['owner_intent','rights_boundary','business_assessment','managed'].map(k=>({key:k,label:recoveryStageLabel(k),rows:rows.filter(x=>x.recovery_stage===k),area:recoveryArea(rows,x=>x.recovery_stage===k)}));}
-function recoveryForestListHtml(rows){if(!rows.length)return '<div class="empty">該当する森林はありません。</div>';return `<div class="tablewrap"><table><thead><tr><th>森林</th><th>面積</th><th>現在工程</th><th>状態</th><th>開始</th><th>確認事項</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${esc(x.forest_name||x.forest_code||'—')}</b><br><span class="smallnote">${esc(x.forest_code||'')}</span></td><td>${ha(x.area_ha)}</td><td>${esc(recoveryStageLabel(x.recovery_stage))}</td><td>${esc(x.recovery_case_status==='on_hold'?'保留':recoveryStateLabel(x.portfolio_state))}</td><td>${esc(x.started_on||'未着手')}</td><td>${esc(x.primary_blocker_code?recoveryBlockerLabel(x.primary_blocker_code):'—')}</td><td><button type="button" onclick="openRecoveryForestDetail('${esc(x.forest_unit_id)}')">詳細</button></td></tr>`).join('')}</tbody></table></div>`;}
-function recoveryProjectFilter(stage){recoveryProjectStageFilter=stage;const box=document.getElementById('recoveryForestList');if(!box)return;const rows=stage==='all'?recoveryProjectForestRows:recoveryProjectForestRows.filter(x=>stage==='on_hold'?x.recovery_case_status==='on_hold':x.recovery_stage===stage);box.innerHTML=recoveryForestListHtml(rows);document.querySelectorAll('[data-recovery-filter]').forEach(b=>b.classList.toggle('active',b.dataset.recoveryFilter===stage));}
+const RECOVERY_STAGE_ORDER=['untracked','forest_identified','owner_identification','owner_intent','rights_boundary','field_assessment','aggregation_candidate','business_assessment','route_decision','managed'];
+function recoveryProjectStageCounts(rows){return RECOVERY_STAGE_ORDER.map(k=>({key:k,label:recoveryStageLabel(k),rows:rows.filter(x=>x.recovery_stage===k),area:recoveryArea(rows,x=>x.recovery_stage===k)})).filter(x=>x.rows.length>0);}
+function recoveryReportLinked(row){return !!(row?.recovery_attributes?.source_report||row?.recovery_attributes?.report_type==='forest_management_recovery');}
+function recoveryForestListHtml(rows){
+ if(!rows.length)return '<div class="empty">該当する森林はありません。</div>';
+ return `<div class="tablewrap"><table><thead><tr><th>森林</th><th>面積</th><th>現在工程</th><th>状態</th><th>開始</th><th>確認事項</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${esc(x.forest_name||x.forest_code||'—')}</b><br><span class="smallnote">${esc(x.forest_code||'')}${recoveryReportLinked(x)?'　<span class="tag">管理復旧レポート接続</span>':''}</span></td><td>${ha(x.area_ha)}</td><td>${esc(recoveryStageLabel(x.recovery_stage))}</td><td>${esc(x.recovery_case_status==='on_hold'?'保留':recoveryStateLabel(x.portfolio_state))}</td><td>${esc(x.started_on||'未着手')}</td><td>${esc(x.primary_blocker_code?recoveryBlockerLabel(x.primary_blocker_code):'—')}</td><td><button type="button" onclick="openRecoveryForestDetail('${esc(x.forest_unit_id)}')">詳細</button></td></tr>`).join('')}</tbody></table></div>`;
+}
+function recoveryProjectFilter(stage){
+ recoveryProjectStageFilter=stage;
+ const box=document.getElementById('recoveryForestList');if(!box)return;
+ const rows=stage==='all'?recoveryProjectForestRows:recoveryProjectForestRows.filter(x=>stage==='on_hold'?x.recovery_case_status==='on_hold':stage==='report'?recoveryReportLinked(x):x.recovery_stage===stage);
+ box.innerHTML=recoveryForestListHtml(rows);
+ document.querySelectorAll('[data-recovery-filter]').forEach(b=>b.classList.toggle('active',b.dataset.recoveryFilter===stage));
+}
+function recoveryReportRoadmapHtml(attrs){
+ const rows=Array.isArray(attrs?.roadmap)?attrs.roadmap:[];if(!rows.length)return '';
+ return `<div class="tablewrap"><table><thead><tr><th>年度</th><th>段階</th><th>対象</th><th>主な業務</th><th>通常管理移行</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.year)}</td><td>${esc(x.phase||'—')}</td><td>${esc(x.target||'—')}</td><td>${esc(x.work||'—')}</td><td>${esc(x.managed_area||'—')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function recoveryDiagnosisHtml(attrs,row){
+ const d=attrs?.current_diagnosis||{};
+ const items=[['管理状況',d.management_status],['境界確認',d.boundary_status],['路網',d.road_status],['施業履歴',d.work_history],['Jクレジット',d.jcredit_status]];
+ if(!items.some(x=>x[1]))return '';
+ return `<div class="detailgrid">${items.map(([k,v])=>`<div class="detailitem"><div class="k">${esc(k)}</div><div class="v">${esc(v||'—')}</div></div>`).join('')}</div>`;
+}
+function recoveryEstimateHtml(est){
+ if(!est)return `<div class="empty">この森林に紐付くCanonical積算はありません。</div>`;
+ const lines=Array.isArray(est.lines)?est.lines:[];
+ const status=est.estimate_stage||est.estimate_status||'reference';
+ return `<div class="map-summary-note"><b>${esc(est.title||'参考積算')}</b><br>${esc(est.fiscal_year)}年度／基準日 ${date(est.as_of_date)}／${esc(workflowStatusLabel(status))}<br><b>参考積算であり、承認済予算・実支出ではありません。</b></div>
+ <div class="finance-snapshot"><div><div class="k">概算総事業費</div><div class="v">${est.total_cost_jpy==null?'—':yen(est.total_cost_jpy)}</div></div><div><div class="k">参考補助等</div><div class="v">${est.total_subsidy_jpy==null?'—':yen(est.total_subsidy_jpy)}</div></div><div><div class="k">参考収入</div><div class="v">${est.total_revenue_jpy==null?'—':yen(est.total_revenue_jpy)}</div></div><div><div class="k">残負担概算</div><div class="v">${est.residual_burden_jpy==null?'—':yen(est.residual_burden_jpy)}</div></div></div>
+ ${lines.length?table('初年度概算｜内訳',['項目','数量','単価','概算額','根拠区分'],lines.map(x=>[esc(x.description||x.line_code||'—'),x.quantity==null?'—':`${num(x.quantity)} ${esc(x.unit||'')}`,x.unit_price_jpy==null?'—':yen(x.unit_price_jpy),yen(x.amount_jpy),esc(x.evidence_level||'—')])):''}
+ <div class="finance-disclaimer">${esc(est.notes||'補助・収入等を含む参考シナリオ。実案件では制度確認・実見積により更新します。')}</div>`;
+}
 async function openRecoveryForestDetail(forestUnitId){
  const row=recoveryProjectForestRows.find(x=>String(x.forest_unit_id)===String(forestUnitId));if(!row)return;
- const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [workRows,mapRows,financeRows]=await Promise.all([q('forest_os_demo_public_work_core_current','select=*&order=planned_start_on,work_code'),q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name'),q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`)]);
+ const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer),fid=encodeURIComponent(forestUnitId);
+ const [workRows,mapRows,financeRows,estimateRows,planRows,costRows,budgetRows]=await Promise.all([
+  q('forest_os_demo_public_work_core_current','select=*&order=planned_start_on,work_code'),
+  q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name'),
+  q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`),
+  q('forest_os_demo_public_estimate_current','select=*&order=fiscal_year,title'),
+  q('forest_os_demo_public_plan_core_current','select=*&order=starts_on,plan_code'),
+  q('forest_os_demo_public_cost_current',`select=*&forest_unit_id=eq.${fid}&order=transaction_date,cost_category_name`),
+  q('forest_os_demo_public_budget_current','select=*&order=fiscal_year')
+ ]);
  const work=(workRows||[]).filter(w=>(Array.isArray(w.targets)?w.targets:[]).some(t=>String(t.target_id||t.forest_unit_id||'')===String(forestUnitId)||String(t.target_name||t.forest_name||'')===String(row.forest_name)));
- const map=(mapRows||[]).filter(x=>String(x.target_id||'')===String(forestUnitId)||String(x.display_name||'')===String(row.forest_name)),fin=financeRows[0]||null;
- const stages=[['owner_intent','所有者意向'],['rights_boundary','権利・境界'],['business_assessment','事業性・出口判断'],['managed','継続管理']],idx=stages.findIndex(x=>x[0]===row.recovery_stage);
+ const map=(mapRows||[]).filter(x=>String(x.target_id||'')===String(forestUnitId)||String(x.display_name||'')===String(row.forest_name));
+ const fin=financeRows[0]||null,attrs=row.recovery_attributes||{};
+ const est=(estimateRows||[]).find(x=>String(x.estimate_id)===String(attrs.estimate_id))||(estimateRows||[]).find(x=>(Array.isArray(x.targets)?x.targets:[]).some(t=>String(t.target_id)===String(forestUnitId)))||null;
+ const plan=(planRows||[]).find(x=>String(x.plan_id)===String(attrs.plan_id))||(planRows||[]).find(x=>(Array.isArray(x.targets)?x.targets:[]).some(t=>String(t.target_id)===String(forestUnitId)))||null;
+ const budgets=(budgetRows||[]).filter(b=>String(b.context_id||'')===String(forestUnitId)||(Array.isArray(b.lines)?b.lines:[]).some(l=>String(l.target_id||'')===String(forestUnitId)));
+ const stages=RECOVERY_STAGE_ORDER.map(k=>[k,recoveryStageLabel(k)]),idx=stages.findIndex(x=>x[0]===row.recovery_stage);
  const flow=stages.map((x,i)=>`<div class="project-step ${i<idx?'done':i===idx?'current':''}"><div class="n">${i<idx?'確認済':i===idx?'現在':'次工程'}</div><div class="t">${esc(x[1])}</div></div>`).join('');
+ const reportLinked=recoveryReportLinked(row),reportTitle=reportLinked?'森林管理復旧レポート｜Canonical接続':'森林復帰ケース';
+ const planHtml=plan?`<div class="detailgrid"><div class="detailitem"><div class="k">関連計画</div><div class="v"><b>${esc(plan.plan_name||plan.plan_code)}</b><br>${date(plan.starts_on)}〜${date(plan.ends_on)}／${esc(workflowStatusLabel(plan.plan_status))}</div></div><div class="detailitem"><div class="k">計画主体</div><div class="v">${esc(plan.responsible_party_name||'—')}</div></div></div>`:'<div class="empty">この森林に紐付くCanonical計画はありません。</div>';
+ const actualCostTotal=(costRows||[]).reduce((z,x)=>z+Number(x.amount_jpy||0),0);
+ const actualHtml=(costRows||[]).length?table('実績費用',['費目','作業・契約','金額','状態'],costRows.map(x=>[esc(x.cost_category_name||x.cost_category_code||'—'),esc(x.work_title||x.contract_title||'—'),yen(x.amount_jpy),esc(x.accounting_status||'—')])):`<div class="empty">この森林に紐付く実績費用は現在0件です。参考積算を実支出として扱いません。</div>`;
+ const budgetHtml=budgets.length?table('予算',['年度','金額','状態'],budgets.map(x=>[esc(x.fiscal_year),x.total_amount==null?'—':yen(x.total_amount),esc(x.budget_status||'—')])):`<div class="empty">この森林単位の承認済予算は現在ありません。</div>`;
  document.getElementById('cards').innerHTML='';
  document.getElementById('content').innerHTML=`<section class="pj-sheet recovery-detail"><div class="pj-sheet-head"><div><div class="eyebrow">蒼谷村｜森林復帰｜森林詳細</div><h2>${esc(row.forest_name||row.forest_code)}</h2><div class="desc">PJ全体のフェーズではなく、この森林ケース固有の現在地です。参加時期・保留・再開・復帰判定は森林ごとに保持します。</div></div><div class="pj-sheet-status">${esc(row.recovery_case_status==='on_hold'?'保留':recoveryStageLabel(row.recovery_stage))}</div></div>
  <div class="pj-kpi-row"><div class="pj-kpi"><div class="k">面積</div><div class="v">${ha(row.area_ha)}</div></div><div class="pj-kpi"><div class="k">現在工程</div><div class="v">${esc(recoveryStageLabel(row.recovery_stage))}</div></div><div class="pj-kpi"><div class="k">参加・着手</div><div class="v">${esc(row.started_on||'未着手')}</div></div><div class="pj-kpi"><div class="k">状態</div><div class="v">${esc(row.recovery_case_status==='on_hold'?'保留':recoveryStateLabel(row.portfolio_state))}</div></div></div>
  <div class="pj-detail-bar"><button class="go" onclick="soutaniRecoveryProjectSummary()">PJサマリーへ戻る</button><button onclick="openForestFromMap('${esc(row.forest_name)}')">森林台帳</button><button onclick="load('map')">地図</button><button onclick="load('business')">業務</button><button onclick="load('finance')">お金</button></div>
+ ${reportLinked?`<div class="pj-block"><h3>${esc(reportTitle)}</h3><div class="map-summary-note"><b>元レポート：</b>${esc(attrs.source_report||'—')}<br>レポート固有の数字を別管理せず、森林ID・復帰ケース・計画・Canonical積算へ接続しています。</div></div>`:''}
  <div class="pj-block"><h3>この森林の復帰工程</h3><div class="project-flow">${flow}</div><div class="pj-note">別の森林が後から参加しても、この森林の工程・履歴には影響しません。</div></div>
- <div class="pj-block"><h3>権利・境界・事業条件</h3><div class="detailgrid"><div class="detailitem"><div class="k">所有者意向</div><div class="v">${esc(aggStatusLabel(row.owner_intent_status,'intent'))}</div></div><div class="detailitem"><div class="k">権利整理</div><div class="v">${esc(aggStatusLabel(row.rights_clearance_status,'rights'))}</div></div><div class="detailitem"><div class="k">境界</div><div class="v">${esc(aggStatusLabel(row.boundary_status,'boundary'))}</div></div><div class="detailitem"><div class="k">施業準備</div><div class="v">${esc(aggStatusLabel(row.work_readiness_status,'readiness'))}</div></div></div>${row.primary_blocker_code?`<div class="pj-note"><b>保留・確認事項：</b>${esc(recoveryBlockerLabel(row.primary_blocker_code))}${row.blocker_detail?` — ${esc(row.blocker_detail)}`:''}</div>`:''}</div>
+ <div class="pj-block"><h3>計画・ロードマップ</h3>${planHtml}${recoveryReportRoadmapHtml(attrs)}${reportLinked?'<div class="pj-note">ロードマップは固定予算ではなく、各年度の実績を反映して更新する管理計画です。</div>':''}</div>
+ <div class="pj-block"><h3>権利・境界・事業条件</h3>${reportLinked?recoveryDiagnosisHtml(attrs,row):`<div class="detailgrid"><div class="detailitem"><div class="k">所有者意向</div><div class="v">${esc(aggStatusLabel(row.owner_intent_status,'intent'))}</div></div><div class="detailitem"><div class="k">権利整理</div><div class="v">${esc(aggStatusLabel(row.rights_clearance_status,'rights'))}</div></div><div class="detailitem"><div class="k">境界</div><div class="v">${esc(aggStatusLabel(row.boundary_status,'boundary'))}</div></div><div class="detailitem"><div class="k">施業準備</div><div class="v">${esc(aggStatusLabel(row.work_readiness_status,'readiness'))}</div></div></div>`}${row.primary_blocker_code?`<div class="pj-note"><b>保留・確認事項：</b>${esc(recoveryBlockerLabel(row.primary_blocker_code))}${row.blocker_detail?` — ${esc(row.blocker_detail)}`:''}</div>`:''}</div>
  <div class="pj-block"><h3>作業・履歴</h3>${work.length?`<div class="jc-timeline">${work.map(w=>`<div class="jc-event"><b>${esc(w.work_title||w.work_type_name||w.work_type_code||'作業')}</b><div>${esc(w.planned_start_on||w.actual_start_on||'日付未設定')} ${w.planned_area_ha!=null?'／'+ha(w.planned_area_ha):''}</div></div>`).join('')}</div>`:'<div class="empty">この森林に紐付く公開作業記録は現在ありません。</div>'}</div>
- <div class="pj-block"><h3>お金</h3><div class="pj-note">森林復帰プールと、この森林への個別配賦・負担は別です。現在のCanonical Readには森林単位の確定配賦額がないため、推測して按分しません。</div>${fin?recoveryFinanceSection(fin):'<div class="empty">森林復帰財務Readなし。</div>'}</div>
+ <div class="pj-block"><h3>お金｜概算・予算・実績を分離</h3><div class="pj-note"><b>概算積算 ≠ 承認済予算 ≠ 実績費用。</b> 補助・木材収入も参考シナリオと実際の入金を混同しません。J-クレジット収入は初年度0円の前提です。</div>${recoveryEstimateHtml(est)}<h4>予算</h4>${budgetHtml}<h4>実績費用</h4>${actualHtml}<div class="smallnote">実績費用合計：${(costRows||[]).length?yen(actualCostTotal):'未発生'}</div><h4>森林復帰プール</h4>${fin?recoveryFinanceSection(fin):'<div class="empty">森林復帰財務Readなし。</div>'}</div>
  <div class="pj-block"><h3>位置</h3><div id="soutaniRecoveryMiniMap" style="height:330px;border:1px solid #d8ded9;border-radius:12px;overflow:hidden;background:#eef2ef"></div></div></section>`;
  renderDemoContextBar();setTimeout(()=>renderSoutaniRecoveryMiniMap(map,row.forest_name),0);
 }
 async function soutaniRecoveryProjectSummary(){
  projectHubType='soutani_recovery';localStorage.setItem('forest_os_project_hub_v79','soutani_recovery');
  const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [rows,financeRows]=await Promise.all([q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${vq}&region_name=eq.${encodeURIComponent('【デモ】蒼谷村')}&order=forest_name`),q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`)]);
+ const [rows,financeRows]=await Promise.all([
+  q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${vq}&region_name=eq.${encodeURIComponent('【デモ】蒼谷村')}&order=forest_name`),
+  q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`)
+ ]);
  recoveryProjectForestRows=rows||[];
- const totalArea=recoveryArea(recoveryProjectForestRows,()=>true),active=recoveryProjectForestRows.filter(x=>x.recovery_case_status==='active'),hold=recoveryProjectForestRows.filter(x=>x.recovery_case_status==='on_hold'),stages=recoveryProjectStageCounts(recoveryProjectForestRows),started=recoveryProjectForestRows.filter(x=>x.started_on),latestStart=started.map(x=>x.started_on).sort().at(-1)||'—',fin=financeRows[0]||null;
+ const totalArea=recoveryArea(recoveryProjectForestRows,()=>true),active=recoveryProjectForestRows.filter(x=>x.recovery_case_status==='active'),hold=recoveryProjectForestRows.filter(x=>x.recovery_case_status==='on_hold'),stages=recoveryProjectStageCounts(recoveryProjectForestRows),started=recoveryProjectForestRows.filter(x=>x.started_on),latestStart=started.map(x=>x.started_on).sort().at(-1)||'—',fin=financeRows[0]||null,reportRows=recoveryProjectForestRows.filter(recoveryReportLinked);
+ const stageTotal=stages.reduce((z,x)=>z+x.rows.length,0),stageArea=stages.reduce((z,x)=>z+x.area,0);
  const stageCards=stages.map(z=>`<button type="button" class="recovery-status" data-recovery-filter="${esc(z.key)}" onclick="recoveryProjectFilter('${esc(z.key)}')"><div class="n">${ha(z.area)}</div><div class="t">${esc(z.label)}｜${num(z.rows.length)}森林</div><div class="d">クリックで該当森林を表示</div></button>`).join('');
- cards([['対象森林',`${num(recoveryProjectForestRows.length)}森林 / ${ha(totalArea)}`],['進行中',`${num(active.length)}森林 / ${ha(recoveryArea(active,()=>true))}`],['保留',`${num(hold.length)}森林 / ${ha(recoveryArea(hold,()=>true))}`],['最新参加・着手',latestStart]]);
+ cards([['対象森林',`${num(recoveryProjectForestRows.length)}森林 / ${ha(totalArea)}`],['進行中',`${num(active.length)}森林 / ${ha(recoveryArea(active,()=>true))}`],['保留',`${num(hold.length)}森林 / ${ha(recoveryArea(hold,()=>true))}`],['管理復旧レポート接続',`${num(reportRows.length)}森林`],['最新参加・着手',latestStart]]);
  document.getElementById('content').innerHTML=`<section class="pj-sheet agg-main-summary"><div class="pj-sheet-head"><div><div class="eyebrow">蒼谷村｜森林復帰PJ サマリー</div><h2>森林ごとの現在地</h2><div class="desc">PJ全体が一つのフェーズを進むのではありません。森林ごとに参加時期と現在工程を持ち、途中参加・保留・再開・管理復帰を並行して管理します。</div></div><div class="pj-sheet-status">運用中</div></div>
- <div class="pj-block"><h3>現在の工程分布</h3><div class="recovery-status-grid">${stageCards}<button type="button" class="recovery-status" data-recovery-filter="on_hold" onclick="recoveryProjectFilter('on_hold')"><div class="n">${ha(recoveryArea(hold,()=>true))}</div><div class="t">保留｜${num(hold.length)}森林</div><div class="d">工程を消さず理由を保持</div></button></div><div class="pj-note">各面積は現在の森林ケースを工程別に集計したものです。後から参加する森林は、その森林自身の工程から加わります。</div></div>
- <div class="pj-block"><h3>参加森林</h3><div class="pj-detail-bar"><button class="active" data-recovery-filter="all" onclick="recoveryProjectFilter('all')">すべて</button>${stages.map(z=>`<button data-recovery-filter="${esc(z.key)}" onclick="recoveryProjectFilter('${esc(z.key)}')">${esc(z.label)}</button>`).join('')}<button data-recovery-filter="on_hold" onclick="recoveryProjectFilter('on_hold')">保留</button></div><div id="recoveryForestList">${recoveryForestListHtml(recoveryProjectForestRows)}</div></div>
- <div class="pj-block"><h3>お金・財源</h3><div class="pj-note">PJサマリーでは森林復帰プールの状態を表示します。森林単位の確定配賦・負担は、正本に紐付いた場合だけ森林詳細へ表示します。</div>${fin?recoveryFinanceSection(fin):'<div class="empty">森林復帰財務Readなし。</div>'}</div>
+ <div class="pj-block"><h3>現在の工程分布</h3><div class="recovery-status-grid">${stageCards}</div><div class="pj-note">工程は相互排他的な現在地です。${num(stageTotal)}森林 / ${ha(stageArea)} で対象全体と一致します。<b>保留は工程ではなく状態</b>なので、工程を残したまま別フィルターで重ねます。</div><div class="pj-near-actions"><button data-recovery-filter="on_hold" onclick="recoveryProjectFilter('on_hold')">保留 ${num(hold.length)}森林 / ${ha(recoveryArea(hold,()=>true))}</button>${reportRows.length?`<button data-recovery-filter="report" onclick="recoveryProjectFilter('report')">管理復旧レポート接続 ${num(reportRows.length)}森林</button>`:''}</div></div>
+ ${reportRows.length?`<div class="pj-block"><h3>管理復旧レポート接続</h3><div class="map-summary-note">既存レポートを別紙のまま放置せず、森林ID → 森林復帰ケース → 森林経営計画 → Canonical積算へ接続しています。</div>${recoveryForestListHtml(reportRows)}</div>`:''}
+ <div class="pj-block"><h3>参加森林</h3><div class="pj-detail-bar"><button class="active" data-recovery-filter="all" onclick="recoveryProjectFilter('all')">すべて</button>${stages.map(z=>`<button data-recovery-filter="${esc(z.key)}" onclick="recoveryProjectFilter('${esc(z.key)}')">${esc(z.label)}</button>`).join('')}<button data-recovery-filter="on_hold" onclick="recoveryProjectFilter('on_hold')">保留</button>${reportRows.length?'<button data-recovery-filter="report" onclick="recoveryProjectFilter(\'report\')">レポート接続</button>':''}</div><div id="recoveryForestList">${recoveryForestListHtml(recoveryProjectForestRows)}</div></div>
+ <div class="pj-block"><h3>お金・財源</h3><div class="pj-note">PJサマリーでは森林復帰プールの状態を表示します。個別森林の概算積算・予算・実績費用は森林詳細で分離表示します。</div>${fin?recoveryFinanceSection(fin):'<div class="empty">森林復帰財務Readなし。</div>'}</div>
  <div class="pj-block"><h3>業務・制御</h3><div class="detailgrid"><div class="detailitem"><div class="k">自治体</div><div class="v">review。蒼谷村の対象森林・工程・保留理由・財務状態を確認。</div></div><div class="detailitem"><div class="k">森林組合</div><div class="v">assigned。担当森林・現場業務を中心に確認。</div></div><div class="detailitem"><div class="k">広域PM</div><div class="v">manage。ただしこのPJ画面では蒼谷村範囲を明示して表示。</div></div></div><div class="pj-near-actions"><button onclick="load('business')">業務へ</button><button onclick="load('finance')">お金へ</button><button onclick="load('map')">森林・地図へ</button></div></div></section>`;
  renderDemoContextBar();
 }
@@ -3508,9 +3562,16 @@ async function personaFinanceScreen(){
  const rows=await personaProjectPortfolio(p),cur=await currentProjectRow(p);if(!cur){document.getElementById('content').innerHTML=personaNoteHtml()+'<div class="empty">上部の「対象PJ」から確認するプロジェクトを選択してください。</div>';return;}
  const code=cur.project_code;
  if(code==='DEMO-FOREST-RECOVERY-SOUTANI'){
-  const [fr,pipe]=await Promise.all([q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${encodeURIComponent(name)}&limit=1`),q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${encodeURIComponent(name)}&region_name=eq.${encodeURIComponent('【デモ】蒼谷村')}&order=forest_name`)]);
-  const f=fr[0]||{};cards([['現在のPJ','森林復帰'],['対象森林',`${pipe.length}件`],['対象面積',ha(pipe.reduce((z,x)=>z+Number(x.area_ha||0),0))],['会計範囲',esc(f.finance_access_level||'確認中')]]);
-  document.getElementById('content').innerHTML=projectBanner(cur)+recoveryFinanceSection(f)+`<section><h2>森林復帰｜費用・財源</h2><div class="map-summary-note">森林復帰に必要な調査、権利・境界整理、現況確認、施業準備等の費用と財源を、J-クレジットPJ会計とは分けて確認します。未確定金額は推測しません。</div></section>`;return;
+  const [fr,pipe,ests,costs,budgets]=await Promise.all([
+   q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${encodeURIComponent(name)}&limit=1`),
+   q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${encodeURIComponent(name)}&region_name=eq.${encodeURIComponent('【デモ】蒼谷村')}&order=forest_name`),
+   q('forest_os_demo_public_estimate_current','select=*&order=fiscal_year,title'),
+   q('forest_os_demo_public_cost_current','select=*&order=transaction_date,cost_category_name'),
+   q('forest_os_demo_public_budget_current','select=*&order=fiscal_year')
+  ]);
+  const f=fr[0]||{},reportRows=(pipe||[]).filter(recoveryReportLinked),reportIds=new Set(reportRows.map(x=>String(x.forest_unit_id))),reportEsts=(ests||[]).filter(x=>(Array.isArray(x.targets)?x.targets:[]).some(t=>reportIds.has(String(t.target_id)))),reportCosts=(costs||[]).filter(x=>reportIds.has(String(x.forest_unit_id))),reportBudgets=(budgets||[]).filter(x=>reportIds.has(String(x.context_id||''))||(Array.isArray(x.lines)?x.lines:[]).some(l=>reportIds.has(String(l.target_id||''))));
+  cards([['現在のPJ','蒼谷村｜森林復帰'],['対象森林',`${pipe.length}森林`],['対象面積',ha(pipe.reduce((z,x)=>z+Number(x.area_ha||0),0))],['会計範囲','森林復帰プール'],['レポート接続積算',`${reportEsts.length}件`]]);
+  document.getElementById('content').innerHTML=projectBanner(cur)+`<section><h2>森林復帰｜費用・財源</h2><div class="map-summary-note"><b>費用・財源・予算・実績を分離して表示します。</b> J-クレジットPJ会計とは別管理です。未確定金額は推測しません。</div></section>`+recoveryFinanceSection(f)+(reportEsts.length?`<section><h2>管理復旧レポート接続｜参考積算</h2>${reportEsts.map(recoveryEstimateHtml).join('')}</section>`:'')+`<section><h2>レポート対象森林の予算・実績</h2><div class="finance-snapshot"><div><div class="k">承認済・登録予算</div><div class="v">${reportBudgets.length?yen(reportBudgets.reduce((z,x)=>z+Number(x.total_amount||0),0)):'未登録'}</div></div><div><div class="k">実績費用</div><div class="v">${reportCosts.length?yen(reportCosts.reduce((z,x)=>z+Number(x.amount_jpy||0),0)):'未発生'}</div></div></div><div class="finance-disclaimer">参考積算を予算・支出として扱いません。実績が発生した場合はCanonical費用・取引へ接続します。</div></section>`;return;
  }
  let financeSnapshot=null;
  try{const fs=await q('forest_os_ui_persona_project_finance_display',`select=*&viewer_name=eq.${encodeURIComponent(name)}&project_code=eq.${encodeURIComponent(code)}&limit=1`);financeSnapshot=fs[0]||null;}catch(_){financeSnapshot=null;}
