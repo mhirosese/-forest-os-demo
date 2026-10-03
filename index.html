@@ -528,7 +528,7 @@ async function personaProjectPortfolio(p=currentPersona(),force=false){
  else rows=await q('forest_os_ui_project_portfolio',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&order=project_code`);
  try{const initiatives=await q('forest_os_demo_public_initiative_directory','select=*&order=project_code');for(const raw of initiatives){if(raw.project_type==='regional_forest_portfolio'||!initiativeVisibleToPersona(raw,p))continue;rows.push(normalizeInitiativeProject(raw));}}catch(_){}
  try{const agg=await q('forest_os_ui_aggregation_access_scope',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&limit=1`);if(agg.length&&!rows.some(x=>x.project_code==='DEMO-PRIVATE-AGG-2022')){const sum=await q('forest_os_ui_aggregation_project_summary','select=*&limit=1');const a=sum[0]||{};rows.push({project_code:a.project_code||'DEMO-PRIVATE-AGG-2022',project_name:a.project_name||'【デモ】青嶺町・蒼谷村 私有林集約プロジェクト',project_type:'private_forest_aggregation',project_status:a.status||'active',visible_area_ha:a.target_area_ha,project_active_area_ha:a.target_area_ha,access_level:agg[0].all_regions?'full_project':'region',can_view_project_finance:true,can_view_project_totals:true});}}catch(_){}
- try{if(['municipality_soutani','coop_soutani','pm_integrated','admin'].includes(p.id)){const rr=await q('forest_os_ui_persona_forest_recovery_summary',`select=*&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&limit=1`);const r=rr[0];if(r&&!rows.some(x=>x.project_code==='DEMO-FOREST-RECOVERY-SOUTANI'))rows.push({project_code:'DEMO-FOREST-RECOVERY-SOUTANI',project_name:'【デモ】蒼谷村 森林復帰プロジェクト',project_type:'forest_recovery',project_status:'active',region_name:'【デモ】蒼谷村',visible_forest_count:r.forest_count,visible_area_ha:r.total_area_ha,recovery_in_progress_count:r.recovery_in_progress_count,recovery_in_progress_area_ha:r.recovery_in_progress_area_ha,can_view_project_finance:true,can_view_project_totals:p.kind==='pm'||p.kind==='admin',access_level:p.kind==='pm'||p.kind==='admin'?'project':'region'});}}catch(_){}
+ try{if(['municipality_soutani','coop_soutani','pm_integrated','admin'].includes(p.id)){const rr=await q('forest_os_ui_persona_forest_recovery_pipeline',`select=forest_unit_id,area_ha,region_name,portfolio_state,recovery_case_status&viewer_name=eq.${encodeURIComponent(personaScopePartyName(p))}&region_name=eq.${encodeURIComponent('【デモ】蒼谷村')}`);if(rr.length&&!rows.some(x=>x.project_code==='DEMO-FOREST-RECOVERY-SOUTANI')){const total=rr.reduce((z,x)=>z+Number(x.area_ha||0),0),inprog=rr.filter(x=>x.portfolio_state==='recovery_in_progress').reduce((z,x)=>z+Number(x.area_ha||0),0);rows.push({project_code:'DEMO-FOREST-RECOVERY-SOUTANI',project_name:'【デモ】蒼谷村 森林復帰プロジェクト',project_type:'forest_recovery',project_status:'active',region_name:'【デモ】蒼谷村',visible_forest_count:rr.length,visible_area_ha:total,recovery_in_progress_count:rr.filter(x=>x.portfolio_state==='recovery_in_progress').length,recovery_in_progress_area_ha:inprog,can_view_project_finance:true,can_view_project_totals:true,access_level:p.kind==='pm'||p.kind==='admin'?'project_region':'region'});}}}catch(_){}
  const m=new Map();for(const row of rows){const code=row?.project_code||'';if(!code)continue;if(!m.has(code))m.set(code,row);else m.set(code,{...row,...m.get(code)});}rows=[...m.values()].sort((a,b)=>String(a.project_name||a.project_code).localeCompare(String(b.project_name||b.project_code),'ja'));projectPortfolioCache.set(key,rows);return rows;
 }
 async function currentProjectRow(p=currentPersona()){if(['owner','owner_proxy'].includes(p.kind))return null;const rows=await personaProjectPortfolio(p);const code=storedProjectCode(p);if(!code)return null;if(!rows.some(x=>x.project_code===code)){saveSelectedProjectCode('',p);return null;}return rows.find(x=>x.project_code===code)||null;}
@@ -914,7 +914,7 @@ async function accounting(){
  html+=table('認証・発行スケジュール',['回','モニタリング期間','認証時期','状態','認証量','発行量'],certs.map(x=>[
    `第${num(x.certification_round)}回`,`${date(x.monitoring_starts_on)}〜${date(x.monitoring_ends_on)}`,String(x.certification_year),esc(demoStatusLabel(x.certification_status)),x.certified_quantity_t==null?'未確定':`${num(x.certified_quantity_t)} t`,x.issued_quantity_t==null?'未確定':`${num(x.issued_quantity_t)} t`
  ]));
- html+=table('18年間の年度別管理',['年','フェーズ','認証回','販売量','販売収益（税抜）','仲介手数料','配賦基準収益','年度アクション'],annual.map(x=>[
+ html+=table('年度運用計画（説明用Read）',['年','フェーズ','認証回','販売量','販売収益（税抜）','仲介手数料','配賦基準収益','年度アクション'],annual.map(x=>[
    x.calendar_year,esc(demoStatusLabel(x.phase)),x.certification_round?`第${num(x.certification_round)}回`:'—',`${num(x.sold_quantity_t||0)} t`,yen(x.sales_ex_tax),yen(x.intermediary_fee_ex_tax),yen(x.distribution_base_ex_tax),esc(x.annual_action)
  ]));
  html+=table('クレジット販売',['日付','販売者','買主','販売方法','数量','単価（税抜）','売上（税抜）','仲介手数料','配賦基準収益'],sales.map(x=>[
@@ -1086,7 +1086,7 @@ async function pm(){
    ]);
    html+=table('青嶺町単独PJ｜現在の対象森林',['段階','森林','山主等','面積','状態'],active.map(x=>[txt(x.participation_stage),x.forest_name,txt(x.forest_owner),ha(x.eligible_area_ha),demoStatusLabel(x.status)]));
    html+=table('青嶺町単独PJ｜2年ごとの認証・発行',['回','モニタリング期間','認証年','状態','認証量','発行量'],pmCertSchedule.map(x=>[`第${num(x.certification_round)}回`,`${date(x.monitoring_starts_on)}〜${date(x.monitoring_ends_on)}`,x.certification_year,esc(demoStatusLabel(x.certification_status)),x.certified_quantity_t==null?'未確定':`${num(x.certified_quantity_t)} t`,x.issued_quantity_t==null?'未確定':`${num(x.issued_quantity_t)} t`]));
-   html+=table('青嶺町単独PJ｜18年間の年度管理',['年','フェーズ','認証回','販売量','売上（税抜）','仲介手数料','配賦基準収益','年度アクション'],fc.map(x=>[x.calendar_year,esc(demoStatusLabel(x.phase)),x.certification_round?`第${num(x.certification_round)}回`:'—',`${num(x.sold_quantity_t||0)} t`,yen(x.sales_ex_tax),yen(x.intermediary_fee_ex_tax),yen(x.distribution_base_ex_tax),esc(x.annual_action)]));
+   html+=table('青嶺町単独PJ｜年度運用計画（説明用Read）',['年','フェーズ','認証回','販売量','売上（税抜）','仲介手数料','配賦基準収益','年度アクション'],fc.map(x=>[x.calendar_year,esc(demoStatusLabel(x.phase)),x.certification_round?`第${num(x.certification_round)}回`:'—',`${num(x.sold_quantity_t||0)} t`,yen(x.sales_ex_tax),yen(x.intermediary_fee_ex_tax),yen(x.distribution_base_ex_tax),esc(x.annual_action)]));
    if(y26.fiscal_year)html+=detailSection('2026年｜町単体PJの収益配賦',[
      ['Jクレ売上（税抜）',yen(y26.jcredit_sales_ex_tax_jpy)],['配賦基準収益',yen(y26.distribution_base_ex_tax_jpy)],['森林組合運営分',yen(y26.forest_coop_operation_pool_jpy)],['基金・留保',yen(y26.fund_reserve_jpy)],['配賦原資',yen(y26.allocation_pool_jpy)],['町有林→町',yen(y26.municipality_return_jpy)],['私有林→山主A',yen(y26.private_owner_return_jpy)],['共有林→水守入会会',yen(y26.common_right_return_jpy)]
    ]);
@@ -3296,15 +3296,22 @@ async function aomineJcreditSummary(){
  saveSelectedProjectCode('DEMO-JC-001',p);
  const rows=await personaProjectPortfolio(p,true);
  const cur=rows.find(x=>x.project_code==='DEMO-JC-001');
- const [storyRows,periodRows,annual,certs]=await Promise.all([
+ const [storyRows,periodRows,annual,certs,inventory,sales,ownerSettlements]=await Promise.all([
   q('forest_os_ui_project_story_summary','select=*&project_code=eq.DEMO-JC-001'),
   q('forest_os_demo_public_jcredit_period_settings_compat','select=*&project_code=eq.DEMO-JC-001'),
   q('forest_os_demo_public_town_jcredit_annual_plan_story','select=*&order=calendar_year'),
-  q('forest_os_demo_public_town_jcredit_certification_schedule','select=*&order=certification_round')
+  q('forest_os_demo_public_town_jcredit_certification_schedule','select=*&order=certification_round'),
+  q('forest_os_demo_public_town_jcredit_inventory','select=*&project_code=eq.DEMO-JC-001&order=sale_priority,lot_code'),
+  q('forest_os_demo_public_town_jcredit_sales','select=*&project_code=eq.DEMO-JC-001&order=sale_date'),
+  q('forest_os_demo_public_owner_annual_settlement','select=*&fiscal_year=eq.2026&order=owner_name')
  ]);
  const st=storyRows[0]||{},pr=periodRows[0]||{};
  if(!st.project_code){cards([['青嶺町J-クレジット','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">青嶺町J-クレジットPJを取得できません。</div></section>';return;}
  const fin=cur?await canonicalProjectFinanceData(cur):{budgets:[],costs:[],txs:[],subs:[],ins:[],dists:[],ests:[]};
+ const soldActual=(sales||[]).reduce((a,x)=>a+Number(x.quantity_t||0),0),salesActual=(sales||[]).reduce((a,x)=>a+Number(x.amount_ex_tax||0),0);
+ const availableActual=(inventory||[]).filter(x=>x.current_bucket==='available').reduce((a,x)=>a+Number(x.quantity_t||0),0),reserveActual=(inventory||[]).filter(x=>x.current_bucket==='risk_reserve').reduce((a,x)=>a+Number(x.quantity_t||0),0);
+ const projectOwnerSettlements=(ownerSettlements||[]).filter(x=>(x.distribution_details||[]).some(d=>String(d.context_id||'')===String(cur?.jcredit_project_id||'')));
+ const allocationActual=projectOwnerSettlements.reduce((a,x)=>a+Number(x.finalized_distribution_jpy||0),0),paidActual=projectOwnerSettlements.reduce((a,x)=>a+Number(x.actual_payment_jpy||0),0);
  const activeArea=Number(st.active_area_ha??st.core_target_area_ha??0),targetArea=Number(st.core_target_area_ha??st.final_target_area_ha??activeArea);
  const activeForests=Number(st.active_forest_count||0),candidateArea=Number(st.candidate_area_ha||0);
  const cycle=pr.certification_cycle_years!=null?`${num(pr.certification_cycle_years)}年ごと`:'—';
@@ -3328,7 +3335,8 @@ async function aomineJcreditSummary(){
  const issuedTotal=(certs||[]).reduce((z,x)=>z+Number(x.issued_quantity_t||0),0);
  const nextCert=(certs||[]).find(x=>Number(x.certification_year)>=todayYear && !['completed','issued'].includes(String(x.certification_status||''))) || (certs||[]).find(x=>Number(x.certification_year)>=todayYear) || null;
  cards([]);
- const html=`<section class="pj-sheet jc-summary"><div class="pj-sheet-head"><div><div class="eyebrow">青嶺町｜森林J-クレジット</div><h2>プロジェクト進行サマリー</h2><div class="desc">対象森林を管理しながら、モニタリング、認証・発行、販売・分配までを年度順に追います。新しい森林は候補として条件を確認し、対象追加の判断履歴を残します。</div></div><div class="pj-sheet-status">${esc(demoStatusLabel(st.project_status||'active'))}</div></div>
+ const reportDbHtml=`<section><h2>J-クレジット事業レポート｜DB接続</h2><div class="map-summary-note"><b>実績値はPJ・認証/発行・在庫・販売・配賦/精算のDBから表示。</b> 年度運用計画は将来予定を含む説明用Readとして区別します。</div><div class="detailgrid"><div class="detailitem"><div class="k">発行済</div><div class="v">${num(issuedTotal)} t</div></div><div class="detailitem"><div class="k">販売実績</div><div class="v">${num(soldActual)} t / ${yen(salesActual)}</div></div><div class="detailitem"><div class="k">通常在庫</div><div class="v">${num(availableActual)} t</div></div><div class="detailitem"><div class="k">リスク留保</div><div class="v">${num(reserveActual)} t</div></div><div class="detailitem"><div class="k">2026配賦原資</div><div class="v">${yen(allocationActual)}</div></div><div class="detailitem"><div class="k">精算対象 / 実支払</div><div class="v">${num(projectOwnerSettlements.filter(x=>Number(x.finalized_distribution_jpy||0)>0).length)}主体 / ${yen(paidActual)}</div></div></div></section>`;
+ const html=reportDbHtml+`<section class="pj-sheet jc-summary"><div class="pj-sheet-head"><div><div class="eyebrow">青嶺町｜森林J-クレジット</div><h2>プロジェクト進行サマリー</h2><div class="desc">対象森林を管理しながら、モニタリング、認証・発行、販売・分配までを年度順に追います。新しい森林は候補として条件を確認し、対象追加の判断履歴を残します。</div></div><div class="pj-sheet-status">${esc(demoStatusLabel(st.project_status||'active'))}</div></div>
  <div class="pj-block"><h3>現在地</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">現在対象</div><div class="v">${ha(activeArea)}</div><div class="d">${num(activeForests)}森林</div><div class="pj-near-actions"><button class="go" onclick="load('forest')">対象森林</button><button onclick="load('map')">地図</button></div></div><div class="pj-kpi"><div class="k">追加候補</div><div class="v">${candidateArea?`${ha(candidateArea)} <span class="tag">未追加</span>`:'現在値なし'}</div><div class="d"><b>現在対象145.6haには未算入</b>。権利・計画・適格性・収支を個別確認</div><div class="pj-near-actions"><button onclick="load('forest')">森林・権利</button></div></div><div class="pj-kpi"><div class="k">認証対象期間</div><div class="v">${esc(period)}</div><div class="d">${esc(cycle)}</div><div class="pj-near-actions"><button onclick="openJcreditDetail('DEMO-JC-001')">認証詳細</button></div></div><div class="pj-kpi"><div class="k">発行済</div><div class="v">${issuedTotal?`${num(issuedTotal)} t`:'未発行／未確定'}</div><div class="d">${nextCert?`次の認証：${esc(nextCert.certification_year)}年度`:'認証予定を確認'}</div></div></div></div>
  <div class="pj-block"><div class="jc-title-row"><div><h3>森林追加｜候補からPJ対象化まで</h3><div class="pj-note">追加候補は既存対象と混ぜず、森林ごとに条件とお金を確認してから対象化します。追加しない判断でも、集約・森林管理側の履歴は残します。</div></div></div>
  <div class="project-flow"><div class="project-step"><div class="n">01 候補</div><div class="t">集約・森林管理から候補化</div><div class="v">${candidateArea?ha(candidateArea):'候補ごと'}</div></div><div class="project-step"><div class="n">02 条件</div><div class="t">権利・同意・計画・適格性</div><div class="v">個別確認</div></div><div class="project-step"><div class="n">03 お金</div><div class="t">費用・財源・負担・回収条件</div><div class="v">収支条件を確認</div></div><div class="project-step"><div class="n">04 追加</div><div class="t">契約・対象変更</div><div class="v">承認後</div></div><div class="project-step"><div class="n">05 運用</div><div class="t">モニタリング・認証へ</div><div class="v">履歴継続</div></div></div>
@@ -3341,83 +3349,44 @@ async function aomineJcreditSummary(){
  renderDemoContextBar();
 }
 
+let recoveryProjectStageFilter='all',recoveryProjectForestRows=[];
+function recoveryProjectStageCounts(rows){return ['owner_intent','rights_boundary','business_assessment','managed'].map(k=>({key:k,label:recoveryStageLabel(k),rows:rows.filter(x=>x.recovery_stage===k),area:recoveryArea(rows,x=>x.recovery_stage===k)}));}
+function recoveryForestListHtml(rows){if(!rows.length)return '<div class="empty">該当する森林はありません。</div>';return `<div class="tablewrap"><table><thead><tr><th>森林</th><th>面積</th><th>現在工程</th><th>状態</th><th>開始</th><th>確認事項</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${esc(x.forest_name||x.forest_code||'—')}</b><br><span class="smallnote">${esc(x.forest_code||'')}</span></td><td>${ha(x.area_ha)}</td><td>${esc(recoveryStageLabel(x.recovery_stage))}</td><td>${esc(x.recovery_case_status==='on_hold'?'保留':recoveryStateLabel(x.portfolio_state))}</td><td>${esc(x.started_on||'未着手')}</td><td>${esc(x.primary_blocker_code?recoveryBlockerLabel(x.primary_blocker_code):'—')}</td><td><button type="button" onclick="openRecoveryForestDetail('${esc(x.forest_unit_id)}')">詳細</button></td></tr>`).join('')}</tbody></table></div>`;}
+function recoveryProjectFilter(stage){recoveryProjectStageFilter=stage;const box=document.getElementById('recoveryForestList');if(!box)return;const rows=stage==='all'?recoveryProjectForestRows:recoveryProjectForestRows.filter(x=>stage==='on_hold'?x.recovery_case_status==='on_hold':x.recovery_stage===stage);box.innerHTML=recoveryForestListHtml(rows);document.querySelectorAll('[data-recovery-filter]').forEach(b=>b.classList.toggle('active',b.dataset.recoveryFilter===stage));}
+async function openRecoveryForestDetail(forestUnitId){
+ const row=recoveryProjectForestRows.find(x=>String(x.forest_unit_id)===String(forestUnitId));if(!row)return;
+ const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
+ const [workRows,mapRows,financeRows]=await Promise.all([q('forest_os_demo_public_work_core_current','select=*&order=planned_start_on,work_code'),q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name'),q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`)]);
+ const work=(workRows||[]).filter(w=>(Array.isArray(w.targets)?w.targets:[]).some(t=>String(t.target_id||t.forest_unit_id||'')===String(forestUnitId)||String(t.target_name||t.forest_name||'')===String(row.forest_name)));
+ const map=(mapRows||[]).filter(x=>String(x.target_id||'')===String(forestUnitId)||String(x.display_name||'')===String(row.forest_name)),fin=financeRows[0]||null;
+ const stages=[['owner_intent','所有者意向'],['rights_boundary','権利・境界'],['business_assessment','事業性・出口判断'],['managed','継続管理']],idx=stages.findIndex(x=>x[0]===row.recovery_stage);
+ const flow=stages.map((x,i)=>`<div class="project-step ${i<idx?'done':i===idx?'current':''}"><div class="n">${i<idx?'確認済':i===idx?'現在':'次工程'}</div><div class="t">${esc(x[1])}</div></div>`).join('');
+ document.getElementById('cards').innerHTML='';
+ document.getElementById('content').innerHTML=`<section class="pj-sheet recovery-detail"><div class="pj-sheet-head"><div><div class="eyebrow">蒼谷村｜森林復帰｜森林詳細</div><h2>${esc(row.forest_name||row.forest_code)}</h2><div class="desc">PJ全体のフェーズではなく、この森林ケース固有の現在地です。参加時期・保留・再開・復帰判定は森林ごとに保持します。</div></div><div class="pj-sheet-status">${esc(row.recovery_case_status==='on_hold'?'保留':recoveryStageLabel(row.recovery_stage))}</div></div>
+ <div class="pj-kpi-row"><div class="pj-kpi"><div class="k">面積</div><div class="v">${ha(row.area_ha)}</div></div><div class="pj-kpi"><div class="k">現在工程</div><div class="v">${esc(recoveryStageLabel(row.recovery_stage))}</div></div><div class="pj-kpi"><div class="k">参加・着手</div><div class="v">${esc(row.started_on||'未着手')}</div></div><div class="pj-kpi"><div class="k">状態</div><div class="v">${esc(row.recovery_case_status==='on_hold'?'保留':recoveryStateLabel(row.portfolio_state))}</div></div></div>
+ <div class="pj-detail-bar"><button class="go" onclick="soutaniRecoveryProjectSummary()">PJサマリーへ戻る</button><button onclick="openForestFromMap('${esc(row.forest_name)}')">森林台帳</button><button onclick="load('map')">地図</button><button onclick="load('business')">業務</button><button onclick="load('finance')">お金</button></div>
+ <div class="pj-block"><h3>この森林の復帰工程</h3><div class="project-flow">${flow}</div><div class="pj-note">別の森林が後から参加しても、この森林の工程・履歴には影響しません。</div></div>
+ <div class="pj-block"><h3>権利・境界・事業条件</h3><div class="detailgrid"><div class="detailitem"><div class="k">所有者意向</div><div class="v">${esc(aggStatusLabel(row.owner_intent_status,'intent'))}</div></div><div class="detailitem"><div class="k">権利整理</div><div class="v">${esc(aggStatusLabel(row.rights_clearance_status,'rights'))}</div></div><div class="detailitem"><div class="k">境界</div><div class="v">${esc(aggStatusLabel(row.boundary_status,'boundary'))}</div></div><div class="detailitem"><div class="k">施業準備</div><div class="v">${esc(aggStatusLabel(row.work_readiness_status,'readiness'))}</div></div></div>${row.primary_blocker_code?`<div class="pj-note"><b>保留・確認事項：</b>${esc(recoveryBlockerLabel(row.primary_blocker_code))}${row.blocker_detail?` — ${esc(row.blocker_detail)}`:''}</div>`:''}</div>
+ <div class="pj-block"><h3>作業・履歴</h3>${work.length?`<div class="jc-timeline">${work.map(w=>`<div class="jc-event"><b>${esc(w.work_title||w.work_type_name||w.work_type_code||'作業')}</b><div>${esc(w.planned_start_on||w.actual_start_on||'日付未設定')} ${w.planned_area_ha!=null?'／'+ha(w.planned_area_ha):''}</div></div>`).join('')}</div>`:'<div class="empty">この森林に紐付く公開作業記録は現在ありません。</div>'}</div>
+ <div class="pj-block"><h3>お金</h3><div class="pj-note">森林復帰プールと、この森林への個別配賦・負担は別です。現在のCanonical Readには森林単位の確定配賦額がないため、推測して按分しません。</div>${fin?recoveryFinanceSection(fin):'<div class="empty">森林復帰財務Readなし。</div>'}</div>
+ <div class="pj-block"><h3>位置</h3><div id="soutaniRecoveryMiniMap" style="height:330px;border:1px solid #d8ded9;border-radius:12px;overflow:hidden;background:#eef2ef"></div></div></section>`;
+ renderDemoContextBar();setTimeout(()=>renderSoutaniRecoveryMiniMap(map,row.forest_name),0);
+}
 async function soutaniRecoveryProjectSummary(){
  projectHubType='soutani_recovery';localStorage.setItem('forest_os_project_hub_v79','soutani_recovery');
  const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [portfolio,storyRows,recoveryRows,financeRows,workRows,mapRows]=await Promise.all([
-  personaProjectPortfolio(p,true),
-  q('forest_os_ui_project_story_summary','select=*&project_code=eq.DEMO-JC-SOUTANI-001'),
-  q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${vq}&order=region_name,forest_name`),
-  q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`),
-  q('forest_os_demo_public_work_core_current','select=*&order=planned_start_on,work_code'),
-  q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name')
- ]);
- const cur=portfolio.find(x=>x.project_code==='DEMO-JC-SOUTANI-001')||null;
- const st=storyRows[0]||{};
- const targetName='蒼谷村有林・北峰団地';
- // Canonical current target: 31.5 ha / 1 forest. Legacy 49.7 ha / 2-forest demo rows are not used here.
- const targetArea=Number(st.core_target_area_ha??st.active_area_ha??cur?.core_target_area_ha??31.5);
- const soutaniRows=(recoveryRows||[]).filter(x=>x.region_name==='【デモ】蒼谷村');
- const exactRows=soutaniRows.filter(x=>String(x.forest_name||'').includes('北峰団地'));
- const scopedRows=exactRows.length?exactRows:[];
- const activeRows=scopedRows.filter(x=>x.recovery_case_status==='active');
- const holdRows=scopedRows.filter(x=>x.recovery_case_status==='on_hold');
- const stages=[
-  ['forest_identified','森林把握','対象森林と基礎情報を確認'],
-  ['owner_identification','所有者確認','所有者・共有者等を確認'],
-  ['owner_intent','意向確認','管理・施業に関する意向を確認'],
-  ['rights_boundary','権利・境界確認','権利関係と境界条件を整理'],
-  ['field_assessment','現況確認','森林状態・路網・施業条件を確認'],
-  ['business_assessment','事業性判定','費用・財源・実施条件を整理'],
-  ['route_decision','出口決定','施業・継続管理・制度等へ接続'],
-  ['managed','継続管理','通常の管理ラインへ復帰']
- ];
- const stageIndex=new Map(stages.map((x,i)=>[x[0],i]));
- const observed=scopedRows.map(x=>stageIndex.get(x.recovery_stage)).filter(Number.isInteger);
- const currentIdx=observed.length?Math.max(...observed):-1;
- const hasManaged=scopedRows.some(x=>x.portfolio_state==='managed'||x.recovery_stage==='managed');
- const currentStage=currentIdx>=0?stages[currentIdx][1]:'確認中';
- const stageCards=stages.map((x,i)=>{
-  let state='未到達',cls='';
-  if(hasManaged||i<currentIdx){state='確認済';cls='done'}
-  else if(i===currentIdx){state='進行中';cls='current'}
-  return `<div class="project-step ${cls}"><div class="n">${String(i+1).padStart(2,'0')} ${esc(state)}</div><div class="t">${esc(x[1])}</div><div class="d">${esc(x[2])}</div></div>`;
- }).join('');
- const blockerMap=new Map();
- holdRows.forEach(x=>{const k=x.primary_blocker_code||'other';const z=blockerMap.get(k)||{count:0,area:0};z.count++;z.area+=Number(x.area_ha||0);blockerMap.set(k,z)});
- const workForTarget=(workRows||[]).filter(w=>{
-  if(w.region_name!=='【デモ】蒼谷村')return false;
-  const ts=Array.isArray(w.targets)?w.targets:[];
-  return ts.some(t=>String(t.target_name||t.forest_name||'').includes('北峰団地'));
- });
- const years=new Map();
- for(const w of workForTarget){
-  const y=String(w.planned_start_on||w.actual_start_on||'').slice(0,4)||'時期未設定';
-  if(!years.has(y))years.set(y,[]);years.get(y).push(w);
- }
- const yearHtml=[...years.entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]))).map(([y,ws])=>`<div class="jc-year"><div class="jc-year-head"><div class="jc-year-label">${esc(y==='時期未設定'?y:y+'年度')}</div><span class="tag">${ws.some(w=>w.work_status==='planned')?'計画・進行':'記録'}</span></div><div class="jc-year-body">${ws.map(w=>`<div class="jc-event"><b>${esc(w.work_title||w.work_type_name||w.work_type_code||'作業')}</b><div>${w.planned_area_ha!=null?`予定 ${ha(w.planned_area_ha)}　`:''}${esc(w.performed_by_party_name||'担当確認中')}</div></div>`).join('')}</div></div>`).join('');
- const fin=financeRows[0]||null;
- const financeHtml=`<div id="soutaniRecoveryFinance">${fin?recoveryFinanceSection(fin):`<section><h2>費用・財源</h2><div class="empty">この森林に対応する森林復帰費用の正本金額は、現在の公開Readでは確認できません。推測値は表示しません。</div></section>`}</div>`;
- const blockerHtml=blockerMap.size?`<div class="pj-block" id="recovery-checks"><h3>保留・確認事項</h3><div class="recovery-status-grid">${[...blockerMap.entries()].map(([k,z])=>`<div class="recovery-status"><div class="t">${esc(recoveryBlockerLabel(k))}</div><div class="d">${num(z.count)}件${z.area?`／${ha(z.area)}`:''}。この森林の確認事項として履歴を残し、次回確認へ引き継ぎます。</div></div>`).join('')}</div></div>`:'';
- const forestMapRows=(mapRows||[]).filter(x=>x.layer_code==='forest'&&(String(x.display_name||'').includes('北峰団地')||String(x.target_id||'')==='46947fae-beee-43a8-ab56-5b0608d0b836'));
- cards([]);
- const html=`<section class="pj-sheet agg-main-summary recovery-detail">
-  <div class="pj-sheet-head"><div><div class="eyebrow">蒼谷村｜森林復帰詳細</div><h2>${esc(targetName)}</h2><div class="desc">この31.5haについて、位置・権利・境界・現況・事業条件・作業・費用を一つの森林単位で追い、通常の管理ラインへ戻るまでの判断履歴を残します。</div></div><div class="pj-sheet-status">${esc(currentStage)}</div></div>
-  <div class="pj-kpi-row"><div class="pj-kpi"><div class="k">対象面積</div><div class="v">${ha(targetArea)}</div></div><div class="pj-kpi"><div class="k">現在工程</div><div class="v">${esc(currentStage)}</div></div><div class="pj-kpi"><div class="k">作業記録</div><div class="v">${num(workForTarget.length)}件</div></div><div class="pj-kpi"><div class="k">確認保留</div><div class="v">${holdRows.length?`${num(holdRows.length)}件`:'0件'}</div></div></div>
-  <div class="pj-detail-bar recovery-anchorbar"><span class="label">この森林：</span><button class="go" onclick="document.getElementById('recovery-location')?.scrollIntoView({behavior:'smooth'})">位置</button><button onclick="document.getElementById('recovery-process')?.scrollIntoView({behavior:'smooth'})">復帰工程</button><button onclick="document.getElementById('recovery-rights')?.scrollIntoView({behavior:'smooth'})">権利・境界</button><button onclick="document.getElementById('recovery-work')?.scrollIntoView({behavior:'smooth'})">計画・作業</button><button onclick="document.getElementById('soutaniRecoveryFinance')?.scrollIntoView({behavior:'smooth'})">お金</button><button onclick="document.getElementById('recovery-history')?.scrollIntoView({behavior:'smooth'})">履歴</button></div>
-  <div class="pj-block" id="recovery-location"><h3>位置・対象森林</h3><div class="detailgrid"><div class="detailitem"><div class="k">対象森林</div><div class="v"><b>${esc(targetName)}</b><br>${ha(targetArea)}／蒼谷村有林</div><div class="pj-near-actions"><button class="go" onclick="openForestFromMap('${targetName}')">森林台帳を見る</button><button onclick="load('map')">全体地図で見る</button></div></div><div class="detailitem"><div class="k">地図の意味</div><div class="v">この復帰工程がどの森林範囲に対するものかを固定します。境界・筆・作業範囲の詳細は森林台帳・地図へ接続します。</div></div></div><div id="soutaniRecoveryMiniMap" style="height:360px;border:1px solid #d8ded9;border-radius:12px;margin-top:12px;overflow:hidden;background:#eef2ef"></div><div class="pj-note">地図はCanonical Map Readの森林Geometryを使用します。Geometryが取得できない場合は位置を推測表示しません。</div></div>
-  <div class="pj-block" id="recovery-process"><h3>この森林の復帰工程</h3><div class="project-flow">${stageCards}</div><div class="pj-note"><b>工程はPJ全体ではなく、この森林に対する現在地です。</b> 後から別の森林が参加しても、この31.5haの工程を巻き戻しません。</div></div>
-  <div class="pj-block" id="recovery-rights"><h3>所有・権利・境界・現況</h3><div class="detailgrid"><div class="detailitem"><div class="k">所有・権利</div><div class="v">所有者、共有・相続、管理権限、意向を復帰判断の前提として確認します。</div><div class="pj-near-actions"><button class="go" onclick="openForestFromMap('${targetName}')">所有・権利を見る</button></div></div><div class="detailitem"><div class="k">境界・位置</div><div class="v">森林Geometryと境界確認状況を分けて管理し、未確定部分を確定扱いしません。</div><div class="pj-near-actions"><button onclick="load('map')">地図・境界を見る</button></div></div><div class="detailitem"><div class="k">現況</div><div class="v">森林状態、路網、過去施業、現地確認結果を事業性判定へ接続します。</div></div></div></div>
-  ${blockerHtml}
-  <div class="pj-block" id="recovery-work"><h3>計画・作業</h3><div class="detailgrid"><div class="detailitem"><div class="k">計画</div><div class="v">復帰方針から森林経営計画等の計画へ接続し、対象・版・判断根拠を追います。</div><div class="pj-near-actions"><button class="go" onclick="load('planning')">計画を見る</button></div></div><div class="detailitem"><div class="k">作業・現場記録</div><div class="v">施業、巡視、調査等を作業案件と実績として記録し、この森林へ紐付けます。</div><div class="pj-near-actions"><button onclick="load('work')">作業・記録を見る</button></div></div></div></div>
-  <div class="pj-block" id="recovery-history"><h3>年度・作業履歴</h3><div class="pj-note">この森林に紐付く年度付き作業だけを表示します。事実のない年度・施業面積は作りません。</div><div class="jc-timeline">${yearHtml||'<div class="empty">対象森林に紐付く年度付き作業記録は、現在この公開Readでは確認できません。</div>'}</div></div>
-  <div class="pj-block"><h3>復帰判定とその後</h3><div class="detailgrid"><div class="detailitem"><div class="k">復帰判定</div><div class="v">工程を通過した事実と根拠を確認し、継続して管理できる状態になった時点で「継続管理」へ移します。</div></div><div class="detailitem"><div class="k">通常管理</div><div class="v">巡視・施業等を継続し、地域森林として管理します。</div></div><div class="detailitem"><div class="k">別事業への接続</div><div class="v">森林経営計画、施業案件、J-クレジット等へ必要に応じて接続します。森林復帰の履歴は残します。</div><div class="pj-note">J-クレジットへ接続する場合は、森林復帰とは別のPJとして「森林J-クレジット」タブから確認します。</div></div></div></div>
- </section><div class="pj-note" style="margin:10px 0 0"><b>お金の表示について：</b> 森林復帰プールの金額が表示される場合も、この31.5haへの配賦額・山主負担とはみなしません。森林単位の費用・財源が正本で紐付いた時点で詳細表示します。</div>${financeHtml}`;
- document.getElementById('content').innerHTML=html;
+ const [rows,financeRows]=await Promise.all([q('forest_os_ui_persona_forest_recovery_pipeline',`select=*&viewer_name=eq.${vq}&region_name=eq.${encodeURIComponent('【デモ】蒼谷村')}&order=forest_name`),q('forest_os_ui_persona_forest_recovery_finance',`select=*&viewer_name=eq.${vq}&limit=1`)]);
+ recoveryProjectForestRows=rows||[];
+ const totalArea=recoveryArea(recoveryProjectForestRows,()=>true),active=recoveryProjectForestRows.filter(x=>x.recovery_case_status==='active'),hold=recoveryProjectForestRows.filter(x=>x.recovery_case_status==='on_hold'),stages=recoveryProjectStageCounts(recoveryProjectForestRows),started=recoveryProjectForestRows.filter(x=>x.started_on),latestStart=started.map(x=>x.started_on).sort().at(-1)||'—',fin=financeRows[0]||null;
+ const stageCards=stages.map(z=>`<button type="button" class="recovery-status" data-recovery-filter="${esc(z.key)}" onclick="recoveryProjectFilter('${esc(z.key)}')"><div class="n">${ha(z.area)}</div><div class="t">${esc(z.label)}｜${num(z.rows.length)}森林</div><div class="d">クリックで該当森林を表示</div></button>`).join('');
+ cards([['対象森林',`${num(recoveryProjectForestRows.length)}森林 / ${ha(totalArea)}`],['進行中',`${num(active.length)}森林 / ${ha(recoveryArea(active,()=>true))}`],['保留',`${num(hold.length)}森林 / ${ha(recoveryArea(hold,()=>true))}`],['最新参加・着手',latestStart]]);
+ document.getElementById('content').innerHTML=`<section class="pj-sheet agg-main-summary"><div class="pj-sheet-head"><div><div class="eyebrow">蒼谷村｜森林復帰PJ サマリー</div><h2>森林ごとの現在地</h2><div class="desc">PJ全体が一つのフェーズを進むのではありません。森林ごとに参加時期と現在工程を持ち、途中参加・保留・再開・管理復帰を並行して管理します。</div></div><div class="pj-sheet-status">運用中</div></div>
+ <div class="pj-block"><h3>現在の工程分布</h3><div class="recovery-status-grid">${stageCards}<button type="button" class="recovery-status" data-recovery-filter="on_hold" onclick="recoveryProjectFilter('on_hold')"><div class="n">${ha(recoveryArea(hold,()=>true))}</div><div class="t">保留｜${num(hold.length)}森林</div><div class="d">工程を消さず理由を保持</div></button></div><div class="pj-note">各面積は現在の森林ケースを工程別に集計したものです。後から参加する森林は、その森林自身の工程から加わります。</div></div>
+ <div class="pj-block"><h3>参加森林</h3><div class="pj-detail-bar"><button class="active" data-recovery-filter="all" onclick="recoveryProjectFilter('all')">すべて</button>${stages.map(z=>`<button data-recovery-filter="${esc(z.key)}" onclick="recoveryProjectFilter('${esc(z.key)}')">${esc(z.label)}</button>`).join('')}<button data-recovery-filter="on_hold" onclick="recoveryProjectFilter('on_hold')">保留</button></div><div id="recoveryForestList">${recoveryForestListHtml(recoveryProjectForestRows)}</div></div>
+ <div class="pj-block"><h3>お金・財源</h3><div class="pj-note">PJサマリーでは森林復帰プールの状態を表示します。森林単位の確定配賦・負担は、正本に紐付いた場合だけ森林詳細へ表示します。</div>${fin?recoveryFinanceSection(fin):'<div class="empty">森林復帰財務Readなし。</div>'}</div>
+ <div class="pj-block"><h3>業務・制御</h3><div class="detailgrid"><div class="detailitem"><div class="k">自治体</div><div class="v">review。蒼谷村の対象森林・工程・保留理由・財務状態を確認。</div></div><div class="detailitem"><div class="k">森林組合</div><div class="v">assigned。担当森林・現場業務を中心に確認。</div></div><div class="detailitem"><div class="k">広域PM</div><div class="v">manage。ただしこのPJ画面では蒼谷村範囲を明示して表示。</div></div></div><div class="pj-near-actions"><button onclick="load('business')">業務へ</button><button onclick="load('finance')">お金へ</button><button onclick="load('map')">森林・地図へ</button></div></div></section>`;
  renderDemoContextBar();
- setTimeout(()=>renderSoutaniRecoveryMiniMap(forestMapRows,targetName),0);
 }
-
 let soutaniRecoveryMiniMap=null;
 function renderSoutaniRecoveryMiniMap(rows,targetName){
  const el=document.getElementById('soutaniRecoveryMiniMap');if(!el)return;
