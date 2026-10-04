@@ -346,7 +346,60 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 .jc-summary .pj-kpi .d{font-size:12px;color:#64748b;margin-top:4px;line-height:1.45}.jc-timeline-block{margin-top:14px}.jc-title-row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.jc-timeline{position:relative;margin-top:16px;padding-left:22px}.jc-timeline:before{content:"";position:absolute;left:7px;top:7px;bottom:7px;width:2px;background:#d9e2dc}.jc-year{position:relative;border:1px solid #dfe6e1;border-radius:12px;padding:14px 16px;margin:0 0 12px;background:#fff}.jc-year:before{content:"";position:absolute;left:-21px;top:20px;width:10px;height:10px;border-radius:50%;background:#81948a;border:3px solid #fff;box-shadow:0 0 0 1px #b8c6be}.jc-year.current{border-color:#5f806d;box-shadow:0 0 0 1px rgba(70,105,84,.08);background:#fbfdfb}.jc-year.current:before{background:#315f46}.jc-year.future{background:#fafafa}.jc-year.future:before{background:#b7bdb9}.jc-year-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.jc-year-label{font-size:17px;font-weight:800}.jc-now,.jc-plan,.jc-done{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700}.jc-now{background:#e2f0e7;color:#28563b}.jc-plan{background:#eef0f1;color:#66716b}.jc-done{background:#edf3ef;color:#50645a}.jc-phase{font-size:12px;color:#5e6b64}.jc-year-body{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(250px,.8fr);gap:16px}.jc-action{font-size:14px;line-height:1.65}.jc-cert{margin-top:8px;padding:8px 10px;background:#f5f8f6;border-radius:8px;font-size:12px;line-height:1.55}.jc-year-money{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.jc-year-money>div{border-left:1px solid #e3e8e5;padding-left:9px}.jc-year-money span{display:block;font-size:10px;color:#738078}.jc-year-money b{display:block;margin-top:3px;font-size:12px}.jc-year .pj-near-actions{margin-top:10px}@media(max-width:850px){.jc-year-body{grid-template-columns:1fr}.jc-year-money{grid-template-columns:1fr 1fr 1fr}}
 
 /* v80 information architecture reset */
-.hub-switch{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}.hub-switch button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;cursor:pointer}.hub-switch button.active{background:#eef5f0;border-color:#8fa99a;font-weight:700}.ia-note{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fafbfa;margin:0 0 12px;font-size:12px;line-height:1.6}.project-directory{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.project-directory .pd-card{border:1px solid var(--line);border-radius:11px;background:#fff;padding:13px}.project-directory .pd-type{font-size:10px;color:var(--muted);font-weight:700}.project-directory .pd-card h3{margin:5px 0 6px;font-size:15px}.project-directory .pd-meta{font-size:11px;color:var(--muted);line-height:1.55}.project-directory .pd-card button{margin-top:10px}@media(max-width:760px){.project-directory{grid-template-columns:1fr}}
+.hub-switch{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}.hub-switch button{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:9px;padding:8px 11px;cursor:pointer}.hub-switch button.active{background:#425f4b;color:#fff;border-color:#425f4b;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}.hub-switch button.active:hover{background:#36523f;color:#fff}.ia-note{padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fafbfa;margin:0 0 12px;font-size:12px;line-height:1.6}.plan-card-list{display:grid;gap:10px}.plan-card{border:1px solid var(--line);border-radius:11px;background:#fff;overflow:hidden}.plan-card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:13px 14px;border-bottom:1px solid #edf0ed}.plan-card-head h3{font-size:15px;margin:0 0 4px}.plan-card-meta{font-size:11px;color:var(--muted);line-height:1.5}.plan-card-body{padding:12px 14px}.plan-approval-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}.plan-approval-summary>div{border:1px solid #e5e9e5;border-radius:8px;padding:9px 10px;background:#fafbfa}.plan-approval-summary .k{font-size:10px;color:var(--muted);margin-bottom:3px}.plan-approval-summary .v{font-size:13px;font-weight:650;line-height:1.45}.plan-detail-toggle{margin-top:8px;border:1px solid #d8e0da;border-radius:9px;background:#f8faf8;padding:9px 10px}.plan-detail-toggle>summary{cursor:pointer;font-weight:700;font-size:13px}.plan-detail-toggle[open]>summary{margin-bottom:10px}.plan-work-list{display:grid;gap:7px;margin-top:8px}.plan-work-item{border-left:3px solid #8ea493;background:#fafbfa;padding:8px 10px;font-size:12px;line-height:1.55}.approval-note{padding:9px 10px;border:1px solid #dce4de;border-radius:8px;background:#f4f8f5;font-size:12px;line-height:1.6;margin-top:9px}@media(max-width:700px){.plan-approval-summary{grid-template-columns:1fr 1fr}.plan-card-head{display:block}.plan-card-head .tag{margin-top:7px}}.work-task-list{display:grid;gap:10px}.work-task-card{border:1px solid #dce4de;border-left:5px solid #5f8068;border-radius:10px;background:#fff;padding:12px 13px}.work-task-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.work-task-head h3{margin:0 0 4px;font-size:14px}.work-task-meta{font-size:11px;color:var(--muted);line-height:1.55}.work-task-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:9px}.work-task-grid>div{background:#f7f9f7;border:1px solid #e5ebe6;border-radius:8px;padding:8px 9px}.work-task-grid .k{font-size:10px;color:var(--muted);margin-bottom:3px}.work-task-grid .v{font-size:12px;font-weight:650;line-height:1.45}.work-latest{margin-top:9px;background:#eef5f0;border:1px solid #d5e2d8;border-radius:8px;padding:9px 10px;font-size:12px;line-height:1.55}.work-evidence{margin-top:8px;border:1px solid #dfe6e1;border-radius:8px;background:#fbfcfb;padding:8px 10px}.work-evidence>summary{cursor:pointer;font-size:12px;font-weight:700}.work-evidence[open]>summary{margin-bottom:7px}.work-evidence-list{display:grid;gap:5px}.work-evidence-item{display:flex;gap:7px;align-items:flex-start;padding:6px 7px;border:1px solid #e7ebe8;border-radius:7px;background:#fff;font-size:11px;line-height:1.45}.work-evidence-item .ev-date{color:var(--muted);white-space:nowrap}.work-evidence-item .ev-title{flex:1}.demo-badge{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:999px;background:#eef2ef;color:#526258;font-size:9px;font-weight:700;vertical-align:1px}.work-entry-destination{margin:0 0 10px;padding:10px 12px;border:1px solid #cfded3;border-radius:9px;background:#f1f7f3;font-size:12px;line-height:1.6}.work-help{margin-top:12px;border:1px solid #dfe5e0;border-radius:9px;background:#fafbfa;padding:9px 11px}.work-help>summary{cursor:pointer;font-weight:700;font-size:12px}.work-help[open]>summary{margin-bottom:8px}.save-feedback{border:1px solid #a9c4b0;background:#edf6ef;border-radius:9px;padding:10px 12px;margin:0 0 12px;font-size:12px;line-height:1.6}.event-entry-section{border:2px solid #d4e2d7;background:#fbfdfb}.event-entry-section h2{margin-bottom:6px}@media(max-width:700px){.work-task-grid{grid-template-columns:1fr 1fr}.work-task-head{display:block}.work-task-head .tag{display:inline-block;margin-top:5px}}.project-directory{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.project-directory .pd-card{border:1px solid var(--line);border-radius:11px;background:#fff;padding:13px}.project-directory .pd-type{font-size:10px;color:var(--muted);font-weight:700}.project-directory .pd-card h3{margin:5px 0 6px;font-size:15px}.project-directory .pd-meta{font-size:11px;color:var(--muted);line-height:1.55}.project-directory .pd-card button{margin-top:10px}@media(max-width:760px){.project-directory{grid-template-columns:1fr}}
+
+/* v80 presentation readability refresh */
+:root{
+  --bg:#f1f4f0;
+  --panel:#ffffff;
+  --line:#c7d0c8;
+  --text:#162018;
+  --muted:#46544a;
+  --accent:#295139;
+  --soft:#e3ebe4;
+  --warn:#7a4708;
+}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{line-height:1.55;letter-spacing:.01em}
+header{box-shadow:0 1px 0 rgba(0,0,0,.03)}
+h1{font-size:21px;font-weight:800;letter-spacing:.01em}
+.sub{font-size:13px;font-weight:500}
+button{font-size:14px;font-weight:650;color:var(--text)}
+button:not(.active){background:#fff}
+main{max-width:1200px}
+.notice{background:#e8efea;border-color:#ccd6ce;color:var(--text)}
+.card{box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.card .label,.detailitem .k,.partygrid .k,.pmkv .k,.plan-kpi .k,.demo-context .ctxfield label,.demo-form label,.filterbox label,.admin-filter label,.context-select label,.planfield label,.agg-controls label,.workfilter label,.jc-flow-box .d,.demo-note,.photometa,.maphead span,.map-source-note,.map-summary-note,.map-note,.project-banner .pb-meta,.project-choice .pc-meta,.finance-axis p,.demo-form-note,.empty,.footer,.smallnote,.plan-note,.pmcardnote,.context-inline-note,.filterhint,.sub{color:var(--muted)}
+.card .value{font-size:24px;font-weight:750}
+section{box-shadow:0 1px 1px rgba(0,0,0,.02)}
+section h2{font-size:16px;font-weight:780;background:#f4f7f4}
+.tablewrap table{font-size:13.5px}
+th,td{padding:11px 12px}
+th{background:#f1f5f2;color:#3e4b43;font-weight:700}
+.tag,.statuspill,.pmchip,.ownerchip,.sourcechip,.value-pill,.plan-status,.ctxbadge,.ctxdelegate,.draft-pill,.covchip{font-weight:700}
+.selector,.demo-form input,.demo-form select,.demo-form textarea,.filterbox select,.projectfilter summary,.admin-filter select,.context-select select,.planfield select,.planfield input,.agg-controls select,.planrow select,.planrow input,.workfilter select,.demo-context select{border-color:#bcc7be;color:var(--text)}
+.selector,.demo-form input,.demo-form select,.demo-form textarea{background:#fff}
+.doclink,.entitylink{color:#1a5636}
+.entitytype{border-color:#c8d2ca;background:#eef3ee;color:#4f5d54;font-weight:700}
+.layergroups,.layerbar,.map-note,.project-note,.plan-top,.workfilter,.agg-controls,.jc-flow-body,.value-strip{background:#f4f7f4}
+.layercheck,.covchip,.project-choice,.finance-axis>div,.plan-kpi,.ctxvalue,.partysection,.mapsection,.mapdetail,.admin-toolbar,.contextbar,.project-banner,.demo-context{border-color:#c7d0c8}
+.layercheck{font-size:11.5px;font-weight:650}
+.layercheck:has(input:checked){background:#e7efe8;border-color:#8ea791;box-shadow:inset 0 0 0 1px rgba(54,88,61,.08)}
+.primarybtn{background:#2c5b3d;border-color:#2c5b3d;font-size:14px;font-weight:750}
+.secondarybtn,.mapjump,.closebtn{font-weight:700}
+.maplegend,.activelegend{background:rgba(255,255,255,.98);border-color:#bfc9c1;box-shadow:0 4px 16px rgba(0,0,0,.10)}
+.mapmodebadge{color:#34463a;background:#e8efe9;border-color:#c5d1c7;font-weight:700}
+.persona-scope-note,.project-note{font-size:12.5px;line-height:1.65}
+.delegation-note{background:#fff5e6;border-color:#e2cfa7}
+.project-choice .pc-title,.project-banner .pb-title,.pmprojtitle,.pmtasktitle,.pmcontracttitle,.partyname{color:var(--text)}
+@media(max-width:640px){
+  h1{font-size:20px}
+  section h2{font-size:15px}
+  button{font-size:14px}
+  .card .value{font-size:22px}
+  th,td{padding:10px 11px}
+}
+
 </style>
 </head>
 <body>
@@ -502,7 +555,7 @@ function renderDemoContextBar(){
  const p=currentPersona(),el=document.getElementById('demoContextBar');if(!el)return;
  const badge=p.kind==='owner_proxy'?'<span class="ctxdelegate">代理管理</span>':'<span class="ctxbadge">デモ視点</span>';
  const module=typeof currentModuleCode!=='undefined'?currentModuleCode:'home';
- const projectAware=['projects','business','finance'].includes(module);
+ const projectAware=['projects','business','planning','work','finance'].includes(module);
  const projectField=['owner','owner_proxy'].includes(p.kind)?`<div class="ctxfield"><label>対象</label><div class="ctxvalue">自分の森林・精算</div></div>`:projectAware?`<div class="ctxfield"><label>対象PJ</label><div id="demoProjectField" class="ctxvalue"><span class="project-context-loading">関係PJを読み込み中...</span></div></div>`:`<div class="ctxfield"><label>表示範囲</label><div class="ctxvalue"><strong>${esc(p.region||p.party)}</strong><div class="context-inline-note">${esc(p.scope)}</div></div></div>`;
  el.innerHTML=`<div class="demo-context"><div class="ctxfield"><label>操作主体</label><select id="demoPersonaSelect" onchange="setDemoPersona(this.value)">${visibleDemoPersonas().map(x=>`<option value="${esc(x.id)}" ${x.id===p.id?'selected':''}>${esc(personaOptionLabel(x))}</option>`).join('')}</select><div class="context-inline-note">デモ表示切替。本番権限は user_memberships・Access Scope・RLS/RPC で判定。</div></div><div class="ctxfield"><label>現在の立場</label><div class="ctxvalue">${badge}<strong>${esc(p.roleLabel)}</strong><br>${esc(p.party)}</div></div>${projectField}</div>`;
  if(projectAware&&!['owner','owner_proxy'].includes(p.kind))hydrateProjectContext();
@@ -521,7 +574,7 @@ function initiativeVisibleToPersona(row,p){
  if(p.kind==='forest_coop'&&p.region&&row.region_name===p.region&&Number(row.work_case_count||0)>0)return true;
  return false;
 }
-function normalizeInitiativeProject(x){return {...x,project_type:x.project_type||x.initiative_type||'initiative',project_status:x.project_status||x.initiative_status,visible_forest_count:x.project_active_forest_count??x.forest_membership_count??0,visible_area_ha:x.project_active_area_ha??x.forest_area_ha??null,can_view_project_finance:true,can_view_project_totals:true,access_level:x.access_level||'project'};}
+function normalizeInitiativeProject(x){return {...x,project_id:x.project_id||x.initiative_id||null,initiative_id:x.initiative_id||x.project_id||null,project_type:x.project_type||x.initiative_type||'initiative',project_status:x.project_status||x.initiative_status,visible_forest_count:x.project_active_forest_count??x.forest_membership_count??0,visible_area_ha:x.project_active_area_ha??x.forest_area_ha??null,can_view_project_finance:true,can_view_project_totals:true,access_level:x.access_level||'project'};}
 async function personaProjectPortfolio(p=currentPersona(),force=false){
  const key=p.id;if(!force&&projectPortfolioCache.has(key))return projectPortfolioCache.get(key);let rows=[];
  if(p.kind==='admin'){const all=await q('forest_os_ui_project_story_summary','select=*&order=project_code');rows=all.map(x=>({...x,visible_forest_count:x.active_forest_count,visible_area_ha:x.active_area_ha,project_active_forest_count:x.active_forest_count,project_active_area_ha:x.active_area_ha,project_candidate_forest_count:x.candidate_forest_count,project_candidate_area_ha:x.candidate_area_ha,can_view_project_finance:true,can_view_project_totals:true,access_level:'project'}));}
@@ -2658,7 +2711,8 @@ function renderPlanningScreen(){const p=currentPlan();cards([['保存計画',`${
 async function planning(){renderPlanningScreen();}
 
 /* ---------------- v81 現場イベント入力（Authenticated guarded RPC） ---------------- */
-let eventEntryData={contracts:[],forests:[],parcels:[],bases:[],targets:[]};
+let eventEntryData={contracts:[],forests:[],parcels:[],bases:[],targets:[],mode:'generic'};
+let lastEventSaveNotice='';
 function eventContract(code){return eventEntryData.contracts.find(x=>x.entry_code===code)||{};}
 function eventBases(code){return eventEntryData.bases.filter(x=>x.entry_type===code);}
 function eventTargetOptions(type){
@@ -2683,18 +2737,19 @@ async function loadEventTargets(){
 async function eventBasisChanged(){try{await loadEventTargets();}catch(e){alert(`入力対象を取得できません：${e.message}`);}}
 function eventEntryFields(){
  const code=document.getElementById('eventEntryType')?.value||eventEntryData.contracts[0]?.entry_code||'patrol';
- const c=eventContract(code),fallen=code==='fallen_tree_observation',thinning=code==='thinning';
+ const c=eventContract(code),fallen=code==='fallen_tree_observation',thinning=code==='thinning',aggregation=code==='aggregation_progress';
  const contractTargets=String(c.allowed_target_types||'forest_unit,land_parcel').split(',').filter(Boolean);
- const bases=eventBases(code);const basis=authToken()?`<div><label>入力権限・作業案件</label><select id="eventBasisId" onchange="eventBasisChanged()"><option value="">選択してください</option>${bases.map(x=>`<option value="${esc(x.basis_id)}">${esc(x.basis_type==='work_case'?'作業案件 '+x.basis_id.slice(0,8):x.basis_note||x.basis_type)}</option>`).join('')}</select></div>`:'';
- return `<div class="workfilter">
+ const bases=eventBases(code);const basis=authToken()?`<div><label>作業案件</label><select id="eventBasisId" onchange="eventBasisChanged()"><option value="">選択してください</option>${bases.map(x=>`<option value="${esc(x.basis_id)}">${esc(x.basis_note||('作業案件 '+x.basis_id.slice(0,8)))}</option>`).join('')}</select></div>`:'';
+ const destination=aggregation?'保存後、この作業案件の「記録件数」「最新記録」に反映します。':fallen?'保存先は作業記録ではなく「出来事・異常（incidents）」です。森林詳細の出来事・履歴で確認します。':'保存後、この作業案件の「記録件数」「最新記録」に反映します。';
+ return `<div class="work-entry-destination"><b>入力後の反映先：</b>${destination}</div><div class="workfilter">
   <div><label>記録種別</label><select id="eventEntryType" onchange="renderEventEntryForm()">${eventEntryData.contracts.map(x=>`<option value="${esc(x.entry_code)}" ${x.entry_code===code?'selected':''}>${esc(x.display_name)}</option>`).join('')}</select></div>
   ${basis}
   <div><label>対象単位</label><select id="eventTargetType" onchange="eventTargetTypeChanged()">${contractTargets.map(t=>`<option value="${esc(t)}">${t==='land_parcel'?'筆':'森林'}</option>`).join('')}</select></div>
   <div><label>対象</label><select id="eventTargetId"><option value="">選択してください</option>${authToken()?'':eventEntryTargetOptions(contractTargets[0]||'forest_unit')}</select></div>
   <div><label>${fallen?'発生日':'実施日'}</label><input id="eventDate" type="date"></div>
   ${fallen?`<div><label>把握日</label><input id="eventKnownDate" type="date"></div><div><label>重要度</label><select id="eventSeverity"><option value="low">低</option><option value="medium" selected>中</option><option value="high">高</option></select></div>`:''}
-  ${(fallen||thinning)?`<div><label>${fallen?'影響面積':'実施面積'}（ha）</label><input id="eventArea" type="number" min="0" step="0.01"></div>`:''}
-  <div><label>${fallen?'状況':'結果・メモ'}</label><input id="eventSummary" type="text" placeholder="現場で確認した内容"></div>
+  ${(fallen||thinning||aggregation)?`<div><label>${fallen?'影響面積':aggregation?'今回確認・処理面積':'実施面積'}（ha・任意）</label><input id="eventArea" type="number" min="0" step="0.01"></div>`:''}
+  <div><label>${fallen?'状況':aggregation?'進捗・確認内容':'結果・メモ'}</label><input id="eventSummary" type="text" placeholder="${aggregation?'例：所有者3名へ連絡、2名同意・1名再確認':'現場で確認した内容'}"></div>
  </div>
  <div class="map-note"><b>現場入力：</b>${authToken()?'認証済みです。DBが返した入力権限・対象だけを選択でき、保存時にもguarded RPCで再検証します。':'公開デモでは保存しません。ログイン後、担当作業案件・地域担当・明示権限に基づく対象だけ保存できます。'}</div>
  <div class="admin-filter-actions"><button type="button" onclick="previewEventEntry()">登録内容を確認</button></div><div id="eventEntryPreview"></div>`;
@@ -2706,31 +2761,42 @@ async function renderEventEntryForm(){
  eventEntryData.targets=[];if(authToken()){const b=document.getElementById('eventBasisId');if(b&&b.options.length===2){b.selectedIndex=1;await eventBasisChanged();}}
 }
 function eventPayload(){
- const code=document.getElementById('eventEntryType')?.value||'',fallen=code==='fallen_tree_observation';
- return {p_entry_type:code,p_basis_id:document.getElementById('eventBasisId')?.value||null,p_target_type:document.getElementById('eventTargetType')?.value||'',p_target_id:document.getElementById('eventTargetId')?.value||null,p_event_date:document.getElementById('eventDate')?.value||null,p_known_at:fallen?(document.getElementById('eventKnownDate')?.value||document.getElementById('eventDate')?.value||null):null,p_severity:fallen?(document.getElementById('eventSeverity')?.value||'medium'):null,p_area_ha:(fallen||code==='thinning')?(Number(document.getElementById('eventArea')?.value||0)||null):null,p_summary:document.getElementById('eventSummary')?.value||null};
+ const code=document.getElementById('eventEntryType')?.value||'',fallen=code==='fallen_tree_observation',withArea=fallen||code==='thinning'||code==='aggregation_progress';
+ return {p_entry_type:code,p_basis_id:document.getElementById('eventBasisId')?.value||null,p_target_type:document.getElementById('eventTargetType')?.value||'',p_target_id:document.getElementById('eventTargetId')?.value||null,p_event_date:document.getElementById('eventDate')?.value||null,p_known_at:fallen?(document.getElementById('eventKnownDate')?.value||document.getElementById('eventDate')?.value||null):null,p_severity:fallen?(document.getElementById('eventSeverity')?.value||'medium'):null,p_area_ha:withArea?(Number(document.getElementById('eventArea')?.value||0)||null):null,p_summary:document.getElementById('eventSummary')?.value||null};
 }
 function previewEventEntry(){
  const payload=eventPayload(),code=payload.p_entry_type,c=eventContract(code),targetLabel=document.getElementById('eventTargetId')?.selectedOptions?.[0]?.textContent||'';
  if(!payload.p_target_id||!payload.p_event_date||authToken()&&!payload.p_basis_id){document.getElementById('eventEntryPreview').innerHTML='<div class="empty">入力権限・対象・日付を選択してください。</div>';return;}
- const route=code==='fallen_tree_observation'?'incidents → incident_impacts':'既存 work_case → work_events';
+ const route=code==='fallen_tree_observation'?'出来事・異常：incidents → incident_impacts':code==='aggregation_progress'?'選択した集約作業 → work_events（上の記録件数・最新記録へ反映）':'既存 work_case → work_events（上の最新記録へ反映）';
  document.getElementById('eventEntryPreview').innerHTML=`<section><h3>登録内容確認</h3><div class="map-summary-note"><b>種別：</b>${esc(c.display_name||code)}<br><b>対象：</b>${esc(targetLabel)}<br><b>登録先：</b>${esc(route)}<br><b>状態：</b>${authToken()?'保存可能（保存時に権限再検証）':'公開デモ・未保存'}</div><details><summary>入力データ</summary><pre style="white-space:pre-wrap;overflow:auto">${esc(JSON.stringify(payload,null,2))}</pre></details>${authToken()?'<div class="admin-filter-actions"><button class="primarybtn" type="button" onclick="saveEventEntry(this)">DBへ保存</button></div>':''}</section>`;
 }
 async function saveEventEntry(btn){
  if(!authToken())return alert('ログインが必要です。');if(!confirm('この現場記録をDBへ保存します。よろしいですか？'))return;
  btn.disabled=true;
- try{const r=await rpc('forest_os_submit_event_entry',eventPayload());document.getElementById('eventEntryPreview').innerHTML=`<div class="map-summary-note"><b>保存しました。</b> ${esc(r.record_type||'record')} / ${esc(r.id||'')}</div>`;}
- catch(e){alert(`保存できませんでした：${e.message}`);btn.disabled=false;}
-}
-async function eventEntrySection(){
  try{
-  const contracts=await q('forest_os_ui_event_entry_contract','select=*&order=entry_code');
+  const payload=eventPayload(),r=await rpc('forest_os_submit_event_entry',payload);
+  if(r.record_type==='work_event'){
+   lastEventSaveNotice=`保存した記録を作業案件へ反映しました。上の「記録件数」「最新記録」で確認できます。記録ID：${r.id||''}`;
+   if(businessMode==='work'){await personaWorkScreen();return;}
+  }
+  const msg=r.record_type==='incident'?'保存しました。倒木確認は作業実績ではなく、対象森林の「出来事・異常／履歴」に反映します。':'保存しました。';
+  document.getElementById('eventEntryPreview').innerHTML=`<div class="map-summary-note"><b>${esc(msg)}</b> ${esc(r.record_type||'record')} / ${esc(r.id||'')}</div>`;
+ }catch(e){alert(`保存できませんでした：${e.message}`);btn.disabled=false;}
+}
+async function eventEntrySection(mode='generic',allowedBasisIds=[]){
+ try{
+  let contracts=await q('forest_os_ui_event_entry_contract','select=*&order=entry_code');
+  if(mode==='aggregation')contracts=contracts.filter(x=>x.entry_code==='aggregation_progress');
+  else contracts=contracts.filter(x=>x.entry_code!=='aggregation_progress');
   let forests=[],parcels=[],bases=[];
-  if(authToken())bases=await rpc('forest_os_my_event_entry_basis',{});
-  else [forests,parcels]=await Promise.all([q('forest_os_demo_public_forest_core_current','select=forest_unit_id,forest_code,forest_name,region_name&order=region_name,forest_name'),q('forest_os_demo_public_parcel_core_current','select=parcel_id,parcel_code,lot_number,region_name,forest_name&order=region_name,parcel_code')]);
-  eventEntryData={contracts,forests,parcels,bases,targets:[]};
-  if(!contracts.length)return '<section><h2>現場記録入力</h2><div class="empty">入力契約がありません。</div></section>';
-  return `<section><h2>現場記録入力</h2><div id="eventEntryForm">${eventEntryFields()}</div></section>`;
- }catch(e){return `<section><h2>現場記録入力</h2><div class="empty">入力定義を取得できません：${esc(e.message)}</div></section>`;}
+  if(authToken()){
+   bases=await rpc('forest_os_my_event_entry_basis',{});
+   if(mode==='aggregation'&&allowedBasisIds?.length){const ok=new Set(allowedBasisIds.map(String));bases=bases.filter(x=>x.entry_type==='aggregation_progress'&&ok.has(String(x.basis_id)));}
+  }else [forests,parcels]=await Promise.all([q('forest_os_demo_public_forest_core_current','select=forest_unit_id,forest_code,forest_name,region_name&order=region_name,forest_name'),q('forest_os_demo_public_parcel_core_current','select=parcel_id,parcel_code,lot_number,region_name,forest_name&order=region_name,parcel_code')]);
+  eventEntryData={contracts,forests,parcels,bases,targets:[],mode};
+  if(!contracts.length)return '<section class="event-entry-section"><h2>現場・進捗記録入力</h2><div class="empty">入力定義がありません。</div></section>';
+  return `<section class="event-entry-section"><h2>${mode==='aggregation'?'集約作業の進捗記録':'現場記録入力'}</h2><div id="eventEntryForm">${eventEntryFields()}</div></section>`;
+ }catch(e){return `<section class="event-entry-section"><h2>現場・進捗記録入力</h2><div class="empty">入力定義を取得できません：${esc(e.message)}</div></section>`;}
 }
 
 /* ---------------- v25 作業予定 ---------------- */
@@ -2836,7 +2902,8 @@ async function aggSelectParcel(id,el){
  target.innerHTML=`<div class="agg-detailhead">${esc(d.forest_name)}</div><div class="smallnote">${esc(d.region_name)} ｜ ${ha(d.area_ha)}</div><div style="margin-top:7px">${aggPill(d.map_status_label,true)}${d.is_detached_owner?aggPill(`飛地所有 ${num(d.owner_parcel_count)}筆`,false,true):''}${d.is_cross_region_owner?aggPill('町村またぎ',false,true):''}${d.block_name?aggPill(d.block_name,true):''}</div><div class="agg-kv"><div><div class="k">所有者</div><div class="v">${esc(d.owner_code||d.owner_display_name||'確認中')}</div></div><div><div class="k">参加意向</div><div class="v">${esc(aggStatusLabel(d.owner_intent_status,'intent'))}</div></div><div><div class="k">権利整理</div><div class="v">${esc(aggStatusLabel(d.rights_clearance_status,'rights'))}</div></div><div><div class="k">境界・現地条件</div><div class="v">${esc(aggStatusLabel(d.boundary_status,'boundary'))}</div></div><div><div class="k">施業準備</div><div class="v">${esc(aggStatusLabel(d.work_readiness_status,'readiness'))}</div></div><div><div class="k">森林経営計画</div><div class="v">${esc(aggStatusLabel(d.management_plan_status,'plan'))}</div></div><div class="agg-full"><div class="k">権利者・確認状況</div><div class="v">${rights||'—'}</div></div><div class="agg-full"><div class="k">次に必要な対応</div><div class="v"><strong>${esc(d.next_action)}</strong></div></div></div>`;
 }
 async function aggregationProject(){
- const p=currentPersona(),viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
+ const p=currentPersona();saveSelectedProjectCode('DEMO-PRIVATE-AGG-2022',p);
+ const viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
  const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows,financeScopes]=await Promise.all([
   q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${vq}&limit=1`),
   q('forest_os_ui_aggregation_persona_progress',`select=*&viewer_name=eq.${vq}&order=fiscal_year`),
@@ -2850,6 +2917,11 @@ async function aggregationProject(){
  ]);
  const s=summaries[0];
  if(!s){cards([['集約プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者は私有林集約プロジェクトの対象ではありません。</div></section>';return;}
+ let aggOpsPlans=[],aggOpsWorks=[];
+ try{[aggOpsPlans,aggOpsWorks]=await Promise.all([
+  q('forest_os_ui_aggregation_project_plan_scope',`select=*&viewer_name=eq.${vq}&order=starts_on,plan_code`),
+  q('forest_os_ui_aggregation_project_work_scope',`select=*&viewer_name=eq.${vq}&order=planned_start_on,work_code`)
+ ])}catch(_){aggOpsPlans=[];aggOpsWorks=[]}
  aggDetailCache=new Map();
  document.getElementById('cards').innerHTML='';
  const years=[...yearRows].sort((a,b)=>Number(a.fiscal_year)-Number(b.fiscal_year));
@@ -2889,7 +2961,8 @@ async function aggregationProject(){
    <div class="projecthub-tabs" style="margin:12px 0 16px">${yearButtons}</div>
     <div class="pj-block"><h3>広域PJ全体と現在の担当範囲</h3><div class="summary-kpis"><div class="summary-kpi"><div class="k">広域PJ全体</div><div class="v">${ha(s.project_target_area_ha||y.target_area_ha)}</div><div class="d">複数地域をまたぐプロジェクト全体</div></div><div class="summary-kpi"><div class="k">現在の表示範囲</div><div class="v">${ha(s.visible_area_ha)}</div><div class="d">${esc(s.all_regions?'広域全体':(p.party+'の担当・共有範囲'))}</div></div><div class="summary-kpi"><div class="k">状況把握</div><div class="v">${ha(s.visible_known_area_ha)}</div><div class="d">現在の表示範囲</div></div><div class="summary-kpi"><div class="k">施業候補</div><div class="v">${ha(s.visible_ready_area_ha)}</div><div class="d">現在の表示範囲</div></div></div><div class="smallnote" style="margin-top:10px">広域PJでは、まずPJ全体を把握し、その下で現在の組織・担当範囲を確認し、さらに個別森林へ降ります。行政は全体と自自治体の進捗・資金を比較し、森林組合は共有された担当森林・作業を中心に確認します。</div></div>
    <div class="pj-block"><h3>${isCurrent?'現在地点':'年度末の確定状況'}</h3>${pipeline}${compactDelta}<div class="pj-note">${y.fiscal_year}年度：対象 ${ha(y.target_area_ha)} → 状況把握 ${ha(y.known_area_ha)} → 事業候補 ${ha(y.ready_area_ha)} → まとまり形成 ${formationValue}。${isCurrent?'現在値で、年度末締めまでは未確定です。':'年度末締め後の確定スナップショットです。'}</div></div>
-   <div class="pj-block" style="margin-top:12px"><h3>このPJのお金｜${y.fiscal_year}年度</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">広域PJ全体予算</div><div class="v">${yen(y.budget_jpy)}</div></div><div class="pj-kpi"><div class="k">執行額</div><div class="v">${yen(y.executed_jpy)}</div></div><div class="pj-kpi"><div class="k">残額</div><div class="v">${yen(y.remaining_jpy)}</div></div></div><div class="pj-exec-rate">執行率 ${execRate}%</div><div class="pj-money-split pj-money-scope">${scopeHtml}</div><div class="pj-note">ここでは負担区分の大枠だけ表示。費目・財源・負担主体・按分根拠などの細目は「契約・お金」で管理します。${isCurrent?' 執行額は現在までのデモ記録です。':' 年度末確定値です。'}</div></div>
+   <div class="pj-block" style="margin-top:12px"><h3>このPJのお金｜${y.fiscal_year}年度</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">広域PJ全体予算</div><div class="v">${yen(y.budget_jpy)}</div></div><div class="pj-kpi"><div class="k">執行額</div><div class="v">${yen(y.executed_jpy)}</div></div><div class="pj-kpi"><div class="k">残額</div><div class="v">${yen(y.remaining_jpy)}</div></div></div><div class="pj-exec-rate">執行率 ${execRate}%</div><div class="pj-money-split pj-money-scope">${scopeHtml}</div><div class="pj-note">ここでは負担区分の大枠だけ表示。費目・財源・負担主体・按分根拠などの細目は「契約・お金」で管理します。費用は林野庁の意向調査・境界確認／測量・集積計画の参考歩掛を基礎にし、広域共通調整は奈良県の森林整備地域活動支援対策の共同計画等4,000円/haを目安にしたデモ積算です。${isCurrent?' 執行額は年度途中60%のデモ仮定です。':' 年度完了のデモ値です。'}</div></div>
+   <div class="pj-block"><h3>${selectedYear}年度の計画・作業・現場記録</h3><div class="summary-kpis"><div class="summary-kpi"><div class="k">計画</div><div class="v">${num(aggOpsPlans.filter(x=>Number(String(x.starts_on||'').slice(0,4))===selectedYear).length)}件</div><div class="d">年度事業計画</div></div><div class="summary-kpi"><div class="k">作業案件</div><div class="v">${num(aggOpsWorks.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===selectedYear).length)}件</div><div class="d">所有者・境界・集約調整</div></div><div class="summary-kpi"><div class="k">現場・進捗記録</div><div class="v">${num(aggOpsWorks.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===selectedYear&&x.latest_event_date).length)}件</div><div class="d">最新記録を作業に保持</div></div></div><div class="pj-note">広域PMは地域横断、自治体・森林組合は自地域の計画・作業を表示します。ここでのhaは施業完了面積ではなく、所有者対応・境界確認・集約調整など各工程の年度対象面積です。現場記録の確定は担当主体に限定し、広域PMは調整権限として分離しています。</div></div>
    <div class="pj-block"><h3>特記事項</h3><textarea id="aggProjectNotes" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;padding:10px 12px;border:1px solid #cfd6dc;border-radius:8px;font:inherit;line-height:1.55" placeholder="PJ全体で共有したい留意事項、今後の対応、説明時の補足などを入力">${esc(loadAggregationProjectNotes())}</textarea><div class="pj-detail-bar" style="margin-top:8px"><button type="button" class="go" onclick="saveAggregationProjectNotes()">特記事項を保存</button><span id="aggProjectNotesStatus" class="pj-note">この端末のデモ画面に保存します。DB正本にはまだ書き込みません。</span></div></div>
    <div class="pj-detail-bar"><span class="label">詳しく見る：</span><button class="go" onclick="document.getElementById('aggMapDetail').scrollIntoView({behavior:'smooth'})">対象森林・地図</button><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button></div>
   </section>`+
@@ -2995,18 +3068,39 @@ async function forestLandHub(){
 }
 function businessSwitchHtml(){const labels={attention:'要対応・承認',planning:'計画',work:'作業・現場記録'};return `<div class="hub-switch">${Object.entries(labels).map(([k,v])=>`<button class="${businessMode===k?'active':''}" onclick="switchBusiness('${k}')">${v}</button>`).join('')}</div><div class="ia-note"><b>業務は実際に処理する仕事の入口です。</b> 入力フォームを独立した世界にせず、森林・PJ・作業の対象から登録するか、ここから自分が処理可能な案件を選びます。</div>`;}
 async function switchBusiness(mode){businessMode=mode;localStorage.setItem('forest_os_business_mode_v80',mode);await businessHub();}
+async function personaAttentionScreen(){
+ const p=currentPersona(),name=personaScopePartyName(p),cur=await currentProjectRow(p).catch(()=>null);
+ let tasks=[];try{tasks=await q('forest_os_demo_public_task_core_current','select=*&order=due_on.nullslast,title&limit=100')}catch(_){tasks=[]}
+ tasks=tasks.filter(t=>{
+   if(cur?.project_code&&t.initiative_code&&t.initiative_code!==cur.project_code)return false;
+   if(t.assigned_party_name===name)return true;
+   if(p.kind==='municipality'&&t.region_name===p.party)return true;
+   if(p.kind==='pm'&&cur?.project_code&&t.initiative_code===cur.project_code)return true;
+   return false;
+ });
+ let pendingPlans=[],approvedPlans=[];
+ const isAgg=cur?.project_code==='DEMO-PRIVATE-AGG-2022'||cur?.project_type==='private_forest_aggregation';
+ if(isAgg&&p.kind==='municipality'){
+   const y=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
+   let plans=[];try{plans=await q('forest_os_ui_aggregation_project_plan_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`)}catch(_){plans=[]}
+   plans=plans.filter(x=>Number(String(x.starts_on||'').slice(0,4))===y&&x.can_review);
+   pendingPlans=plans.filter(x=>!['approved','completed'].includes(String(x.plan_status||x.version_status||'')));
+   approvedPlans=plans.filter(x=>['approved','completed'].includes(String(x.plan_status||x.version_status||'')));
+ }
+ cards([['要対応タスク',`${tasks.length}件`],['承認待ち計画',`${pendingPlans.length}件`],['承認済・確認可',`${approvedPlans.length}件`],['対象PJ',cur?projectShortName(cur):'未選択']]);
+ let html=personaNoteHtml()+`<section><h2>要対応・承認</h2><div class="map-summary-note">ここには現在処理が必要なタスクと、未承認の計画だけを出します。<b>承認済み計画を「承認対象」として再表示しません。</b> 計画の内容・承認者・対象森林・関連作業は「計画」タブで確認します。</div></section>`;
+ if(tasks.length){html+=table('現在の要対応タスク',['件名','種別','PJ','担当','期限','状態'],tasks.map(t=>[esc(t.title),esc(t.task_type||'—'),esc(t.initiative_name||'—'),esc(t.assigned_party_name||'—'),date(t.due_on),workflowStatusLabel(t.task_status)]));}
+ else html+=`<section><div class="empty">現在、選択中の範囲に要対応タスクはありません。</div></section>`;
+ if(pendingPlans.length){html+=`<section><h2>承認待ち計画</h2><div class="map-summary-note">${pendingPlans.length}件あります。内容を確認してから承認判断する設計です。</div><div class="summary-links"><button class="go" onclick="switchBusiness('planning')">計画詳細を確認</button></div></section>`;}
+ else if(isAgg&&p.kind==='municipality')html+=`<section><h2>計画承認</h2><div class="empty">現在、承認待ちの計画はありません。${approvedPlans.length?`${approvedPlans.length}件は承認済みです。計画タブで承認内容を確認できます。`:''}</div><div class="summary-links"><button onclick="switchBusiness('planning')">計画を見る</button></div></section>`;
+ document.getElementById('content').innerHTML=html;
+}
 async function businessHub(){
  if(businessMode==='planning')await personaPlanningScreen();
  else if(businessMode==='work')await personaWorkScreen();
- else await personaPlanningScreen();
+ else await personaAttentionScreen();
  const c=document.getElementById('content');if(!c)return;
  c.insertAdjacentHTML('afterbegin',businessSwitchHtml());
- if(businessMode==='attention'){
-   const p=currentPersona();
-   let tasks=[];try{tasks=await q('forest_os_ui_task_current','select=*&order=due_on.nullslast,created_at.desc&limit=50')}catch(_){tasks=[]}
-   const intro=`<section><h2>要対応・承認</h2><div class="map-summary-note">警告・確認・承認は別のデータを作らず、森林・PJ・計画・作業に紐づく同じタスク／workflowを横断表示します。現在のデモReadで利用者別に確実に絞れない項目は、ここで推測表示しません。</div>${tasks.length?`<div class="smallnote" style="margin-top:8px">Canonical task Read：${tasks.length}件。対象関係・Access Scopeを確認できるものから操作対象にします。</div>`:'<div class="empty" style="margin-top:10px">現在、この画面で安全に利用者別表示できる要対応タスクはありません。計画・作業の確認対象は各タブで確認できます。</div>'}</section>`;
-   c.insertAdjacentHTML('afterbegin',intro);
- }
 }
 function projectTypeLabel(x){const t=x?.project_type||'';const map={private_forest_aggregation:'私有林集約',forest_recovery:'森林復帰',reforestation_program:'再造林',regional_forest_management:'地域森林管理',wide_area_forest_management:'広域森林管理'};if(x?.project_code?.startsWith('DEMO-JC-'))return '森林J-クレジット';return map[t]||'プロジェクト';}
 async function projectDirectory(){const p=currentPersona(),rows=await personaProjectPortfolio(p,true);cards([['関与PJ',`${rows.length}件`],['主語','事業・案件'],['森林との関係','多対多'],['入口','組織→PJ→対象森林']]);const list=rows.length?`<div class="project-directory">${rows.map(x=>`<div class="pd-card"><div class="pd-type">${esc(projectTypeLabel(x))}</div><h3>${esc(projectShortName(x))}</h3><div class="pd-meta">${esc(x.project_name||'')}${x.region_name?`<br>${esc(x.region_name)}`:''}<br>${projectCardMeta(x)}</div><button type="button" onclick="openProjectByCode('${esc(x.project_code)}')">PJを開く</button></div>`).join('')}</div>`:'<div class="empty">現在の立場で表示できるプロジェクトはありません。</div>';document.getElementById('content').innerHTML=personaNoteHtml()+`<section><h2>プロジェクト一覧</h2><div class="ia-note">運営・参加・担当関係のある事業・案件を表示します。J-クレジットだけに限定しません。</div>${list}</section>`;}
@@ -3122,40 +3216,116 @@ async function personaHomeLegacyV80(){
 }
 function accessBadge(row){
  if(row.can_edit||row.can_update)return '<span class="tag">編集可</span>';
- if(row.can_review)return '<span class="tag">確認・承認対象</span>';
+ if(row.can_review){
+   const st=String(row.plan_status||row.version_status||'');
+   return ['approved','completed'].includes(st)?'<span class="tag">確認対象</span>':'<span class="tag">承認確認</span>';
+ }
  if(row.can_coordinate)return '<span class="tag">調整可</span>';
  return '<span class="tag">閲覧</span>';
 }
-async function personaPlanningScreen(){
- const p=currentPersona(),name=personaScopePartyName(p);
- const rows=await q('forest_os_ui_persona_plan_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`);
- const editable=rows.filter(x=>x.can_edit).length,reviewable=rows.filter(x=>x.can_review).length;
- cards([['対象計画',`${rows.length}件`],['編集可',`${editable}件`],['確認・承認対象',`${reviewable}件`],['対象面積',ha(rows.reduce((a,x)=>a+Number(x.target_area_ha||0),0))]]);
- const title=p.kind==='municipality'?'計画・承認':p.kind==='forest_coop'?'森林経営・施業計画':'計画';
- document.getElementById('content').innerHTML=personaNoteHtml()+
-  table(title,['計画','種類','地域','責任主体','期間','対象森林','対象面積','状態','権限'],rows.map(x=>[
-   `<b>${esc(x.plan_name)}</b><br><span class="mini">${esc(x.plan_code)}</span>`,esc(({DEMO_FOREST_MANAGEMENT:'森林経営計画',DEMO_ANNUAL_OPERATION:'年度施業計画'}[x.plan_type_code]||x.plan_type_code)),esc(x.region_name),partyLink(x.responsible_party),`${date(x.starts_on)}〜${date(x.ends_on)}`,num(x.target_forest_count),ha(x.target_area_ha),workflowStatusLabel(x.plan_status),accessBadge(x)
-  ]))+
-  `<section><h2>案件化から計画へ</h2><div class="map-summary-note">案件化画面で整理した森林を、森林経営計画・年度施業計画などの実行単位へ接続します。候補面積と計画面積は同一値とは限らず、対象森林・期間・責任主体を確定した時点の計画値を保持します。</div></section>`+
-  `<section><h2>表示・操作ルール</h2><div class="map-summary-note">${p.kind==='municipality'?'管内計画を確認できます。承認操作は地域所属だけでは実行せず、個別ワークフロー・明示権限が付いた場合に行う設計です。':p.kind==='forest_coop'?'自組合が責任主体の計画は編集対象。管理森林に関係する他主体の計画は閲覧に限定します。':'担当・責任関係のある計画だけを表示します。既存計画の編集可否は責任主体・明示権限で分離します。'}</div></section>`;
+function aggPlanApprovalLabel(row){
+ const st=String(row.plan_status||row.version_status||'');
+ if(st==='approved')return '承認済';
+ if(row.can_review)return '承認確認';
+ return workflowStatusLabel(st||'—');
 }
+function aggPlanWorkstreams(row){
+ const v=row?.version_content;const a=v&&Array.isArray(v.workstreams)?v.workstreams:[];
+ return a.length?a.map(x=>`<span class="tag" style="margin:0 4px 4px 0">${esc(x)}</span>`).join(''):'—';
+}
+function aggPlanDetailCard(row,workRows,financeRows){
+ const ids=new Set((Array.isArray(row.work_cases)?row.work_cases:[]).map(x=>String(x.work_case_id||'')));
+ const works=(workRows||[]).filter(w=>ids.has(String(w.work_case_id||'')));
+ const scope=String(row.region_name||'').includes('青嶺')?'AOMINE':String(row.region_name||'').includes('蒼谷')?'SOUTANI':'';
+ const fin=(financeRows||[]).find(x=>x.scope_code===scope);
+ const approval=aggPlanApprovalLabel(row);
+ const approver=row.approved_by_party_name||'—';
+ const approvedDate=row.approved_on?date(row.approved_on):'—';
+ const financeText=fin?`${yen(fin.budget_jpy)}（執行 ${yen(fin.executed_jpy)}／残 ${yen(fin.remaining_jpy)}）`:'—';
+ return `<div class="plan-card"><div class="plan-card-head"><div><h3>${esc(row.plan_name)}</h3><div class="plan-card-meta">${esc(row.plan_code)}｜${esc(row.region_name||'広域')}｜v${esc(row.version_no||row.current_version_no||1)}</div></div><span class="tag">${esc(approval)}</span></div><div class="plan-card-body"><div class="plan-approval-summary"><div><div class="k">対象</div><div class="v">${num(row.target_count)}森林／${ha(row.target_area_ha)}</div></div><div><div class="k">実行責任</div><div class="v">${esc(row.responsible_party_name||row.responsible_party||'—')}</div></div><div><div class="k">承認</div><div class="v">${esc(approval)}${row.approved_on?`<br><span class="mini">${approvedDate}</span>`:''}</div></div><div><div class="k">関連作業</div><div class="v">${works.length||row.linked_work_case_count||0}件</div></div></div><details class="plan-detail-toggle" ${row.can_review?'open':''}><summary>計画内容・承認内容を見る</summary><div class="detailgrid"><div class="detailitem"><div class="k">承認者</div><div class="v">${esc(approver)}</div></div><div class="detailitem"><div class="k">承認日</div><div class="v">${approvedDate}</div></div><div class="detailitem"><div class="k">計画期間</div><div class="v">${date(row.starts_on)}〜${date(row.ends_on)}</div></div><div class="detailitem"><div class="k">地域予算・執行</div><div class="v">${financeText}</div></div></div><div class="approval-note"><b>この計画で確認・承認しているもの：</b> 対象森林と年度、実行責任主体、主要業務の実施方針です。<b>個々の現場記録や支出そのものを一括承認するものではありません。</b> 予算・執行は「お金」の正本で別管理します。</div><div style="margin-top:10px"><b>主要業務</b><div style="margin-top:6px">${aggPlanWorkstreams(row)}</div></div>${works.length?`<div style="margin-top:10px"><b>この計画に接続された作業</b><div class="plan-work-list">${works.map(w=>`<div class="plan-work-item"><b>${esc(w.title)}</b><br>${num(w.forest_count)}森林／${ha(w.target_area_ha||w.planned_area_ha)}｜${esc(workflowStatusLabel(w.work_status))}${w.latest_event_date?`<br>最新記録 ${date(w.latest_event_date)}：${esc(w.result_summary||'記録あり')}`:''}</div>`).join('')}</div></div>`:'<div class="empty">この計画に接続された作業案件はありません。</div>'}<div class="summary-links" style="margin-top:10px"><button onclick="switchBusiness('work')">作業・現場記録を見る</button><button onclick="load('finance')">お金を見る</button></div></details></div></div>`;
+}
+async function personaPlanningScreen(){
+ const p=currentPersona(),name=personaScopePartyName(p),cur=await currentProjectRow(p).catch(()=>null);
+ const isAgg=cur?.project_code==='DEMO-PRIVATE-AGG-2022'||cur?.project_type==='private_forest_aggregation';
+ let rows=[],aggWorks=[],aggFinance=[];
+ if(isAgg){
+  const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
+  const [a,w,f]=await Promise.all([
+   q('forest_os_ui_aggregation_project_plan_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`),
+   q('forest_os_ui_aggregation_project_work_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`),
+   q('forest_os_demo_public_aggregation_finance_scope',`select=*&fiscal_year=eq.${aggYear}&order=scope_code`)
+  ]);
+  rows=a.filter(x=>Number(String(x.starts_on||'').slice(0,4))===aggYear).map(x=>({...x,responsible_party:x.responsible_party_name,target_forest_count:x.target_count,access_level:x.project_access_level,can_review:x.can_review,can_edit:x.can_edit}));
+  aggWorks=w.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===aggYear);
+  aggFinance=f;
+ }else{
+  rows=await q('forest_os_ui_persona_plan_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=starts_on,plan_code`);
+ }
+ const editable=rows.filter(x=>x.can_edit).length;
+ const approved=rows.filter(x=>['approved','completed'].includes(String(x.plan_status||x.version_status||''))).length;
+ const pendingApproval=rows.filter(x=>x.can_review&&!['approved','completed'].includes(String(x.plan_status||x.version_status||''))).length;
+ cards(p.kind==='municipality'?[['対象計画',`${rows.length}件`],['承認待ち',`${pendingApproval}件`],['承認済',`${approved}件`],['対象面積',ha(rows.reduce((a,x)=>a+Number(x.target_area_ha||0),0))]]:[['対象計画',`${rows.length}件`],['編集可',`${editable}件`],['承認済',`${approved}件`],['対象面積',ha(rows.reduce((a,x)=>a+Number(x.target_area_ha||0),0))]]);
+ const aggYear=isAgg?Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026):null;
+ const title=isAgg?`私有林集約｜${aggYear}年度計画`:p.kind==='municipality'?'計画・承認':p.kind==='forest_coop'?'森林経営・施業計画':'計画';
+ const typeName=x=>({DEMO_FOREST_MANAGEMENT:'森林経営計画',DEMO_ANNUAL_OPERATION:'年度施業計画',annual_business_plan:'年度事業計画'}[x]||x);
+ let html=personaNoteHtml();
+ if(isAgg)html+=`<section><h2>表示コンテキスト</h2><div class="map-summary-note"><b>${esc(projectShortName(cur))}</b> の${aggYear}年度計画です。自治体が見る「承認」は、森林組合が何をするかだけでなく、<b>どの森林を・どの年度に・どの業務方針で動かすか</b>を確認するものとして表示します。予算・個別現場実績は別正本です。</div></section>`;
+ if(isAgg){
+   html+=rows.length?`<section><h2>${esc(title)}</h2><div class="plan-card-list" style="padding:12px">${rows.map(x=>aggPlanDetailCard(x,aggWorks,aggFinance)).join('')}</div></section>`:`<section><div class="empty">この私有林集約PJに接続された計画はありません。</div></section>`;
+ }else{
+   html+=rows.length?table(title,['計画','種類','地域','責任主体','期間','対象森林','対象面積','状態','権限'],rows.map(x=>[
+    `<b>${esc(x.plan_name)}</b><br><span class="mini">${esc(x.plan_code)}</span>`,esc(typeName(x.plan_type_code)),esc(x.region_name||'広域'),partyLink(x.responsible_party),`${date(x.starts_on)}〜${date(x.ends_on)}`,num(x.target_forest_count),ha(x.target_area_ha),workflowStatusLabel(x.plan_status),accessBadge(x)
+   ])):`<section><div class="empty">現在の立場で表示できる計画はありません。</div></section>`;
+ }
+ html+=`<section><h2>案件化から計画へ</h2><div class="map-summary-note">案件化画面で整理した森林を、森林経営計画・年度事業計画・年度施業計画などの実行単位へ接続します。候補面積と計画面積は同一値とは限らず、対象森林・期間・責任主体を確定した時点の計画値を保持します。</div></section>`+
+  `<section><h2>表示・操作ルール</h2><div class="map-summary-note">${p.kind==='municipality'?'自治体は計画内容と承認履歴を確認します。承認済計画は「確認対象」と表示し、未承認のものだけを「承認待ち」とします。':p.kind==='forest_coop'?'自組合が責任主体の計画は編集対象。管理森林に関係する他主体の計画は閲覧に限定します。':p.kind==='pm'?'広域PMは地域実施計画を横断確認し、地域間調整を行います。現場実績の確定は担当森林組合の作業案件で行います。':'担当・責任関係のある計画だけを表示します。既存計画の編集可否は責任主体・明示権限で分離します。'}</div></section>`;
+ document.getElementById('content').innerHTML=html;
+}
+function aggWorkCardHtml(x,evidenceRows=[]){
+ const authority=x.can_submit_work_record?'記録入力可':x.can_coordinate?'調整・確認':'閲覧';
+ const recCount=Number(x.work_event_count||0);
+ const ev=(evidenceRows||[]).filter(e=>String(e.work_case_id||'')===String(x.work_case_id||''));
+ const evidenceHtml=ev.length?`<details class="work-evidence"><summary>添付資料 ${num(ev.length)}件</summary><div class="work-evidence-list">${ev.map(e=>`<div class="work-evidence-item"><span class="ev-date">${e.event_date?date(e.event_date):'—'}</span><span class="ev-title">${esc(e.title||e.evidence_type||'添付資料')}<span class="demo-badge">デモ</span></span></div>`).join('')}</div></details>`:'';
+ return `<div class="work-task-card"><div class="work-task-head"><div><h3>${esc(x.title)}</h3><div class="work-task-meta">${esc(x.work_code)}｜${esc(x.region_name||'—')}｜担当 ${esc(x.responsible_party||'—')}</div></div><span class="tag">${esc(workflowStatusLabel(x.work_status))}</span></div><div class="work-task-grid"><div><div class="k">対象</div><div class="v">${num(x.forest_count)}森林／${ha(x.target_area_ha||x.planned_area_ha)}</div></div><div><div class="k">予定</div><div class="v">${date(x.planned_start_on)}〜${date(x.planned_end_on)}</div></div><div><div class="k">記録</div><div class="v">${num(recCount)}件</div></div><div><div class="k">操作</div><div class="v">${esc(authority)}</div></div></div>${x.latest_event_date?`<div class="work-latest"><b>最新記録 ${date(x.latest_event_date)}</b><br>${esc(x.result_summary||'記録あり')}${x.evidence_document_count?`<br>添付資料 ${num(x.evidence_document_count)}件`:''}</div>`:'<div class="work-latest">まだ進捗記録はありません。</div>'}${evidenceHtml}</div>`;
+}
+
 async function personaWorkScreen(){
- const p=currentPersona(),name=personaScopePartyName(p);
- const rows=await q('forest_os_ui_persona_work_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`);
+ const p=currentPersona(),name=personaScopePartyName(p),cur=await currentProjectRow(p).catch(()=>null);
+ const isAgg=cur?.project_code==='DEMO-PRIVATE-AGG-2022'||cur?.project_type==='private_forest_aggregation';
+ let rows=[],evidenceRows=[];
+ if(isAgg){
+  const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
+  const [a,e]=await Promise.all([
+   q('forest_os_ui_aggregation_project_work_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`),
+   q('forest_os_demo_public_work_evidence_compat',`select=*&order=event_date.desc,title`)
+  ]);
+  rows=a.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===aggYear);
+  const ids=new Set(rows.map(x=>String(x.work_case_id||'')));
+  evidenceRows=e.filter(x=>ids.has(String(x.work_case_id||'')));
+ }else{
+  rows=await q('forest_os_ui_persona_work_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=planned_start_on,work_code`);
+ }
  const editable=rows.filter(x=>x.can_update).length,recordable=rows.filter(x=>x.can_submit_work_record).length,coord=rows.filter(x=>x.can_coordinate).length;
- cards([['表示案件',`${rows.length}件`],['更新可',`${editable}件`],['実績入力可',`${recordable}件`],['調整可',`${coord}件`]]);
- const title=p.kind==='forestry_company'?'作業予定・実績':p.kind==='municipality'?'施業進捗':p.kind==='owner'?'施業予定・履歴':p.kind==='owner_proxy'?'作業・連絡':'作業・タスク';
- document.getElementById('content').innerHTML=personaNoteHtml()+table(title,['作業','地域','対象森林','担当','予定','面積','状態','権限'],rows.map(x=>[
-  `<b>${esc(x.title)}</b><br><span class="mini">${esc(x.work_code)}</span>`,esc(x.region_name),esc(x.forest_names||'—'),partyLink(x.responsible_party),`${date(x.planned_start_on)}〜${date(x.planned_end_on)}`,ha(x.planned_area_ha||x.target_area_ha),workflowStatusLabel(x.work_status),accessBadge(x)
- ]))+`<section><h2>計画から実施・証拠へ</h2><div class="map-summary-note">計画した森林を作業案件へ落とし、実施日・担当・面積・実績を記録します。契約、写真、報告書、検収等の証拠は作業案件に紐づけて追跡します。</div></section><section><h2>権限の考え方</h2><div class="map-summary-note">閲覧できる案件と、更新・実績入力できる案件を分離しています。${p.kind==='forestry_company'?'林業会社は自社が受託・実施する案件だけ更新・実績入力できます。':p.kind==='owner_proxy'?'代理人は委任された森林の連絡・調整だけを行い、施業実績そのものの確定はしません。':'担当主体・明示された作業関係がある場合だけ更新します。'}</div></section>`;
- const cur=await currentProjectRow(p).catch(()=>null);
- const ctx=document.createElement('section');ctx.innerHTML=`<h2>表示コンテキスト</h2><div class="map-summary-note"><b>${esc(cur?projectShortName(cur):'地域・森林')}</b>。作業案件はPJ名だけで絞らず、DB上の担当・対象森林・Access Scopeで判定します。上部の対象PJから切替できます。</div>`;
- document.getElementById('content').insertBefore(ctx,document.getElementById('content').firstChild);
- const eventHtml=await eventEntrySection();
- document.getElementById('content').insertAdjacentHTML('beforeend',eventHtml);
+ const withRecord=rows.filter(x=>x.latest_event_date).length;
+ cards(isAgg?[['PJ作業',`${rows.length}件`],['現場・進捗記録あり',`${withRecord}件`],['実績入力可',`${recordable}件`],['調整可',`${coord}件`]]:[['表示案件',`${rows.length}件`],['更新可',`${editable}件`],['実績入力可',`${recordable}件`],['調整可',`${coord}件`]]);
+ const aggYear=isAgg?Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026):null;
+ const title=isAgg?`私有林集約｜${aggYear}年度 作業・現場記録`:p.kind==='forestry_company'?'作業予定・実績':p.kind==='municipality'?'施業進捗':p.kind==='owner'?'施業予定・履歴':p.kind==='owner_proxy'?'作業・連絡':'作業・タスク';
+ let html=personaNoteHtml();
+ const notice=lastEventSaveNotice;lastEventSaveNotice='';
+ if(notice)html+=`<div class="save-feedback"><b>保存反映済み</b><br>${esc(notice)}</div>`;
+ html+=`<section><h2>表示コンテキスト</h2><div class="map-summary-note"><b>${esc(cur?projectShortName(cur):'地域・森林')}</b>。${isAgg?'選択中の私有林集約PJに接続された作業だけを、DB上の地域・担当・Access Scopeで表示しています。':'作業案件はPJ名だけで絞らず、DB上の担当・対象森林・Access Scopeで判定します。上部の対象PJから切替できます。'}</div></section>`;
+ if(rows.length){
+  if(isAgg){html+=`<section><h2>${esc(title)}</h2><div class="work-task-list">${rows.map(x=>aggWorkCardHtml(x,evidenceRows)).join('')}</div></section>`;}
+  else html+=table(title,['作業','地域','対象森林','担当','予定','面積','状態','権限'],rows.map(x=>[
+    `<b>${esc(x.title)}</b><br><span class="mini">${esc(x.work_code)}</span>`,esc(x.region_name),esc(x.forest_names||'—'),partyLink(x.responsible_party),`${date(x.planned_start_on)}〜${date(x.planned_end_on)}`,ha(x.planned_area_ha||x.target_area_ha),workflowStatusLabel(x.work_status),accessBadge(x)
+   ]));
+ }else html+=`<section><div class="empty">${isAgg?'この私有林集約PJに接続された作業案件はありません。':'現在の立場で表示できる作業案件はありません。'}</div></section>`;
+ html+=`<div id="workEntryMount"></div><details class="work-help"><summary>この画面の流れ・権限を見る</summary><div class="map-summary-note"><b>計画 → 作業案件 → 進捗記録 → 証拠</b>の順でつなぎます。写真・報告書・検収等は作業案件／作業イベントへ紐づけます。<br><b>権限：</b>${p.kind==='forestry_company'?'林業会社は自社が受託・実施する案件だけ更新・実績入力できます。':p.kind==='owner_proxy'?'代理人は委任された森林の連絡・調整だけを行い、施業実績そのものの確定はしません。':p.kind==='pm'?'広域PMは全地域の進捗を調整できますが、現場記録の確定は担当主体が行います。':'担当主体・明示された作業関係がある場合だけ更新します。'}</div></details>`;
+ document.getElementById('content').innerHTML=html;
+ const eventHtml=await eventEntrySection(isAgg?'aggregation':'generic',isAgg?rows.map(x=>x.work_case_id):[]);
+ const mount=document.getElementById('workEntryMount');if(mount)mount.innerHTML=eventHtml;
  if(authToken()){
-  const b=document.getElementById('eventBasisId');
-  if(b&&b.options.length===2){b.selectedIndex=1;await eventBasisChanged();}
+  const b=document.getElementById('eventBasisId');if(b&&b.options.length===2){b.selectedIndex=1;await eventBasisChanged();}
  }
 }
 function groupCosts(rows){
@@ -3244,7 +3414,7 @@ function contractRoleLabel(v){
 }
 function projectShortName(x){const code=typeof x==='string'?x:(x?.project_code||'');const map={'DEMO-JC-001':'青嶺町｜森林J-クレジット','DEMO-JC-SOUTANI-001':'蒼谷村｜森林J-クレジット','DEMO-JC-WIDE-001':'広域｜森林J-クレジット','DEMO-PRIVATE-AGG-2022':'広域｜私有林集約','DEMO-FOREST-RECOVERY-SOUTANI':'蒼谷村｜森林復帰'};return map[code]||(x?.project_name||x?.story_label||code||'PJ');}
 function projectStatusLabel(v){return ({active:'運用中',registered:'登録済',pre_certification:'認証前',planning:'計画中',approved:'承認済',draft:'下書き'}[v]||workflowStatusLabel(v));}
-function workflowStatusLabel(v){return ({active:'運用中',planned:'予定',completed:'完了',pre_certification:'認証前',registered:'登録済',planning:'計画中',approved:'承認済',draft:'下書き',pending:'確認中',cancelled:'取消',settled:'精算済',paid:'支払済',issued:'発行済',forecast:'見込',provisional:'仮置き',reference:'参考',estimate_confirmed:'積算確認済',decided:'決定済',actual:'実績',estimating:'積算中',estimated:'積算確定',contracted:'契約済'}[v]||txt(v));}
+function workflowStatusLabel(v){return ({active:'運用中',in_progress:'進行中',planned:'予定',completed:'完了',pre_certification:'認証前',registered:'登録済',planning:'計画中',approved:'承認済',draft:'下書き',pending:'確認中',cancelled:'取消',settled:'精算済',paid:'支払済',issued:'発行済',forecast:'見込',provisional:'仮置き',reference:'参考',estimate_confirmed:'積算確認済',decided:'決定済',actual:'実績',estimating:'積算中',estimated:'積算確定',contracted:'契約済'}[v]||txt(v));}
 function accessLevelLabel(v){return ({project:'PJ全体',full_project:'PJ全体',region:'地域範囲',region_detail:'地域詳細',forest:'森林単位',forest_detail:'担当森林',work_context:'担当作業に必要な範囲',self:'本人範囲',forest_self:'自分の森林',summary:'概要'}[v]||txt(v));}
 function ownershipClassLabel(v){return ({prefectural:'県有林',municipal:'市町村有林',private:'私有林',shared:'共有林',community:'入会・共有林'}[v]||txt(v));}
 function storyComponentLabel(v){return ({watershed:'水源地',reforestation:'再造林',mixed:'水源地＋再造林'}[v]||txt(v));}
@@ -3489,7 +3659,7 @@ async function jcreditProject(){
 }
 
 async function canonicalProjectFinanceData(cur){
- const pid=cur.jcredit_project_id||cur.project_id||null,code=cur.project_code||'';
+ const pid=cur.jcredit_project_id||cur.project_id||cur.initiative_id||null,code=cur.project_code||'';
  const [budgets,costs,txs,subs,ins,dists,ests]=await Promise.all([
   q('forest_os_demo_public_budget_current','select=*'),
   q('forest_os_demo_public_cost_current','select=*'),
@@ -3625,25 +3795,32 @@ async function personaFinanceScreen(){
  const hz=hzs[0]||{},drafts=financeDraftList(code);
  const canonicalFinance=await canonicalProjectFinanceData(cur);
  const currentCost=moneyRange(hz.known_project_cost_min_jpy,hz.known_project_cost_base_jpy,hz.known_project_cost_max_jpy);
- const officialBudget=canonicalFinance.budgets.reduce((a,x)=>a+Number(x.total_amount||0),0);
+ const selectedFinanceYear=code==='DEMO-PRIVATE-AGG-2022'?Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026):null;
+ const officialBudget=(code==='DEMO-PRIVATE-AGG-2022'?canonicalFinance.budgets.filter(x=>Number(x.fiscal_year)===selectedFinanceYear):canonicalFinance.budgets).reduce((a,x)=>a+Number(x.total_amount||0),0);
  const executed=canonicalFinance.txs.filter(x=>x.reference_no==='DEMO-PAY-2026-01').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
  const registeredForecast=canonicalFinance.costs.filter(x=>x.accounting_status==='forecast').reduce((a,x)=>a+Number(x.amount_jpy||0),0);
  const recordedIncome=canonicalFinance.txs.filter(x=>x.direction==='in').reduce((a,x)=>a+Number(x.amount_in_tax||0),0);
  const distributionPlanned=canonicalFinance.dists.reduce((a,x)=>a+Number(x.finalized_distribution_jpy||x.planned_distribution_jpy||0),0);
- cards([['現在のPJ',esc(cur.story_label||'—')],['正式予算',officialBudget?yen(officialBudget):'未登録'],['執行実績',executed?yen(executed):'未登録'],['登録済み見込費用',registeredForecast?yen(registeredForecast):'未登録'],['入金記録',recordedIncome?yen(recordedIncome):'—'],['分配予定',distributionPlanned?yen(distributionPlanned):'—']]);
+ cards([['現在のPJ',esc(projectShortName(cur))],['正式予算',officialBudget?yen(officialBudget):'未登録'],['執行実績',executed?yen(executed):'未登録'],['登録済み見込費用',registeredForecast?yen(registeredForecast):'未登録'],['入金記録',recordedIncome?yen(recordedIncome):'—'],['分配予定',distributionPlanned?yen(distributionPlanned):'—']]);
  let html=personaNoteHtml()+projectBanner(cur)+canonicalProjectFinanceHtml(canonicalFinance,cur)+projectFinanceSnapshotHtml(financeSnapshot);
- if(p.kind==='pm'&&projectHubType==='aggregation'){
+ if(code==='DEMO-PRIVATE-AGG-2022')html+=`<section><h2>私有林集約｜予算の読み方</h2><div class="map-summary-note"><b>予算額と財源内訳は別軸です。</b> 年度予算は budget_versions.total_amount を正本とし、費用明細と財源明細を合算して二重計上しません。費用は林野庁の参考歩掛（意向調査8,000円/ha、境界確認16,000円/ha、境界測量45,000円/ha、集積計画案作成・同意取得30,400円/ha）を基礎にし、広域共通調整は奈良県R7の共同計画等4,000円/haを目安にしています。財源80%森林環境譲与税・20%一般財源はデモ仮定です。</div></section>`;
+ if(code==='DEMO-PRIVATE-AGG-2022'){
   const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
   const [aggScopes,aggDetails]=await Promise.all([
    q('forest_os_demo_public_aggregation_finance_scope',`select=*&fiscal_year=eq.${aggYear}&order=scope_code`),
    q('forest_os_demo_public_aggregation_finance_detail',`select=*&fiscal_year=eq.${aggYear}&order=scope_code,expense_code,funding_code`)
   ]);
-  const scopeOrder=['AOMINE','SOUTANI','SHARED'];
-  const scopeCards=scopeOrder.map(c=>aggScopes.find(x=>x.scope_code===c)).filter(Boolean).map(x=>`<div class="pj-money-box"><div class="title">${esc(x.scope_label)}</div><div class="pj-money-line"><span>予算</span><b>${yen(x.budget_jpy)}</b></div><div class="pj-money-line"><span>執行</span><b>${yen(x.executed_jpy)}</b></div><div class="pj-money-line"><span>残額</span><b>${yen(x.remaining_jpy)}</b></div></div>`).join('');
-  html+=`<section><h2>広域集約PJ｜${aggYear}年度の負担区分</h2><div class="pj-money-split pj-money-scope">${scopeCards}</div><div class="finance-disclaimer">上段はPJ説明用の大区分です。以下の詳細収支は、負担主体・費目・財源を分離して保持しています。</div></section>`;
-  if(aggDetails.length)html+=table('広域集約PJ｜詳細収支',['負担区分','負担主体','費目','財源','予算','執行','按分根拠'],aggDetails.map(x=>[esc(x.scope_label),esc(x.burden_party_label),esc(x.expense_label),esc(x.funding_label),yen(x.budget_jpy),yen(x.executed_jpy),esc(x.allocation_rule)]));
- }
- if(p.kind==='forest_coop'&&extras[0]?.length)html+=ownOrgFinanceSection(p,extras[0][0]);
+  const totalBudget=aggScopes.reduce((z,x)=>z+Number(x.budget_jpy||0),0),totalExecuted=aggScopes.reduce((z,x)=>z+Number(x.executed_jpy||0),0),totalRemaining=aggScopes.reduce((z,x)=>z+Number(x.remaining_jpy||0),0);
+  const ownScope=String(p.party||'').includes('青嶺')?'AOMINE':String(p.party||'').includes('蒼谷')?'SOUTANI':null;
+  const allowedCodes=(p.kind==='pm'||p.kind==='admin'||!ownScope)?['AOMINE','SOUTANI','SHARED']:[ownScope,'SHARED'];
+  const visibleScopes=allowedCodes.map(c=>aggScopes.find(x=>x.scope_code===c)).filter(Boolean);
+  const scopeCards=visibleScopes.map(x=>`<div class="pj-money-box"><div class="title">${esc(x.scope_label)}</div><div class="pj-money-line"><span>予算</span><b>${yen(x.budget_jpy)}</b></div><div class="pj-money-line"><span>執行</span><b>${yen(x.executed_jpy)}</b></div><div class="pj-money-line"><span>残額</span><b>${yen(x.remaining_jpy)}</b></div></div>`).join('');
+  html+=`<section><h2>広域集約PJ｜${aggYear}年度 予算・執行</h2><div class="finance-snapshot"><div><div class="k">PJ全体予算</div><div class="v">${yen(totalBudget)}</div></div><div><div class="k">PJ全体執行</div><div class="v">${yen(totalExecuted)}</div></div><div><div class="k">PJ全体残額</div><div class="v">${yen(totalRemaining)}</div></div></div><div class="pj-money-split pj-money-scope">${scopeCards}</div><div class="finance-disclaimer">${ownScope?'PJ全体に加え、自地域と広域共通の負担区分を表示しています。':'PJ全体を地域別・広域共通に分けて表示しています。'} 予算と財源は別軸で、費用明細＋財源明細を足して予算額を二重計上しません。</div></section>`;
+  const visibleDetails=aggDetails.filter(x=>allowedCodes.includes(x.scope_code));
+  if(visibleDetails.length)html+=table('広域集約PJ｜詳細収支',['負担区分','負担主体','費目','財源','予算','執行','按分根拠'],visibleDetails.map(x=>[esc(x.scope_label),esc(x.burden_party_label),esc(x.expense_label),esc(x.funding_label),yen(x.budget_jpy),yen(x.executed_jpy),esc(x.allocation_rule)]));
+  const aggBudgets=canonicalFinance.budgets.filter(x=>Number(x.fiscal_year)===aggYear);
+  if(aggBudgets.length)html+=table('正式予算｜費用と財源の対応',['年度','正式予算','費用内訳合計','財源内訳合計','状態'],aggBudgets.map(x=>{const lines=Array.isArray(x.lines)?x.lines:[],exp=lines.filter(l=>l.category==='expense').reduce((z,l)=>z+Number(l.planned_amount||0),0),fund=lines.filter(l=>l.category==='funding').reduce((z,l)=>z+Number(l.planned_amount||0),0);return [esc(x.fiscal_year),yen(x.total_amount),yen(exp),yen(fund),workflowStatusLabel(x.budget_status||'—')]}));
+ } if(p.kind==='forest_coop'&&extras[0]?.length)html+=ownOrgFinanceSection(p,extras[0][0]);
  if(p.kind==='pm'){
   const b=(extras[0]||[])[0];
   if(b)html+=detailSection('PM／広域運営法人｜法人経営（計画値・PJ横断）',[
