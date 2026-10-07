@@ -406,11 +406,12 @@ th{background:#f1f5f2;color:#3e4b43;font-weight:700}
 .jc-money-overview{border-color:#cbd6ce;background:#fcfdfc}
 .jc-money-scope-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
 .jc-money-scope-head h3{margin:0}.jc-money-asof{font-size:9px;color:var(--muted);white-space:nowrap}
-.jc-money-total-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.jc-money-total{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}
-.jc-money-total .k{font-size:9px;color:var(--muted);font-weight:700}.jc-money-total .v{font-size:17px;font-weight:800;margin-top:4px}.jc-money-total .d{font-size:9px;color:var(--muted);line-height:1.5;margin-top:4px}
-.jc-money-total.unknown{background:#fafbfa}.jc-money-total.unknown .v{font-size:14px;color:#59655e}
-.jc-money-periods{display:grid;grid-template-columns:1fr 1fr 1.25fr 1.35fr 1.25fr;gap:7px;margin-top:10px}
+.jc-money-total-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.jc-money-total{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff;min-width:0}
+.jc-money-total .k{font-size:10px;color:var(--muted);font-weight:750;line-height:1.4;text-wrap:balance;word-break:normal;overflow-wrap:normal;line-break:strict}.jc-money-total .v{font-size:19px;font-weight:800;line-height:1.3;margin-top:5px;word-break:normal;overflow-wrap:normal;line-break:strict}.jc-money-total .d{font-size:10px;color:var(--muted);line-height:1.6;margin-top:5px;text-wrap:pretty;word-break:normal;overflow-wrap:normal;line-break:strict}
+.jc-money-total.unknown{background:#fafbfa}.jc-money-total.unknown .v{font-size:16px;color:#59655e}
+.jc-money-flow-pair{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}.jc-money-flow-pair span{white-space:nowrap}.jc-money-flow-pair .in::before{content:'入金 ';font-size:10px;color:var(--muted);font-weight:700}.jc-money-flow-pair .out::before{content:'出金 ';font-size:10px;color:var(--muted);font-weight:700}
+.jc-money-periods{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}
 .jc-money-period{border:1px solid var(--line);border-radius:8px;padding:9px;background:#fafbfa;min-height:76px}
 .jc-money-period.current{background:#eef5f0;border-color:#91aa98}.jc-money-period .y{font-size:10px;font-weight:800}.jc-money-period .t{font-size:10px;font-weight:700;margin-top:4px}.jc-money-period .d{font-size:9px;color:var(--muted);line-height:1.45;margin-top:3px}
 .jc-money-twoaxis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.jc-money-axis{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff}.jc-money-axis h4{font-size:11px;margin:0 0 8px}.jc-money-axis .axis-total{font-size:19px;font-weight:800}.jc-money-axis .axis-note{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.45}
@@ -420,7 +421,8 @@ th{background:#f1f5f2;color:#3e4b43;font-weight:700}
 .jc-money-subhead{font-size:11px;font-weight:800;margin:14px 0 7px;padding-top:10px;border-top:1px solid var(--line)}
 .jc-money-year-state{font-size:9px;padding:2px 6px;border-radius:999px;border:1px solid #d8dfda;white-space:nowrap}.jc-money-year-state.actual{background:#eef5f0}.jc-money-year-state.plan{background:#f7f7f7;color:#68716b}.jc-money-year-state.unknown{background:#fbfaf5;color:#716957}
 .jc-money-ledger summary{cursor:pointer;font-size:10px;font-weight:800;padding:8px 0}.jc-money-ledger .tablewrap{margin-top:4px}
-@media(max-width:900px){.jc-money-total-grid{grid-template-columns:1fr 1fr}.jc-money-periods{grid-template-columns:1fr 1fr}.jc-money-twoaxis,.jc-tax-rule-grid{grid-template-columns:1fr}.jc-revenue-flow{grid-template-columns:1fr}.jc-revenue-arrow{display:none}}
+@media(max-width:900px){.jc-money-total-grid{grid-template-columns:1fr 1fr}.jc-money-periods{grid-template-columns:repeat(2,minmax(0,1fr))}.jc-money-twoaxis,.jc-tax-rule-grid{grid-template-columns:1fr}.jc-revenue-flow{grid-template-columns:1fr}.jc-revenue-arrow{display:none}}
+@media(max-width:560px){.jc-money-total-grid,.jc-money-periods{grid-template-columns:1fr}}
 
 
 /* finance / table readability cleanup 2026-10-07 */
@@ -3890,7 +3892,7 @@ async function aomineJcreditSummary(view='project'){
  <h4 style="margin-top:14px">認証回別｜売上ポテンシャル</h4><div class="tablewrap"><table><thead><tr><th>認証回</th><th>発行量</th><th>リスク留保</th><th>販売可能量</th><th>販売単価</th><th>売上</th></tr></thead><tbody>${comparisonRoundRows}<tr><td><b>4回合計</b></td><td><b>${num(comparisonIssuedPerRound*comparisonRoundCount)}t</b></td><td><b>${num(comparisonIssuedPerRound*comparisonReserveRate*comparisonRoundCount)}t</b></td><td><b>${num(comparisonSaleablePerRound*comparisonRoundCount)}t</b></td><td>—</td><td><b>${yen(comparisonGrossPotential)}</b><br><span class="smallnote">費用控除前・比較用</span></td></tr></tbody></table></div></details>`;
 
  const moneyOverviewHtml=`<div class="pj-block jc-money-overview"><div class="jc-money-scope-head"><div><h3>お金｜PJ全体 → 2026年度 → 第1回販売</h3><div class="pj-note">「事業収支（税抜）」「資金繰り（税込）」「配賦」を分け、どの年度・認証回の金額かを明示します。全期間の総事業費・最終利益は将来費用が未積算のため現時点では確定しません。</div></div><div class="jc-money-asof">PJ計画 ${planStartYear}〜${planEndYear}年度</div></div>
- <div class="jc-money-total-grid"><div class="jc-money-total"><div class="k">累計実績｜事業費（税抜）</div><div class="v">${yen(actualExpenseEx)}</div><div class="d">2026年度の登録済み支出。将来管理費等は含まない。</div></div><div class="jc-money-total"><div class="k">累計実績｜Jクレ売上（税抜）</div><div class="v">${yen(actualRevenueEx||salesActual)}</div><div class="d">現在は2026年度・第1回販売200tのみ。</div></div><div class="jc-money-total"><div class="k">累計実績｜資金移動（税込）</div><div class="v">入 ${yen(actualRevenueGross)} / 出 ${yen(actualExpenseGross)}</div><div class="d">実際の入出金。損益とは別。</div></div><div class="jc-money-total unknown"><div class="k">PJ全期間｜最終収支</div><div class="v">未算定</div><div class="d">${esc(allPeriodStatus)}。第2〜4回の費用・認証量・販売額等が未確定。</div></div></div>
+ <div class="jc-money-total-grid"><div class="jc-money-total"><div class="k">実績事業費（税抜）</div><div class="v">${yen(actualExpenseEx)}</div><div class="d">現時点で登録されている2026年度の支出。将来管理費等は含みません。</div></div><div class="jc-money-total"><div class="k">実績Jクレ売上（税抜）</div><div class="v">${yen(actualRevenueEx||salesActual)}</div><div class="d">2026年度・第1回販売200tの売上実績です。</div></div><div class="jc-money-total"><div class="k">実績入出金（税込）</div><div class="v jc-money-flow-pair"><span class="in">${yen(actualRevenueGross)}</span><span class="out">${yen(actualExpenseGross)}</span></div><div class="d">銀行上の資金移動。事業収支とは分けて見ます。</div></div><div class="jc-money-total unknown"><div class="k">PJ全期間の最終収支</div><div class="v">未算定</div><div class="d">${esc(allPeriodStatus)}。第2〜4回の費用・認証量・販売額等が未確定です。</div></div></div>
  <div class="jc-money-periods"><div class="jc-money-period"><div class="y">2024〜2025</div><div class="t">PJ開始・森林管理</div><div class="d">認証対象期間。金額の正本登録はなし。</div></div><div class="jc-money-period current"><div class="y">2026｜現在</div><div class="t">第1回認証・発行・販売</div><div class="d">費用・売上・在庫・配賦が実績として動いた年度。</div></div><div class="jc-money-period"><div class="y">2027</div><div class="t">森林管理・在庫運用</div><div class="d">将来費用は未積算。既存在庫の販売判断を継続。</div></div><div class="jc-money-period"><div class="y">2028・2030・2032</div><div class="t">第2〜4回認証予定</div><div class="d">認証量・発行量・売上・費用は未確定。</div></div><div class="jc-money-period"><div class="y">${postYears}</div><div class="t">認証終了後の森林管理</div><div class="d">管理継続期間。将来管理費は現在未積算。</div></div></div>
  <div class="jc-money-subhead">2026年度｜第1回発行で実際に動いたお金</div>
  <div class="jc-tax-rule-grid"><div class="jc-money-axis"><h4>事業収支｜税抜</h4><div class="axis-total">費用 ${yen(actualExpenseEx)}</div><div class="axis-note">売上・費用を同じ税抜基準で比較します。</div><div class="jc-money-breakdown"><div><span>森林整備業務費</span><b>${yen(actualForestEx)}</b></div><div><span>審査・認証費</span><b>${yen(actualReviewEx)}</b></div><div><span>Jクレ売上</span><b>${yen(actualRevenueEx||salesActual)}</b></div></div></div>
@@ -4363,6 +4365,11 @@ async function personaFinanceScreen(){
  let financeSnapshot=null;
  try{const fs=await q('forest_os_ui_persona_project_finance_display',`select=*&viewer_name=eq.${encodeURIComponent(name)}&project_code=eq.${encodeURIComponent(code)}&limit=1`);financeSnapshot=fs[0]||null;}catch(_){financeSnapshot=null;}
 
+ // J-credit has its own detailed money screen. Route here before the generic
+ // organization-only finance fallback so municipality personas can follow
+ // issuance -> registry account -> lot -> transfer -> sale -> receipt -> distribution.
+ if(code.startsWith('DEMO-JC-')){await jcreditFinanceDetailScreen(cur,p,financeSnapshot);return;}
+
  if(cur.can_view_project_finance===false){
   const promises=[
    q('forest_os_ui_persona_transaction_scope',`select=*&viewer_name=eq.${encodeURIComponent(name)}&order=transaction_date`),
@@ -4394,8 +4401,6 @@ async function personaFinanceScreen(){
   if(contracts.length)scoped+=table('このPJの関係契約',['契約','立場','期間','状態'],contracts.map(x=>[esc(x.title),esc(contractRoleLabel(x.party_role)),`${date(x.starts_on)}〜${date(x.ends_on)}`,esc(demoStatusLabel(x.status))]));
   document.getElementById('content').innerHTML=scoped;return;
  }
-
- if(code.startsWith('DEMO-JC-')){await jcreditFinanceDetailScreen(cur,p,financeSnapshot);return;}
 
  const extraPromises=[];
  if(p.kind==='forest_coop')extraPromises.push(q('forest_os_ui_persona_finance_dashboard',`select=*&viewer_name=eq.${encodeURIComponent(name)}`));
