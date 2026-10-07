@@ -1216,7 +1216,7 @@ async function pm(){
  document.getElementById('content').innerHTML=html;
 }
 
-let forestRows=[],forestContracts=[],forestEvidence=[],forestRightsMatrix=[];
+let forestRows=[],forestContracts=[],forestEvidence=[],forestRightsMatrix=[],forestOwnerRows=[],forestOwnerPortfolio=[];
 function forestHubScroll(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
 function forestProjectAction(x){
  const name=String(x.jcredit_project_name||'');
@@ -1226,6 +1226,31 @@ function forestProjectAction(x){
 function forestHubHtml(x,c,e){
  const incidentCount=Number(x.active_incident_count||0),contractCount=c.length,evidenceCount=e.length;
  return `<div class="target-hub-head"><div class="eyebrow">森林サマリー</div><h2>${esc(x.name)}</h2><div class="meta">${esc(x.region_name||'—')}｜${ha(x.area_ha)}｜この森林を起点に関係情報を確認</div><div class="target-related"><div><div class="k">関係プロジェクト</div><div class="v">${esc(x.jcredit_project_name||'登録関係を詳細で確認')}</div></div><div><div class="k">作業・案件</div><div class="v">${esc(x.latest_work_title||'現在の作業案件なし')}</div></div><div><div class="k">出来事・異常</div><div class="v">対応中 ${num(incidentCount)}件${x.incident_title?`｜${esc(x.incident_title)}`:''}</div></div></div><div class="target-hub-nav">${forestProjectAction(x)}<button type="button" onclick="forestHubScroll('forest-rights')">所有・権利</button><button type="button" onclick="forestHubScroll('forest-work')">計画・作業を見る</button><button type="button" onclick="forestHubScroll('forest-events')">出来事・履歴を見る</button><button type="button" onclick="forestHubScroll('forest-contracts')">契約 ${contractCount}件</button><button type="button" onclick="load('work')">現場記録</button><button type="button" onclick="load('finance')">お金</button></div></div>`;
+}
+function rightsVerificationLabel(v){return ({registry_confirmed:'登記確認',contract_confirmed:'契約確認',local_rules_confirmed:'規約・地域資料確認',verified:'確認済み',unverified:'未確認'}[v]||txt(v));}
+function forestOwnerDetailRowsHtml(x){
+ const rows=forestOwnerRows.filter(z=>String(z.forest_unit_id)===String(x.forest_unit_id));
+ if(!rows.length)return `<section><h2>所有者・権利者</h2><div class="empty">所有者・権利者は未確認です。推測では補完しません。</div></section>`;
+ const portfolio=forestOwnerPortfolio.filter(z=>String(z.forest_unit_id)===String(x.forest_unit_id));
+ const prFor=z=>portfolio.find(p=>p.party_name===z.owner_name&&p.right_type_name===z.right_name&&p.target_type==='forest_unit')||portfolio.find(p=>p.party_name===z.owner_name&&p.target_type==='forest_unit');
+ return table('所有者・権利者の明細',['関係者','権利・役割','持分・株数','確認根拠','Jクレ配賦','支払予定','状態'],rows.map(z=>{
+   const pr=prFor(z),share=z.quantity_text||(z.percentage!=null?`${num(z.percentage)}%`:(z.share_count!=null?`${num(z.share_count)}株`:'—'));
+   const basis=pr?`${rightsVerificationLabel(pr.verification_status)}${pr.verification_basis?`｜${esc(pr.verification_basis)}`:''}`:'—';
+   return [partyLink(z.owner_name),esc(z.right_name||'—'),esc(share),basis,z.planned_distribution_amount==null?'—':yen(z.planned_distribution_amount),date(z.planned_payment_on),z.distribution_status?`<span class="tag">${esc(z.distribution_status==='planned'?'配賦予定':z.distribution_status)}</span>`:'—'];
+ }));
+}
+function forestRelatedOwnerRowsHtml(x){
+ const current=forestOwnerRows.filter(z=>String(z.forest_unit_id)===String(x.forest_unit_id));
+ const principal=new Set(current.filter(z=>!String(z.right_name||'').includes('管理')).map(z=>z.owner_name).filter(Boolean));
+ if(!principal.size)return '';
+ const seen=new Set(),rows=[];
+ forestOwnerRows.forEach(z=>{
+   if(String(z.forest_unit_id)===String(x.forest_unit_id)||!principal.has(z.owner_name))return;
+   const key=`${z.owner_name}|${z.forest_unit_id}|${z.right_name}`;if(seen.has(key))return;seen.add(key);
+   const f=forestRows.find(r=>String(r.forest_unit_id)===String(z.forest_unit_id));
+   rows.push([partyLink(z.owner_name),esc(z.name||f?.name||'—'),esc(f?.region_name||'—'),esc(z.right_name||'—'),esc(z.quantity_text||(z.percentage!=null?`${num(z.percentage)}%`:(z.share_count!=null?`${num(z.share_count)}株`:'—')))]);
+ });
+ return rows.length?table('同じ権利者の他森林（現在の表示範囲）',['権利者','森林','地域','権利','持分'],rows):'';
 }
 function renderForestDetail(id){
  const x=forestRows.find(r=>r.forest_unit_id===id) || forestRows[0];
@@ -1257,6 +1282,7 @@ function renderForestDetail(id){
    ['J-クレジット帰属',rightsHolderText(rx.credit_entitlements)],
    ['クレジット帰属根拠',rightsBasisLabel(rx.credit_entitlement_basis)]
  ]):'')+
+ forestOwnerDetailRowsHtml(x)+forestRelatedOwnerRowsHtml(x)+
  detailSection('権利・相続',[
    ['権利関係',txt(x.rights_summary)],['未解決データ不一致',`${num(x.unresolved_conflicts||0)}件`],
    ['相続状態',txt(x.succession_status)],['相続メモ',txt(x.succession_note)]
@@ -1283,16 +1309,20 @@ function renderForestDetail(id){
  ]);
 }
 async function forestView(){
- const [allForests,allContracts,allEvidence,personaScopes,rightsMatrix]=await Promise.all([
+ const [allForests,allContracts,allEvidence,personaScopes,rightsMatrix,ownerRows,ownerPortfolio]=await Promise.all([
    q('forest_os_demo_public_forest_detail_compat','select=*&order=name'),
    q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
    q('forest_os_demo_public_work_evidence_compat','select=*'),
    q('forest_os_demo_public_persona_forest_scope','select=viewer_name,forest_unit_id&order=viewer_name,forest_unit_id'),
-   q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name')
+   q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
+   q('forest_os_demo_public_owner_forest_compat','select=*&order=name,owner_name'),
+   q('forest_os_demo_public_party_rights_portfolio','select=*&target_type=eq.forest_unit&order=region_name,forest_name,party_name')
  ]);
  const viewer=personaScopePartyName();
  const allowedIds=new Set(personaScopes.filter(x=>x.viewer_name===viewer).map(x=>String(x.forest_unit_id)));
  forestRightsMatrix=rightsMatrix.filter(x=>allowedIds.has(String(x.forest_unit_id)));
+ forestOwnerRows=ownerRows.filter(x=>allowedIds.has(String(x.forest_unit_id)));
+ forestOwnerPortfolio=ownerPortfolio.filter(x=>allowedIds.has(String(x.forest_unit_id)));
  const detailById=new Map(allForests.map(x=>[String(x.forest_unit_id),x]));
  const rightsById=new Map(forestRightsMatrix.map(x=>[String(x.forest_unit_id),x]));
  forestRows=[...allowedIds].map(id=>{
