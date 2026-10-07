@@ -446,6 +446,17 @@ section h2,.pj-block h3,.project-choice .pc-title,.screen-scope .scope-title,.ca
 @media(max-width:900px){.finance-axis{grid-template-columns:1fr}.tablewrap table.table-cols-7{min-width:1000px}.tablewrap table.table-cols-8{min-width:1120px}.tablewrap table.table-cols-9{min-width:1240px}}
 @media(max-width:560px){.finance-snapshot,.finance-overview-grid,.finance-stage-grid{grid-template-columns:1fr 1fr}.card .value{font-size:19px}.finance-period-tabs{flex-wrap:nowrap;overflow-x:auto}.finance-period-tabs button{flex:0 0 auto}}
 
+/* J-credit finance detail rebuild 2026-10-07 */
+.tablewrap table.table-cols-10{min-width:1500px}.tablewrap table.table-cols-11{min-width:1660px}.tablewrap table.table-cols-12{min-width:1820px}.tablewrap table.table-cols-13{min-width:1980px}.tablewrap table.table-cols-14{min-width:2160px}.tablewrap table.table-cols-15{min-width:2340px}
+.money-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--line)}
+.money-detail-head h2{margin:0 0 5px}.money-detail-head .period{font-size:10px;font-weight:800;white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:#fff}
+.money-detail-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:8px;padding:12px}.money-detail-kpi{border:1px solid var(--line);border-radius:9px;background:#fff;padding:10px}.money-detail-kpi .k{font-size:10px;color:var(--muted);font-weight:800}.money-detail-kpi .v{font-size:18px;font-weight:800;line-height:1.25;margin:4px 0}.money-detail-kpi .d{font-size:10px;color:var(--muted);line-height:1.45}
+.money-trace-flow{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:7px;padding:12px}.money-trace-step{border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff;min-width:0}.money-trace-step .n{font-size:9px;color:var(--muted);font-weight:800}.money-trace-step .t{font-size:12px;font-weight:800;margin:3px 0;line-height:1.35}.money-trace-step .d{font-size:9px;color:var(--muted);line-height:1.45}
+.money-model-note{padding:10px 12px;background:#fbfaf5;border:1px solid #e5e0d2;border-radius:8px;font-size:11px;line-height:1.6;margin:10px 12px}.money-model-note b{font-weight:850}
+.money-split-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;padding:12px}.money-split-card{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}.money-split-card .k{font-size:10px;color:var(--muted);font-weight:800}.money-split-card .v{font-size:16px;font-weight:800;margin-top:4px}.money-split-card .d{font-size:10px;color:var(--muted);line-height:1.5;margin-top:4px}
+.money-status-chip{display:inline-block;border:1px solid #d8dfda;border-radius:999px;padding:2px 6px;font-size:9px;white-space:nowrap;background:#fff}.money-status-chip.actual{background:#eef5f0}.money-status-chip.plan{background:#fbfaf5}.money-status-chip.pending{background:#f7f7f7;color:#68716b}
+@media(max-width:900px){.money-trace-flow{grid-template-columns:1fr 1fr}.money-detail-head{display:block}.money-detail-head .period{display:inline-block;margin-top:8px}.tablewrap table.table-cols-10{min-width:1400px}.tablewrap table.table-cols-11{min-width:1540px}.tablewrap table.table-cols-12{min-width:1680px}.tablewrap table.table-cols-13{min-width:1820px}.tablewrap table.table-cols-14{min-width:1960px}.tablewrap table.table-cols-15{min-width:2100px}}
+
 </style>
 </head>
 <body>
@@ -4216,6 +4227,88 @@ function recoveryFinanceStageHtml(estimates,budgets,costs){
  return `<section><h2>森林復帰検討｜お金の現在地</h2><div class="finance-stage-grid"><div class="finance-stage-card ${estimate?'actual':'pending'}"><div class="k">参考積算</div><div class="v">${estimate&&estimateTotal?yen(estimateTotal):'未登録'}</div><div class="d">${estimate?`${esc(estimate.fiscal_year)}年度の検討用。予算・発注額ではありません。`:'検討用積算は未登録です。'}</div></div><div class="finance-stage-card ${budgets?.length?'actual':'pending'}"><div class="k">承認済・登録予算</div><div class="v">${budgets?.length?yen(budgetTotal):'未登録'}</div><div class="d">事業化・予算化された金額だけをここへ表示。</div></div><div class="finance-stage-card ${costs?.length?'actual':'pending'}"><div class="k">実績費用</div><div class="v">${costs?.length?yen(actualTotal):'未発生'}</div><div class="d">支払・原価の実績が発生した時点でCanonical費用へ接続。</div></div><div class="finance-stage-card pending"><div class="k">現在の判断</div><div class="v">事業化前</div><div class="d">参考積算 → 予算 → 契約・発注 → 実績の順に段階を分けます。</div></div></div></section>`;
 }
 
+
+function jcreditSaleChannelLabel(v){return ({direct:'相対取引',intermediary:'仲介取引',market:'市場・取引所',regional:'地域企業向け'}[String(v||'')]||txt(v));}
+function jcreditBucketLabel(v){return ({available:'販売可能',risk_reserve:'リスク留保',sold:'売却済',retired:'無効化済'}[String(v||'')]||txt(v));}
+function dateTimeJa(v){if(!v)return '—';const d=new Date(v);if(Number.isNaN(d.getTime()))return esc(String(v));return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+function jcreditWeightedPrice(rows){const q=rows.reduce((z,x)=>z+Number(x.qty||0),0),a=rows.reduce((z,x)=>z+Number(x.qty||0)*Number(x.price||0),0);return q?a/q:0;}
+function jcreditSalesScenarioHtml(code){
+ if(code!=='DEMO-JC-001')return '';
+ const mix=[
+  {status:'実績',channel:'相対取引',detail:'第1回・売却済',qty:200,price:6000},
+  {status:'試算',channel:'相対取引・高付加価値',detail:'買主個別開拓',qty:300,price:7000},
+  {status:'試算',channel:'市場等',detail:'市場・取引サービス等',qty:200,price:5000},
+  {status:'試算',channel:'地域企業等',detail:'地域価値を含む直接販売',qty:200,price:5500}
+ ];
+ const qty=mix.reduce((z,x)=>z+x.qty,0),amount=mix.reduce((z,x)=>z+x.qty*x.price,0),avg=jcreditWeightedPrice(mix);
+ return `<section><h2>第1回発行分｜販売価格を一本にしない売上モデル</h2><div class="money-model-note"><b>比較用の販売シナリオです。</b> 1,000t発行のうち100tをリスク留保、900tを販売対象とし、実績200tと複数の販売チャネルを組み合わせて、全体の加重平均を${yen(avg)}/tに合わせています。実績以外の単価・数量は正本ではありません。</div></section>${table('販売ロット別｜実績＋比較試算',['区分','販路','想定内容','数量','単価（税抜）','売上（税抜）','構成比'],mix.map(x=>[`<span class="money-status-chip ${x.status==='実績'?'actual':'plan'}">${x.status}</span>`,esc(x.channel),esc(x.detail),`${num(x.qty)} t`,`${yen(x.price)}/t`,yen(x.qty*x.price),`${Math.round(x.qty/qty*1000)/10}%`]))}<section><div class="finance-disclaimer">販売対象 ${num(qty)}t／想定売上 ${yen(amount)}／加重平均 ${yen(avg)}/t。全部を同じ単価で売る前提にはしていません。</div></section>`;
+}
+function jcreditScenarioCashflowHtml(code,financeStory,lines){
+ if(code!=='DEMO-JC-001')return '';
+ const baseSale=1200000, roundGross=5400000, firstRemaining=roundGross-baseSale;
+ const y26=(financeStory||[]).find(x=>Number(x.fiscal_year)===2026)||{};
+ const muniRate=baseSale?Number(y26.municipality_return_jpy||0)/baseSale:0;
+ const ownerRate=baseSale?(Number(y26.private_owner_return_jpy||0)+Number(y26.common_right_return_jpy||0))/baseSale:0;
+ const reviewBase=(lines||[]).filter(x=>Number(x.fiscal_year)===2026&&x.line_code==='REVIEW_CERT').reduce((z,x)=>z+Number(x.amount_base_jpy||0),0)||1363636;
+ const rows=[];let cum=0;
+ for(let y=2024;y<=2032;y++){
+  let sales=0,review=0,kind='管理・モニタリング',state='試算';
+  if(y===2026){sales=baseSale;review=reviewBase;kind='第1回認証・実績販売200t';state='実績＋試算基準';}
+  else if(y===2027){sales=firstRemaining;kind='第1回残在庫700tを販売する仮定';}
+  else if([2028,2030,2032].includes(y)){sales=roundGross;review=reviewBase;kind=`第${y===2028?2:y===2030?3:4}回認証・900t販売仮定`;}
+  const municipal=sales*muniRate,owners=sales*ownerRate,cf=municipal-review;cum+=cf;
+  rows.push([String(y),esc(kind),sales?yen(Math.round(sales)):'—',review?yen(Math.round(review)):'—',sales?yen(Math.round(municipal)):'—',sales?yen(Math.round(owners)):'—',sales?yen(Math.round(cf)):'—',yen(Math.round(cum)),`<span class="money-status-chip ${state.startsWith('実績')?'actual':'plan'}">${esc(state)}</span>`]);
+ }
+ return `<section><h2>8年間｜比較用キャッシュフロー</h2><div class="money-model-note"><b>最終収支ではありません。</b> 販売単価はチャネル別に分けたうえで加重平均6,000円/t、各認証回1,000t発行・100t留保・900t販売、審査・認証費は第1回と同水準とする比較用仮定です。将来の森林整備費、Topora・外部支援費、販売支援費は未積算のため含めません。</div></section>${table('年度別｜売上・自治体Jクレ負担・配賦・CF',['年度','前提','Jクレ売上','審査・認証費','自治体への還元','山主・入会会等配賦','自治体JクレCF','累積CF','区分'],rows)}`;
+}
+async function jcreditFinanceDetailScreen(cur,p,financeSnapshot){
+ const code=cur.project_code;
+ const [saleTrace,inventoryTrace,financeStory,annual,reservePolicies,hzs,futs,lines,fin]=await Promise.all([
+  q('forest_os_demo_public_jcredit_sale_trace_current',`select=*&project_code=eq.${encodeURIComponent(code)}&order=sale_date,lot_code`),
+  q('forest_os_demo_public_jcredit_inventory_trace_current',`select=*&project_code=eq.${encodeURIComponent(code)}&order=issued_on,lot_code`),
+  q('forest_os_demo_public_town_jcredit_finance_story',`select=*&project_code=eq.${encodeURIComponent(code)}&order=fiscal_year`),
+  q('forest_os_demo_public_town_jcredit_annual_plan_story',`select=*&project_code=eq.${encodeURIComponent(code)}&order=calendar_year`),
+  q('forest_os_demo_public_jcredit_reserve_policy_current',`select=*&project_code=eq.${encodeURIComponent(code)}`),
+  q('forest_os_ui_project_finance_horizon',`select=*&project_code=eq.${encodeURIComponent(code)}`),
+  q('forest_os_ui_project_finance_future',`select=*&project_code=eq.${encodeURIComponent(code)}&order=fiscal_year`),
+  q('forest_os_ui_project_finance_lines',`select=*&project_code=eq.${encodeURIComponent(code)}&order=fiscal_year,line_group,line_code`),
+  canonicalProjectFinanceData(cur)
+ ]);
+ const hz=hzs[0]||{},reservePolicy=reservePolicies[0]||{};
+ const salesMap=new Map();saleTrace.forEach(x=>{if(!salesMap.has(String(x.sale_id)))salesMap.set(String(x.sale_id),x)});const sales=[...salesMap.values()];
+ const issueMap=new Map();inventoryTrace.forEach(x=>{if(x.issuance_no&&!issueMap.has(x.issuance_no))issueMap.set(x.issuance_no,x)});const issues=[...issueMap.values()];
+ const issuedTotal=issues.reduce((z,x)=>z+Number(x.issued_quantity_t||0),0),available=inventoryTrace.filter(x=>x.current_bucket==='available').reduce((z,x)=>z+Number(x.lot_quantity_t||0),0),reserved=inventoryTrace.filter(x=>x.current_bucket==='risk_reserve').reduce((z,x)=>z+Number(x.lot_quantity_t||0),0),soldLots=inventoryTrace.filter(x=>x.current_bucket==='sold').reduce((z,x)=>z+Number(x.lot_quantity_t||0),0);
+ const salesEx=sales.reduce((z,x)=>z+Number(x.amount_ex_tax||0),0),salesGross=sales.reduce((z,x)=>z+Number(x.amount_in_tax||0),0),feesEx=sales.reduce((z,x)=>z+Number(x.intermediary_fee_ex_tax||0),0);
+ const actualOutEx=fin.txs.filter(x=>x.direction==='out').reduce((z,x)=>z+Number(x.amount_ex_tax||0),0),actualOutGross=fin.txs.filter(x=>x.direction==='out').reduce((z,x)=>z+Number(x.amount_in_tax||0),0),actualInGross=fin.txs.filter(x=>x.direction==='in').reduce((z,x)=>z+Number(x.amount_in_tax||0),0);
+ const distTotal=fin.dists.reduce((z,x)=>z+Number(x.finalized_distribution_jpy||x.planned_distribution_jpy||0),0),paidDist=fin.dists.reduce((z,x)=>z+Number(x.actual_payment_transaction_jpy||0),0);
+ const planStart=hz.plan_start_year||cur.project_starts_on?.slice?.(0,4)||'—',planEnd=hz.plan_end_year||cur.project_ends_on?.slice?.(0,4)||'—';
+ const stage=sales.length?'販売・精算運用中':issues.length?'発行済・在庫運用中':String(cur.project_status||'').includes('pre')?'認証前':'計画・認証準備中';
+ cards([['現在のPJ',esc(projectShortName(cur))],['現在の段階',stage],['発行済',issuedTotal?`${num(issuedTotal)} t`:'未発行'],['販売済',sales.length?`${num(sales.reduce((z,x)=>z+Number(x.sale_quantity_t||0),0))} t / ${yen(salesEx)}`:'未販売'],['販売可能在庫',inventoryTrace.length?`${num(available)} t`:'—'],['リスク留保',inventoryTrace.length?`${num(reserved)} t`:'—']]);
+ let html=personaNoteHtml()+projectBanner(cur)+`<section><div class="money-detail-head"><div><h2>J-クレジット｜お金・クレジット移転の詳細</h2><div class="smallnote">売上だけでなく、発行・登録簿口座・ロット・移転・販売・入金・配賦まで同じ取引として追います。</div></div><div class="period">PJ計画 ${esc(planStart)}〜${esc(planEnd)}年度</div></div><div class="money-detail-kpis"><div class="money-detail-kpi"><div class="k">売上実績（税抜）</div><div class="v">${sales.length?yen(salesEx):'未発生'}</div><div class="d">販売取引の正本。販売チャネル別に追跡。</div></div><div class="money-detail-kpi"><div class="k">実入金（税込）</div><div class="v">${fin.txs.some(x=>x.direction==='in')?yen(actualInGross):'未発生'}</div><div class="d">銀行入金口座そのものは現DB未登録。</div></div><div class="money-detail-kpi"><div class="k">実支出（税込）</div><div class="v">${fin.txs.some(x=>x.direction==='out')?yen(actualOutGross):'未発生'}</div><div class="d">森林整備・審査認証等の実際の資金移動。</div></div><div class="money-detail-kpi"><div class="k">配賦確定・予定</div><div class="v">${fin.dists.length?yen(distTotal):'未確定'}</div><div class="d">山主・入会会・自治体等。税区分は個別判定。</div></div><div class="money-detail-kpi"><div class="k">配賦の実支払</div><div class="v">${paidDist?yen(paidDist):'未支払'}</div><div class="d">配賦確定額と実支払を分離。</div></div><div class="money-detail-kpi"><div class="k">全期間総事業費</div><div class="v">${hz.total_cost_status?esc(hz.total_cost_status):'未積算'}</div><div class="d">将来費用を0円扱いしません。</div></div></div></section>`;
+ html+=`<section><h2>クレジットとお金のつながり</h2><div class="money-trace-flow"><div class="money-trace-step"><div class="n">1</div><div class="t">認証・発行</div><div class="d">${issuedTotal?`${num(issuedTotal)}t発行`:'未発行'}</div></div><div class="money-trace-step"><div class="n">2</div><div class="t">登録簿口座</div><div class="d">${issues[0]?.issuance_registry_account_ref?esc(issues[0].issuance_registry_account_ref):'未登録'}</div></div><div class="money-trace-step"><div class="n">3</div><div class="t">ロット・在庫</div><div class="d">販売可能 ${num(available)}t／留保 ${num(reserved)}t</div></div><div class="money-trace-step"><div class="n">4</div><div class="t">出庫・移転</div><div class="d">どの口座から何t出したかを移転時刻まで記録</div></div><div class="money-trace-step"><div class="n">5</div><div class="t">販売</div><div class="d">相対・市場等を分け、数量・単価を個別管理</div></div><div class="money-trace-step"><div class="n">6</div><div class="t">入金</div><div class="d">請求・入金日・税込額を会計取引へ接続</div></div><div class="money-trace-step"><div class="n">7</div><div class="t">配賦・留保</div><div class="d">運営・基金・自治体・山主等へ配賦</div></div></div></section>`;
+ const finByYear=new Map((financeStory||[]).map(x=>[Number(x.fiscal_year),x]));
+ const futureByYear=new Map((futs||[]).map(x=>[Number(x.fiscal_year),x]));
+ const expenseByYear=new Map();(lines||[]).filter(x=>x.line_group==='expense'&&x.fiscal_year!=null).forEach(x=>expenseByYear.set(Number(x.fiscal_year),(expenseByYear.get(Number(x.fiscal_year))||0)+Number(x.amount_base_jpy||0)));
+ const reviewByYear=new Map();(lines||[]).filter(x=>x.line_code==='REVIEW_CERT'&&x.fiscal_year!=null).forEach(x=>reviewByYear.set(Number(x.fiscal_year),(reviewByYear.get(Number(x.fiscal_year))||0)+Number(x.amount_base_jpy||0)));
+ const txByYear=new Map();fin.txs.forEach(x=>{const y=Number(String(x.transaction_date||'').slice(0,4));if(!y)return;const a=txByYear.get(y)||{in:0,out:0};a[x.direction==='in'?'in':'out']+=Number(x.amount_in_tax||0);txByYear.set(y,a)});
+ const distByYear=new Map();fin.dists.forEach(x=>{const y=Number(String(x.period_end||x.period_start||'').slice(0,4));if(y)distByYear.set(y,(distByYear.get(y)||0)+Number(x.finalized_distribution_jpy||x.planned_distribution_jpy||0))});
+ const years=financeStory.length?[...new Set(financeStory.map(x=>Number(x.fiscal_year)).filter(y=>y&&y<=2032))]:[...new Set(futs.map(x=>Number(x.fiscal_year)).filter(Boolean))];
+ const yearRows=years.map(y=>{const f=finByYear.get(y)||{},u=futureByYear.get(y)||{},tx=txByYear.get(y)||{in:0,out:0},exp=expenseByYear.get(y)||0,review=reviewByYear.get(y)||0,sold=Number(f.jcredit_sales_ex_tax_jpy||0),issued=Number(f.issued_quantity_t||0),cert=f.certification_round?`第${num(f.certification_round)}回${issued?`／発行 ${num(issued)}t`:''}`:'—',unest=Number(u.year_unestimated_line_count||0)+Number(u.general_unestimated_line_count||0);return [String(y),y===2026?'<span class="money-status-chip actual">実績あり</span>':y>2026?'<span class="money-status-chip plan">計画・未積算</span>':'<span class="money-status-chip pending">管理期間</span>',esc(f.phase||'—'),cert,Number(f.sold_quantity_t||0)?`${num(f.sold_quantity_t)} t`:'—',sold?yen(sold):'—',exp?yen(exp):'—',review?yen(review):'—',distByYear.get(y)?yen(distByYear.get(y)):'—',tx.in?yen(tx.in):'—',tx.out?yen(tx.out):'—',unest?`${num(unest)}件`:'—'];});
+ if(yearRows.length)html+=table('全期間｜年度別のお金',['年度','区分','フェーズ','認証・発行','販売量','売上（税抜）','登録済費用（税抜）','Jクレ固有費','配賦基準額','実入金（税込）','実出金（税込）','未積算'],yearRows);
+ if(financeStory.some(x=>Number(x.fiscal_year)>=2033))html+=`<section><div class="finance-disclaimer">2033〜2041年度は認証終了後の森林管理期間です。新規認証・販売を自動で置かず、管理費も現在は未積算として扱います。</div></section>`;
+ if(saleTrace.length)html+=table('販売・クレジット移転台帳',['売却日','販路','買主','発行・ビンテージ','ロット・シリアル','出庫元登録簿口座','移転先登録簿口座','移転日時','数量','単価（税抜）','売上（税抜）','販売手数料','配賦基準額','入金日','状態'],saleTrace.map(x=>[date(x.sale_date),esc(jcreditSaleChannelLabel(x.sale_channel)),partyLink(x.buyer_name),`${esc(x.issuance_no||'—')}<br><span class="smallnote">${date(x.vintage_start)}〜${date(x.vintage_end)}</span>`,`${esc(x.lot_code)}<br><span class="smallnote">${esc(x.registry_serial_from||'—')}〜${esc(x.registry_serial_to||'—')}</span>`,esc(x.source_registry_account_ref||'未登録'),esc(x.destination_registry_account_ref||'未登録'),dateTimeJa(x.transferred_at),`${num(x.lot_quantity_t||x.sale_quantity_t)} t`,`${yen(x.unit_price_ex_tax)}/t`,yen(x.amount_ex_tax),yen(x.intermediary_fee_ex_tax||0),yen(x.distribution_base_ex_tax),date(x.paid_on),esc(workflowStatusLabel(x.sale_status||x.financial_status))]));
+ else html+=`<section><h2>販売・クレジット移転台帳</h2><div class="empty">このPJはまだ売却・登録簿口座移転の実績がありません。</div></section>`;
+ if(inventoryTrace.length)html+=table('登録簿口座・ロット在庫',['発行','発行日','ビンテージ','ロット','シリアル','数量','現在区分','現在保有者','現在口座','最終移動'],inventoryTrace.map(x=>[esc(x.issuance_no),date(x.issued_on),`${date(x.vintage_start)}〜${date(x.vintage_end)}`,esc(x.lot_code),`${esc(x.registry_serial_from||'—')}〜${esc(x.registry_serial_to||'—')}`,`${num(x.lot_quantity_t)} t`,esc(jcreditBucketLabel(x.current_bucket)),partyLink(x.current_holder_name),esc(x.current_registry_account_ref||'未登録'),`${dateTimeJa(x.last_movement_at)}<br><span class="smallnote">${esc(x.last_movement_type||'—')}</span>`]));
+ else html+=`<section><h2>登録簿口座・ロット在庫</h2><div class="empty">未発行のためロット・在庫はありません。</div></section>`;
+ html+=jcreditSalesScenarioHtml(code)+jcreditScenarioCashflowHtml(code,financeStory,lines);
+ if(fin.dists.length)html+=table('売上後の配賦・精算',['受取先','対象期間','確定・予定額','支払予定','実支払','税区分','状態'],fin.dists.map(x=>[partyLink(x.payee_name),`${date(x.period_start)}〜${date(x.period_end)}`,yen(x.finalized_distribution_jpy||x.planned_distribution_jpy),date(x.planned_payment_on),x.actual_payment_on?yen(x.actual_payment_transaction_jpy||0):'未支払','個別確認',esc(workflowStatusLabel(x.distribution_status))]));
+ const actualCosts=fin.costs.filter(x=>x.accounting_status==='actual'),forecastCosts=fin.costs.filter(x=>x.accounting_status==='forecast');
+ if(actualCosts.length||forecastCosts.length)html+=table('費用明細｜実績と見込を分離',['区分','費目','対象','税抜','税込／見込','日付','状態'],[...actualCosts.map(x=>['実績',esc(x.cost_category_name||x.cost_category_code),esc(x.work_title||x.contract_title||'—'),yen(x.amount_jpy),yen(x.amount_in_tax_jpy??x.amount_jpy),date(x.transaction_date),esc(demoStatusLabel(x.evidence_status||x.accounting_status))]),...forecastCosts.map(x=>['見込',esc(x.cost_category_name||x.cost_category_code),esc(x.work_title||x.contract_title||'—'),yen(x.amount_jpy),yen(x.amount_jpy),'—','見込'])]);
+ if(fin.txs.length)html+=table('資金取引｜請求・支払・入金',['日付','参照番号','内容','主体','相手先','方向','税抜','消費税','税込','決済日','状態'],fin.txs.map(x=>[date(x.transaction_date),esc(x.reference_no||'—'),esc(x.description||x.transaction_type),partyLink(x.principal_party),partyLink(x.counterparty),x.direction==='in'?'入金':'支出',yen(x.amount_ex_tax),yen(x.tax_amount),yen(x.amount_in_tax),date(x.settled_on),esc(workflowStatusLabel(x.status))]));
+ html+=`<section><div class="finance-disclaimer"><b>未接続項目：</b>銀行口座マスタ・入出金口座番号は現DBにありません。登録簿口座はクレジット移転台帳で追跡できます。銀行口座を追加する場合は、金融取引と別マスタで管理し、販売取引→請求→入金口座まで紐付ける構造にします。</div></section>`;
+ document.getElementById('content').innerHTML=html;
+}
+
 async function personaFinanceScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
  if(['owner','owner_proxy'].includes(p.kind)){
@@ -4301,6 +4394,8 @@ async function personaFinanceScreen(){
   if(contracts.length)scoped+=table('このPJの関係契約',['契約','立場','期間','状態'],contracts.map(x=>[esc(x.title),esc(contractRoleLabel(x.party_role)),`${date(x.starts_on)}〜${date(x.ends_on)}`,esc(demoStatusLabel(x.status))]));
   document.getElementById('content').innerHTML=scoped;return;
  }
+
+ if(code.startsWith('DEMO-JC-')){await jcreditFinanceDetailScreen(cur,p,financeSnapshot);return;}
 
  const extraPromises=[];
  if(p.kind==='forest_coop')extraPromises.push(q('forest_os_ui_persona_finance_dashboard',`select=*&viewer_name=eq.${encodeURIComponent(name)}`));
