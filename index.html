@@ -422,6 +422,30 @@ th{background:#f1f5f2;color:#3e4b43;font-weight:700}
 .jc-money-ledger summary{cursor:pointer;font-size:10px;font-weight:800;padding:8px 0}.jc-money-ledger .tablewrap{margin-top:4px}
 @media(max-width:900px){.jc-money-total-grid{grid-template-columns:1fr 1fr}.jc-money-periods{grid-template-columns:1fr 1fr}.jc-money-twoaxis,.jc-tax-rule-grid{grid-template-columns:1fr}.jc-revenue-flow{grid-template-columns:1fr}.jc-revenue-arrow{display:none}}
 
+
+/* finance / table readability cleanup 2026-10-07 */
+.tablewrap{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}
+.tablewrap table{table-layout:auto;min-width:720px}
+.tablewrap table.table-cols-5{min-width:780px}.tablewrap table.table-cols-6{min-width:900px}.tablewrap table.table-cols-7{min-width:1080px}.tablewrap table.table-cols-8{min-width:1220px}.tablewrap table.table-cols-9{min-width:1360px}.tablewrap table.table-cols-1{min-width:0}
+.tablewrap th{white-space:nowrap;line-height:1.35}
+.tablewrap td{line-height:1.55;word-break:normal;overflow-wrap:anywhere;line-break:strict}
+section h2,.pj-block h3,.project-choice .pc-title,.screen-scope .scope-title,.card .value{text-wrap:balance;word-break:normal;overflow-wrap:anywhere;line-break:strict}
+.map-summary-note,.finance-disclaimer,.smallnote,.pj-note,.project-banner .pb-meta,.project-summary-head .desc,.pj-sheet-head .desc,.detailitem .v,section p{text-wrap:pretty;word-break:normal;overflow-wrap:anywhere;line-break:strict}
+.finance-snapshot{grid-template-columns:repeat(auto-fit,minmax(165px,1fr))}
+.finance-snapshot .v{line-height:1.25;word-break:normal;overflow-wrap:anywhere}
+.pj-money-scope{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.finance-period-tabs{display:flex;gap:7px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line);background:#fafbfa}
+.finance-period-tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 10px;font-size:11px;cursor:pointer;white-space:nowrap}
+.finance-period-tabs button.active{background:#425f4b;border-color:#425f4b;color:#fff;font-weight:800}
+.finance-overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;padding:12px}
+.finance-overview-card{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}
+.finance-overview-card .y{font-size:10px;color:var(--muted);font-weight:800}.finance-overview-card .n{font-size:17px;font-weight:800;margin:4px 0}.finance-overview-card .d{font-size:10px;color:var(--muted);line-height:1.5}
+.finance-stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;padding:12px}
+.finance-stage-card{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}.finance-stage-card .k{font-size:10px;color:var(--muted);font-weight:750}.finance-stage-card .v{font-size:15px;font-weight:800;margin-top:4px;line-height:1.3}.finance-stage-card .d{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5}
+.finance-stage-card.pending{background:#fbfaf5}.finance-stage-card.actual{background:#f3f8f4}
+@media(max-width:900px){.finance-axis{grid-template-columns:1fr}.tablewrap table.table-cols-7{min-width:1000px}.tablewrap table.table-cols-8{min-width:1120px}.tablewrap table.table-cols-9{min-width:1240px}}
+@media(max-width:560px){.finance-snapshot,.finance-overview-grid,.finance-stage-grid{grid-template-columns:1fr 1fr}.card .value{font-size:19px}.finance-period-tabs{flex-wrap:nowrap;overflow-x:auto}.finance-period-tabs button{flex:0 0 auto}}
+
 </style>
 </head>
 <body>
@@ -714,7 +738,8 @@ function personaNoteHtml(){const p=currentPersona();return p.kind==='owner_proxy
 function cards(items){document.getElementById('cards').innerHTML=items.map(x=>`<div class="card"><div class="label">${x[0]}</div><div class="value">${x[1]}</div></div>`).join('')}
 function table(title,headers,rows){
  if(!rows.length)return `<section><h2>${title}</h2><div class="empty">該当データなし</div></section>`;
- return `<section><h2>${title}</h2><div class="tablewrap"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;
+ const cols=Math.max(1,headers.length||0);
+ return `<section><h2>${title}</h2><div class="tablewrap"><table class="table-cols-${cols}"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></section>`;
 }
 async function municipality(){
  const p=currentPersona();
@@ -4173,6 +4198,24 @@ function canonicalProjectFinanceHtml(d,cur,aggregationScopes=[]){
  return h;
 }
 
+
+function aggregationFinanceYearOverviewHtml(rows,selectedYear){
+ const years=[...new Set((rows||[]).map(x=>Number(x.fiscal_year)).filter(Boolean))].sort((a,b)=>a-b);
+ if(!years.length)return '';
+ const sums=years.map(y=>{const rs=rows.filter(x=>Number(x.fiscal_year)===y);const budget=rs.reduce((z,x)=>z+Number(x.budget_jpy||0),0),executed=rs.reduce((z,x)=>z+Number(x.executed_jpy||0),0),remaining=rs.reduce((z,x)=>z+Number(x.remaining_jpy||0),0);return {y,budget,executed,remaining,rate:budget?executed/budget*100:null};});
+ const tabs=`<div class="finance-period-tabs">${years.map(y=>`<button type="button" class="${y===selectedYear?'active':''}" onclick="localStorage.setItem('forest_os_agg_selected_year_v1','${y}');personaFinanceScreen()">${y}年度${y===Math.max(...years)?'｜現在':''}</button>`).join('')}</div>`;
+ const cards=`<div class="finance-overview-grid">${sums.map(x=>`<div class="finance-overview-card"><div class="y">${x.y}年度</div><div class="n">${yen(x.executed)} / ${yen(x.budget)}</div><div class="d">執行 / 予算${x.rate==null?'':`｜${Math.round(x.rate*10)/10}%`}${x.remaining?`｜残 ${yen(x.remaining)}`:'｜執行完了'}</div></div>`).join('')}</div>`;
+ const tb=sums.reduce((z,x)=>z+x.budget,0),te=sums.reduce((z,x)=>z+x.executed,0),tr=sums.reduce((z,x)=>z+x.remaining,0);
+ return `<section><h2>私有林集約｜年度別のお金</h2>${tabs}${cards}<div class="finance-disclaimer"><b>${years.length}年度累計：</b>予算 ${yen(tb)}／執行 ${yen(te)}／残額 ${yen(tr)}。各年度は別年度の予算なので、選択年度の詳細と累計を分けて表示します。</div></section>`;
+}
+function recoveryFinanceStageHtml(estimates,budgets,costs){
+ const estimate=(estimates||[])[0]||null;
+ const estimateTotal=estimate?Number(estimate.total_cost_jpy||0):null;
+ const budgetTotal=(budgets||[]).reduce((z,x)=>z+Number(x.total_amount||0),0);
+ const actualTotal=(costs||[]).reduce((z,x)=>z+Number((x.amount_in_tax_jpy??x.amount_jpy)||0),0);
+ return `<section><h2>森林復帰検討｜お金の現在地</h2><div class="finance-stage-grid"><div class="finance-stage-card ${estimate?'actual':'pending'}"><div class="k">参考積算</div><div class="v">${estimate&&estimateTotal?yen(estimateTotal):'未登録'}</div><div class="d">${estimate?`${esc(estimate.fiscal_year)}年度の検討用。予算・発注額ではありません。`:'検討用積算は未登録です。'}</div></div><div class="finance-stage-card ${budgets?.length?'actual':'pending'}"><div class="k">承認済・登録予算</div><div class="v">${budgets?.length?yen(budgetTotal):'未登録'}</div><div class="d">事業化・予算化された金額だけをここへ表示。</div></div><div class="finance-stage-card ${costs?.length?'actual':'pending'}"><div class="k">実績費用</div><div class="v">${costs?.length?yen(actualTotal):'未発生'}</div><div class="d">支払・原価の実績が発生した時点でCanonical費用へ接続。</div></div><div class="finance-stage-card pending"><div class="k">現在の判断</div><div class="v">事業化前</div><div class="d">参考積算 → 予算 → 契約・発注 → 実績の順に段階を分けます。</div></div></div></section>`;
+}
+
 async function personaFinanceScreen(){
  const p=currentPersona(),name=personaScopePartyName(p);
  if(['owner','owner_proxy'].includes(p.kind)){
@@ -4195,17 +4238,18 @@ async function personaFinanceScreen(){
   const f=fr[0]||{},reportRows=(pipe||[]).filter(recoveryReportLinked),reportIds=new Set(reportRows.map(x=>String(x.forest_unit_id))),reportEsts=(ests||[]).filter(x=>(Array.isArray(x.targets)?x.targets:[]).some(t=>reportIds.has(String(t.target_id)))),reportCosts=(costs||[]).filter(x=>reportIds.has(String(x.forest_unit_id))),reportBudgets=(budgets||[]).filter(x=>reportIds.has(String(x.context_id||''))||(Array.isArray(x.lines)?x.lines:[]).some(l=>reportIds.has(String(l.target_id||''))));
   const reportEstimateTotal=reportEsts.reduce((z,x)=>z+Number(x.total_cost_jpy||0),0);
   const financeScopeLabel=({regional_allocation_pending:'地域配賦未確定',full_portfolio:'広域プール',regional_view:'地域範囲',not_available:'表示対象外'})[f.finance_access_level]||'森林復帰検討';
-  cards([['現在のPJ','蒼谷村｜森林復帰検討'],['対象森林',`${pipe.length}森林`],['対象面積',ha(pipe.reduce((z,x)=>z+Number(x.area_ha||0),0))],['参考積算',reportEsts.length?yen(reportEstimateTotal):'未登録'],['会計範囲',financeScopeLabel]]);
+  cards([['現在のPJ','蒼谷村｜森林復帰検討'],['対象森林',`${pipe.length}森林`],['対象面積',ha(pipe.reduce((z,x)=>z+Number(x.area_ha||0),0))],[reportEsts.length?`${reportEsts[0].fiscal_year}年度 参考積算`:'参考積算',reportEsts.length?yen(reportEstimateTotal):'未登録'],['現在の段階',reportBudgets.length?'予算登録済':'事業化前']]);
   const reportEstimateSection=reportEsts.length?`<section><h2>管理復旧レポート（検討資料）｜参考積算</h2>${reportEsts.map(recoveryEstimateHtml).join('')}</section>`:'<section><h2>管理復旧レポート（検討資料）｜参考積算</h2><div class="empty">接続済み参考積算はありません。</div></section>';
-  const reportActualSection=`<section><h2>レポート対象森林の予算・実績</h2><div class="finance-snapshot"><div><div class="k">承認済・登録予算</div><div class="v">${reportBudgets.length?yen(reportBudgets.reduce((z,x)=>z+Number(x.total_amount||0),0)):'未登録'}</div></div><div><div class="k">実績費用</div><div class="v">${reportCosts.length?yen(reportCosts.reduce((z,x)=>z+Number(x.amount_jpy||0),0)):'未発生'}</div></div></div><div class="finance-disclaimer">参考積算を予算・支出として扱いません。実績が発生した場合はCanonical費用・取引へ接続します。</div></section>`;
-  document.getElementById('content').innerHTML=projectBanner(cur)+`<section><h2>森林復帰検討｜費用・財源</h2><div class="map-summary-note"><b>検討時の参考積算・予算・実績を分離して表示します。</b> J-クレジットPJ会計とは別管理です。参考積算を事業決定後の支出として扱いません。</div></section>`+reportEstimateSection+reportActualSection+recoveryFinanceSection(f);return;
+  const reportActualSection=`<section><h2>レポート対象森林の予算・実績</h2><div class="finance-snapshot"><div><div class="k">承認済・登録予算</div><div class="v">${reportBudgets.length?yen(reportBudgets.reduce((z,x)=>z+Number(x.total_amount||0),0)):'未登録'}</div></div><div><div class="k">実績費用</div><div class="v">${reportCosts.length?yen(reportCosts.reduce((z,x)=>z+Number((x.amount_in_tax_jpy??x.amount_jpy)||0),0)):'未発生'}</div></div></div><div class="finance-disclaimer">参考積算を予算・支出として扱いません。実績が発生した場合はCanonical費用・取引へ接続します。</div></section>`;
+  document.getElementById('content').innerHTML=projectBanner(cur)+`<section><h2>森林復帰検討｜費用・財源</h2><div class="map-summary-note"><b>現在は事業化前の検討段階です。</b> 参考積算・承認済予算・実績を別の段階として表示し、J-クレジットPJ会計とは混ぜません。</div></section>`+recoveryFinanceStageHtml(reportEsts,reportBudgets,reportCosts)+reportEstimateSection+reportActualSection+recoveryFinanceSection(f);return;
  }
  if(code==='DEMO-PRIVATE-AGG-2022'){
   const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
-  const [aggScopes,aggDetails]=await Promise.all([
-   q('forest_os_demo_public_aggregation_finance_scope',`select=*&fiscal_year=eq.${aggYear}&order=scope_code`),
+  const [aggAllScopes,aggDetails]=await Promise.all([
+   q('forest_os_demo_public_aggregation_finance_scope','select=*&order=fiscal_year,scope_code'),
    q('forest_os_demo_public_aggregation_finance_detail',`select=*&fiscal_year=eq.${aggYear}&order=scope_code,expense_code,funding_code`)
   ]);
+  const aggScopes=aggAllScopes.filter(x=>Number(x.fiscal_year)===aggYear);
   const totalBudget=aggScopes.reduce((z,x)=>z+Number(x.budget_jpy||0),0),totalExecuted=aggScopes.reduce((z,x)=>z+Number(x.executed_jpy||0),0),totalRemaining=aggScopes.reduce((z,x)=>z+Number(x.remaining_jpy||0),0);
   const ownScope=String(p.party||'').includes('青嶺')?'AOMINE':String(p.party||'').includes('蒼谷')?'SOUTANI':null;
   const isWide=p.kind==='pm'||p.kind==='admin';
@@ -4214,9 +4258,9 @@ async function personaFinanceScreen(){
   const visibleScopes=visibleCodes.map(c=>aggScopes.find(x=>x.scope_code===c)).filter(Boolean);
   const own=ownScope?aggScopes.find(x=>x.scope_code===ownScope):null;
   const topBudget=isCoop&&own?Number(own.budget_jpy||0):totalBudget,topExecuted=isCoop&&own?Number(own.executed_jpy||0):totalExecuted,topRemaining=isCoop&&own?Number(own.remaining_jpy||0):totalRemaining;
-  cards([['現在のPJ',esc(projectShortName(cur))],[isCoop?'担当範囲予算':'PJ全体予算',yen(topBudget)],[isCoop?'担当範囲執行':'PJ全体執行',yen(topExecuted)],['残額',yen(topRemaining)],['執行率',topBudget?`${Math.round(topExecuted/topBudget*1000)/10}%`:'—']]);
+  cards([['現在のPJ',esc(projectShortName(cur))],[`${aggYear}年度 ${isCoop?'担当範囲予算':'PJ全体予算'}`,yen(topBudget)],[`${aggYear}年度 ${isCoop?'担当範囲執行':'PJ全体執行'}`,yen(topExecuted)],[`${aggYear}年度 残額`,yen(topRemaining)],['執行率',topBudget?`${Math.round(topExecuted/topBudget*1000)/10}%`:'—']]);
   const scopeCards=visibleScopes.map(x=>`<div class="pj-money-box"><div class="title">${esc(x.scope_label)}</div><div class="pj-money-line"><span>予算</span><b>${yen(x.budget_jpy)}</b></div><div class="pj-money-line"><span>執行</span><b>${yen(x.executed_jpy)}</b></div><div class="pj-money-line"><span>残額</span><b>${yen(x.remaining_jpy)}</b></div></div>`).join('');
-  let html=personaNoteHtml()+projectBanner(cur)+`<section><h2>私有林集約｜${aggYear}年度 予算・執行</h2><div class="map-summary-note"><b>費用と財源を分離して表示します。</b> 林野庁の参考歩掛（意向調査8,000円/ha、境界確認16,000円/ha、境界測量45,000円/ha、集積計画案作成・同意取得30,400円/ha）を基礎にし、広域共通調整は奈良県R7の共同計画等4,000円/haを目安にしています。財源80%森林環境譲与税・20%一般財源はデモ仮定です。</div></section>`;
+  let html=personaNoteHtml()+projectBanner(cur)+aggregationFinanceYearOverviewHtml(aggAllScopes,aggYear)+`<section><h2>私有林集約｜${aggYear}年度の詳細</h2><div class="map-summary-note"><b>費用と財源を分離して表示します。</b> この下は上で選んだ年度だけの明細です。参考歩掛と財源比率はデモ仮定で、年度予算と財源明細を二重加算しません。</div></section>`;
   if(!isCoop)html+=`<section><div class="finance-snapshot"><div><div class="k">PJ全体予算</div><div class="v">${yen(totalBudget)}</div></div><div><div class="k">PJ全体執行</div><div class="v">${yen(totalExecuted)}</div></div><div><div class="k">PJ全体残額</div><div class="v">${yen(totalRemaining)}</div></div></div></section>`;
   html+=`<section><h2>${isCoop?'担当範囲':'地域別・広域共通'}｜予算・執行</h2><div class="pj-money-split pj-money-scope">${scopeCards}</div><div class="finance-disclaimer">${isWide?'PJ全体を地域別・広域共通に分けて表示しています。':isCoop?'森林組合は担当地域の執行範囲を表示します。':'自治体はPJ全体と自地域・広域共通の負担区分を確認します。'} 予算と財源は別軸で、費用明細＋財源明細を足して予算額を二重計上しません。</div></section>`;
   const visibleDetails=aggDetails.filter(x=>visibleCodes.includes(x.scope_code));
@@ -4287,14 +4331,15 @@ async function personaFinanceScreen(){
  if(code==='DEMO-PRIVATE-AGG-2022')html+=`<section><h2>私有林集約｜予算の読み方</h2><div class="map-summary-note"><b>予算額と財源内訳は別軸です。</b> 年度予算は budget_versions.total_amount を正本とし、費用明細と財源明細を合算して二重計上しません。費用は林野庁の参考歩掛（意向調査8,000円/ha、境界確認16,000円/ha、境界測量45,000円/ha、集積計画案作成・同意取得30,400円/ha）を基礎にし、広域共通調整は奈良県R7の共同計画等4,000円/haを目安にしています。財源80%森林環境譲与税・20%一般財源はデモ仮定です。</div></section>`;
  if(code==='DEMO-PRIVATE-AGG-2022'){
   const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
-  const aggScopes=aggregationFinanceScopes.length?aggregationFinanceScopes:await q('forest_os_demo_public_aggregation_finance_scope',`select=*&fiscal_year=eq.${aggYear}&order=scope_code`);
+  const aggAllScopes=await q('forest_os_demo_public_aggregation_finance_scope','select=*&order=fiscal_year,scope_code');
+  const aggScopes=aggregationFinanceScopes.length?aggregationFinanceScopes:aggAllScopes.filter(x=>Number(x.fiscal_year)===aggYear);
   const aggDetails=await q('forest_os_demo_public_aggregation_finance_detail',`select=*&fiscal_year=eq.${aggYear}&order=scope_code,expense_code,funding_code`);
   const totalBudget=aggScopes.reduce((z,x)=>z+Number(x.budget_jpy||0),0),totalExecuted=aggScopes.reduce((z,x)=>z+Number(x.executed_jpy||0),0),totalRemaining=aggScopes.reduce((z,x)=>z+Number(x.remaining_jpy||0),0);
   const ownScope=String(p.party||'').includes('青嶺')?'AOMINE':String(p.party||'').includes('蒼谷')?'SOUTANI':null;
   const allowedCodes=(p.kind==='pm'||p.kind==='admin'||!ownScope)?['AOMINE','SOUTANI','SHARED']:[ownScope,'SHARED'];
   const visibleScopes=allowedCodes.map(c=>aggScopes.find(x=>x.scope_code===c)).filter(Boolean);
   const scopeCards=visibleScopes.map(x=>`<div class="pj-money-box"><div class="title">${esc(x.scope_label)}</div><div class="pj-money-line"><span>予算</span><b>${yen(x.budget_jpy)}</b></div><div class="pj-money-line"><span>執行</span><b>${yen(x.executed_jpy)}</b></div><div class="pj-money-line"><span>残額</span><b>${yen(x.remaining_jpy)}</b></div></div>`).join('');
-  html+=`<section><h2>広域集約PJ｜${aggYear}年度 予算・執行</h2><div class="finance-snapshot"><div><div class="k">PJ全体予算</div><div class="v">${yen(totalBudget)}</div></div><div><div class="k">PJ全体執行</div><div class="v">${yen(totalExecuted)}</div></div><div><div class="k">PJ全体残額</div><div class="v">${yen(totalRemaining)}</div></div></div><div class="pj-money-split pj-money-scope">${scopeCards}</div><div class="finance-disclaimer">${ownScope?'PJ全体に加え、自地域と広域共通の負担区分を表示しています。':'PJ全体を地域別・広域共通に分けて表示しています。'} 予算と財源は別軸で、費用明細＋財源明細を足して予算額を二重計上しません。</div></section>`;
+  html+=aggregationFinanceYearOverviewHtml(aggAllScopes,aggYear)+`<section><h2>広域集約PJ｜${aggYear}年度の詳細</h2><div class="finance-snapshot"><div><div class="k">PJ全体予算</div><div class="v">${yen(totalBudget)}</div></div><div><div class="k">PJ全体執行</div><div class="v">${yen(totalExecuted)}</div></div><div><div class="k">PJ全体残額</div><div class="v">${yen(totalRemaining)}</div></div></div><div class="pj-money-split pj-money-scope">${scopeCards}</div><div class="finance-disclaimer">${ownScope?'PJ全体に加え、自地域と広域共通の負担区分を表示しています。':'PJ全体を地域別・広域共通に分けて表示しています。'} 予算と財源は別軸で、費用明細＋財源明細を足して予算額を二重計上しません。</div></section>`;
   const visibleDetails=aggDetails.filter(x=>allowedCodes.includes(x.scope_code));
   if(visibleDetails.length)html+=table('広域集約PJ｜詳細収支',['負担区分','負担主体','費目','財源','予算','執行','按分根拠'],visibleDetails.map(x=>[esc(x.scope_label),esc(x.burden_party_label),esc(x.expense_label),esc(x.funding_label),yen(x.budget_jpy),yen(x.executed_jpy),esc(x.allocation_rule)]));
   const aggBudgets=canonicalFinance.budgets.filter(x=>Number(x.fiscal_year)===aggYear);
@@ -4356,7 +4401,7 @@ function screenScopeHtml(){
  else if(m==='projects'&&projectHubType==='jcredit'){title='プロジェクト｜森林J-クレジット';desc='地域森林のうち、このJ-クレジットPJに関係する森林と事業を確認します。';}
  else if(m==='planning'){title='横断管理｜計画一覧';desc='地域内の複数PJ・森林にまたがる計画を横断して確認します。';}
  else if(m==='work'){title='横断管理｜作業一覧';desc='地域内の複数PJ・森林にまたがる作業・実績を横断して確認します。';}
- else if(m==='finance'){title='選択中プロジェクト｜お金';desc='現在選択しているPJの予算・支出・収入・分配を追います。';}
+ else if(m==='finance'){title='選択中プロジェクト｜お金';desc='PJの年度・段階を明示し、予算、見込、実績、財源、入出金、分配を同じ時間軸で追います。';}
  else if(m==='agency'){title='私有林集約プロジェクト｜制度対応';desc='別の制度プロジェクトではなく、同じ集約PJに関係する制度案件とworkflowを重ねて確認します。';}
  return breadcrumbHtml()+`<div class="screen-scope"><div><div class="scope-label">いま見ている単位</div><div class="scope-title">${title}</div></div><div class="scope-desc">${desc}</div></div>`;
 }
