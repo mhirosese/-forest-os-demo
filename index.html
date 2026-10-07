@@ -401,6 +401,27 @@ th{background:#f1f5f2;color:#3e4b43;font-weight:700}
   th,td{padding:10px 11px}
 }
 
+
+/* J-credit money view: separate project horizon, current FY, issuance round, and ledger */
+.jc-money-overview{border-color:#cbd6ce;background:#fcfdfc}
+.jc-money-scope-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
+.jc-money-scope-head h3{margin:0}.jc-money-asof{font-size:9px;color:var(--muted);white-space:nowrap}
+.jc-money-total-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.jc-money-total{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}
+.jc-money-total .k{font-size:9px;color:var(--muted);font-weight:700}.jc-money-total .v{font-size:17px;font-weight:800;margin-top:4px}.jc-money-total .d{font-size:9px;color:var(--muted);line-height:1.5;margin-top:4px}
+.jc-money-total.unknown{background:#fafbfa}.jc-money-total.unknown .v{font-size:14px;color:#59655e}
+.jc-money-periods{display:grid;grid-template-columns:1fr 1fr 1.25fr 1.35fr 1.25fr;gap:7px;margin-top:10px}
+.jc-money-period{border:1px solid var(--line);border-radius:8px;padding:9px;background:#fafbfa;min-height:76px}
+.jc-money-period.current{background:#eef5f0;border-color:#91aa98}.jc-money-period .y{font-size:10px;font-weight:800}.jc-money-period .t{font-size:10px;font-weight:700;margin-top:4px}.jc-money-period .d{font-size:9px;color:var(--muted);line-height:1.45;margin-top:3px}
+.jc-money-twoaxis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.jc-money-axis{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff}.jc-money-axis h4{font-size:11px;margin:0 0 8px}.jc-money-axis .axis-total{font-size:19px;font-weight:800}.jc-money-axis .axis-note{font-size:9px;color:var(--muted);margin-top:2px;line-height:1.45}
+.jc-tax-rule-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.jc-cf-model{margin-top:14px;border-top:1px solid var(--line)}.jc-cf-model summary{font-size:11px}.jc-cf-model h4{font-size:11px;margin:12px 0 6px}.jc-cf-table table{min-width:1080px}.jc-cf-table th,.jc-cf-table td{white-space:nowrap}.jc-cf-table tr.jc-cf-cash td{background:#fafbfa}
+.jc-money-breakdown{margin-top:8px;border-top:1px solid #e7ebe8}.jc-money-breakdown>div{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid #eef1ef;font-size:10px}.jc-money-breakdown>div:last-child{border-bottom:0}.jc-money-breakdown b{font-weight:800}
+.jc-revenue-flow{display:grid;grid-template-columns:1.1fr auto 1fr auto 1fr auto 1fr;gap:6px;align-items:stretch;margin-top:9px}.jc-revenue-step{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fafbfa}.jc-revenue-step .k{font-size:8px;color:var(--muted)}.jc-revenue-step .v{font-size:13px;font-weight:800;margin-top:3px}.jc-revenue-arrow{display:flex;align-items:center;color:var(--muted);font-size:13px}
+.jc-money-subhead{font-size:11px;font-weight:800;margin:14px 0 7px;padding-top:10px;border-top:1px solid var(--line)}
+.jc-money-year-state{font-size:9px;padding:2px 6px;border-radius:999px;border:1px solid #d8dfda;white-space:nowrap}.jc-money-year-state.actual{background:#eef5f0}.jc-money-year-state.plan{background:#f7f7f7;color:#68716b}.jc-money-year-state.unknown{background:#fbfaf5;color:#716957}
+.jc-money-ledger summary{cursor:pointer;font-size:10px;font-weight:800;padding:8px 0}.jc-money-ledger .tablewrap{margin-top:4px}
+@media(max-width:900px){.jc-money-total-grid{grid-template-columns:1fr 1fr}.jc-money-periods{grid-template-columns:1fr 1fr}.jc-money-twoaxis,.jc-tax-rule-grid{grid-template-columns:1fr}.jc-revenue-flow{grid-template-columns:1fr}.jc-revenue-arrow{display:none}}
+
 </style>
 </head>
 <body>
@@ -3626,7 +3647,7 @@ async function aomineJcreditSummary(view='project'){
  saveSelectedProjectCode('DEMO-JC-001',p);
  const rows=await personaProjectPortfolio(p,true);
  const cur=rows.find(x=>x.project_code==='DEMO-JC-001');
- const [storyRows,periodRows,annual,certs,inventory,sales,ownerSettlements,financeStoryRows,reservePolicies,registrationProgress,savedReports,financePolicies,distributionRules,fundingRules]=await Promise.all([
+ const [storyRows,periodRows,annual,certs,inventory,sales,ownerSettlements,financeStoryRows,reservePolicies,registrationProgress,savedReports,financePolicies,distributionRules,fundingRules,financeHorizonRows,financePlanLines]=await Promise.all([
   q('forest_os_ui_project_story_summary','select=*&project_code=eq.DEMO-JC-001'),
   q('forest_os_demo_public_jcredit_period_settings_compat','select=*&project_code=eq.DEMO-JC-001'),
   q('forest_os_demo_public_town_jcredit_annual_plan_story','select=*&order=calendar_year'),
@@ -3640,7 +3661,9 @@ async function aomineJcreditSummary(view='project'){
   q('forest_os_demo_public_simple_report_current','select=*&order=title'),
   q('forest_os_demo_public_jcredit_finance_policy_current','select=*&project_code=eq.DEMO-JC-001'),
   q('forest_os_demo_public_jcredit_distribution_rule_current','select=*&project_code=eq.DEMO-JC-001&order=ownership_class'),
-  q('forest_os_demo_public_jcredit_public_funding_rule_current','select=*&project_code=eq.DEMO-JC-001&order=cost_scope')
+  q('forest_os_demo_public_jcredit_public_funding_rule_current','select=*&project_code=eq.DEMO-JC-001&order=cost_scope'),
+  q('forest_os_ui_project_finance_horizon','select=*&project_code=eq.DEMO-JC-001'),
+  q('forest_os_ui_project_finance_lines','select=*&project_code=eq.DEMO-JC-001')
  ]);
  const st=storyRows[0]||{},pr=periodRows[0]||{};
  if(!st.project_code){cards([['青嶺町J-クレジット','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">青嶺町J-クレジットPJを取得できません。</div></section>';return;}
@@ -3660,6 +3683,7 @@ async function aomineJcreditSummary(view='project'){
  const addCandidates=[...addCandidateMap.values()];
  const savedAomineReport=(savedReports||[]).find(x=>String(x.title||'').includes('青嶺町 森林管理・J-クレジット事業レポート'))||null;
  const financePolicy=(financePolicies||[])[0]||{};
+ const financeHorizon=(financeHorizonRows||[])[0]||{};
  const activeArea=Number(st.active_area_ha??st.core_target_area_ha??0),targetArea=Number(st.core_target_area_ha??st.final_target_area_ha??activeArea);
  const activeForests=Number(st.active_forest_count||0),candidateArea=Number(st.candidate_area_ha||0);
  const cycle=pr.certification_cycle_years!=null?`${num(pr.certification_cycle_years)}年ごと`:'—';
@@ -3688,7 +3712,102 @@ async function aomineJcreditSummary(view='project'){
  const ownershipClassLabel=v=>({municipal:'町有林',private:'私有林',community:'共有・入会林',prefectural:'県有林'}[v]||txt(v));
  const recipientRuleLabel=v=>({return_to_municipality:'自治体へ還元',return_to_forest_owner:'山主へ還元',return_to_right_holders:'権利者へ配賦',return_to_prefecture:'県へ還元'}[v]||txt(v));
  const operatingPolicyHtml=`<details class="plan-detail-toggle" style="margin-top:12px"><summary>費用・財源・配賦ルール（DB正本）</summary><div class="detailgrid" style="margin-top:10px"><div class="detailitem"><div class="k">森林整備の財源</div><div class="v">${esc(fundingModeLabel(financePolicy.forest_maintenance_funding_mode))}</div></div><div class="detailitem"><div class="k">審査・認証費</div><div class="v">${esc(fundingModeLabel(financePolicy.review_certification_cost_policy))}</div></div><div class="detailitem"><div class="k">公費と収益配賦</div><div class="v">${financePolicy.separate_public_fund_and_distribution_axes?'別軸で管理':'—'}${financePolicy.auto_offset_public_fund_against_distribution?'／自動相殺あり':'／自動相殺なし'}</div></div><div class="detailitem"><div class="k">Topora / OS支援費</div><div class="v">${esc(fundingModeLabel(financePolicy.os_fee_cost_treatment))}</div></div></div><div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>森林区分</th><th>収益の帰属</th><th>公費との連動</th><th>備考</th></tr></thead><tbody>${(distributionRules||[]).map(r=>`<tr><td>${esc(ownershipClassLabel(r.ownership_class))}</td><td>${esc(recipientRuleLabel(r.recipient_rule))}</td><td>${r.linked_to_public_funding_amount?'連動':'連動しない'}</td><td>${esc(r.note||'—')}</td></tr>`).join('')||'<tr><td colspan="4">配賦ルール未登録</td></tr>'}</tbody></table></div>${(fundingRules||[]).length?`<div class="smallnote" style="margin-top:8px">公費ルール：${(fundingRules||[]).map(r=>esc(r.note||`${r.funding_party_name||'財源'} → ${r.region_name||'対象森林'}`)).join(' / ')}</div>`:''}</details>`;
- const inventoryOperationHtml=`<div class="pj-block"><h3>在庫・留保・配賦｜運用で常時確認</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">発行済</div><div class="v">${num(issuedTotal)} t</div><div class="d">第1回発行ロット</div></div><div class="pj-kpi"><div class="k">売却済</div><div class="v">${num(soldActual)} t</div><div class="d">売上 ${yen(salesActual)}（税抜）</div></div><div class="pj-kpi"><div class="k">販売可能在庫</div><div class="v">${num(availableActual)} t</div><div class="d">通常在庫。販売対象</div></div><div class="pj-kpi"><div class="k">リスク留保</div><div class="v">${num(reserveActual)} t</div><div class="d">${reservePolicy.target_rate_percent!=null?`方針 ${num(reservePolicy.target_rate_percent)}%`:'別管理'}。自動販売しない</div></div></div><div class="detailgrid" style="margin-top:12px"><div class="detailitem"><div class="k">クレジット留保方針</div><div class="v">${esc(reservePolicy.calculation_basis||'留保方針未登録')}</div>${reserveRisks?`<div class="smallnote">対象リスク：${esc(reserveRisks)}</div>`:''}</div><div class="detailitem"><div class="k">現金｜森林組合運営分</div><div class="v">${yen(y26Finance.forest_coop_operation_pool_jpy)}</div></div><div class="detailitem"><div class="k">現金｜基金・留保</div><div class="v">${yen(y26Finance.fund_reserve_jpy)}</div><div class="smallnote">クレジット${num(reserveActual)}tの留保とは別管理</div></div><div class="detailitem"><div class="k">配賦原資</div><div class="v">${yen(y26Finance.allocation_pool_jpy||allocationActual)}</div></div></div><div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>配賦先</th><th>2026配賦額</th><th>状態</th></tr></thead><tbody>${projectOwnerSettlements.map(x=>`<tr><td>${partyLink(x.owner_name)}</td><td>${yen(x.finalized_distribution_jpy)}</td><td>${Number(x.actual_payment_jpy||0)>0?'支払済':'配賦確定・未支払'}</td></tr>`).join('')||'<tr><td colspan="3">配賦データなし</td></tr>'}</tbody></table></div>${operatingPolicyHtml}</div>`;
+ const knownProjectCost=Number(financeHorizon.known_project_cost_base_jpy||0);
+ const planStartYear=Number(financeHorizon.plan_start_year||2024),planEndYear=Number(financeHorizon.plan_end_year||2041);
+ const lastCertificationYear=Math.max(...(certs||[]).map(x=>Number(x.certification_year||0)).filter(Boolean),2032);
+ const postManagementStart=lastCertificationYear+1;
+ const futureUnestimated=(financePlanLines||[]).filter(x=>x.amount_status==='unestimated');
+ const y26PlanCosts=(financePlanLines||[]).filter(x=>Number(x.fiscal_year)===2026&&x.line_group==='expense'&&x.amount_base_jpy!=null);
+ const y26KnownCost=y26PlanCosts.reduce((a,x)=>a+Number(x.amount_base_jpy||0),0)||knownProjectCost;
+ const y26ForestCost=y26PlanCosts.filter(x=>x.line_code==='FOREST_MAINTENANCE').reduce((a,x)=>a+Number(x.amount_base_jpy||0),0);
+ const y26ReviewCost=y26PlanCosts.filter(x=>x.line_code==='REVIEW_CERT').reduce((a,x)=>a+Number(x.amount_base_jpy||0),0);
+ const projectTxs=(fin.txs||[]).slice().sort((a,b)=>String(a.transaction_date||'').localeCompare(String(b.transaction_date||'')));
+ const actualTxCount=projectTxs.length;
+ const txYear=x=>Number(String(x.transaction_date||'').slice(0,4)||0);
+ const actualExpenseEx=projectTxs.filter(x=>x.direction==='out').reduce((a,x)=>a+Number(x.amount_ex_tax||0),0);
+ const actualExpenseGross=projectTxs.filter(x=>x.direction==='out').reduce((a,x)=>a+Number((x.amount_in_tax??x.amount_ex_tax)||0),0);
+ const actualRevenueEx=projectTxs.filter(x=>x.direction==='in').reduce((a,x)=>a+Number(x.amount_ex_tax||0),0);
+ const actualRevenueGross=projectTxs.filter(x=>x.direction==='in').reduce((a,x)=>a+Number((x.amount_in_tax??x.amount_ex_tax)||0),0);
+ const actualForestEx=projectTxs.filter(x=>x.transaction_type==='forest_maintenance_support').reduce((a,x)=>a+Number(x.amount_ex_tax||0),0);
+ const actualForestGross=projectTxs.filter(x=>x.transaction_type==='forest_maintenance_support').reduce((a,x)=>a+Number((x.amount_in_tax??x.amount_ex_tax)||0),0);
+ const actualReviewEx=projectTxs.filter(x=>x.transaction_type==='jcredit_review_certification_fee').reduce((a,x)=>a+Number(x.amount_ex_tax||0),0);
+ const actualReviewGross=projectTxs.filter(x=>x.transaction_type==='jcredit_review_certification_fee').reduce((a,x)=>a+Number((x.amount_in_tax??x.amount_ex_tax)||0),0);
+ const currentSaleUnitPrice=soldActual?salesActual/soldActual:0;
+ const allPeriodStatus=financeHorizon.total_cost_status||'総事業費は一部未積算';
+ const moneyTypeLabel=v=>({forest_maintenance_support:'森林整備業務費',jcredit_review_certification_fee:'審査・認証費',jcredit_sale:'Jクレジット販売'}[v]||txt(v));
+ const txDirectionLabel=v=>v==='in'?'入金':v==='out'?'支出':txt(v);
+ const moneyYearRows=(annual||[]).filter(x=>Number(x.calendar_year)<=lastCertificationYear).map(a=>{
+  const y=Number(a.calendar_year),c=certByYear.get(y)||null;
+  const yearTx=projectTxs.filter(x=>txYear(x)===y),yearOutEx=yearTx.filter(x=>x.direction==='out').reduce((z,x)=>z+Number(x.amount_ex_tax||0),0);
+  const isCurrent=y===todayYear,isFuture=y>todayYear;
+  const cost=yearOutEx?yen(yearOutEx):isFuture?'未積算':'金額未登録';
+  const certTxt=c?(Number(c.issued_quantity_t||0)>0?`第${num(c.certification_round)}回 発行 ${num(c.issued_quantity_t)}t`:`第${num(c.certification_round)}回 予定・量未確定`):'—';
+  const saleAmt=Number(a.sales_ex_tax||0),saleTxt=saleAmt?yen(saleAmt):isFuture?'未設定':'販売なし';
+  const state=isCurrent?'<span class="jc-money-year-state actual">実績＋配賦予定</span>':isFuture?'<span class="jc-money-year-state plan">予定</span>':'<span class="jc-money-year-state actual">経過</span>';
+  return `<tr><td><b>${y}年度</b></td><td>${esc(a.phase||'—')}</td><td>${cost}${yearOutEx?'<br><span class="smallnote">事業収支用・税抜</span>':''}</td><td>${esc(certTxt)}</td><td>${saleTxt}${saleAmt?'<br><span class="smallnote">税抜</span>':''}</td><td>${state}</td></tr>`;
+ }).join('');
+ const postYears=planEndYear>=postManagementStart?`${postManagementStart}〜${planEndYear}年度`:'認証終了後';
+
+ // 8年間の事業モデルは「正本実績」と「比較用仮定」を混ぜない。
+ // 認証対象期間は2024/4〜2032/3の8年間。最終認証・入金が2032年に発生し得るため、資金表には2032年精算列も出す。
+ const creditingStartYear=Number(pr.custom_crediting_start?String(pr.custom_crediting_start).slice(0,4):2024)||2024;
+ const creditingYears=Number(pr.crediting_period_years||8)||8;
+ const creditingEndFy=creditingStartYear+creditingYears-1;
+ const cashflowYears=[];for(let y=creditingStartYear;y<=creditingEndFy;y++)cashflowYears.push(y);if(lastCertificationYear>creditingEndFy)cashflowYears.push(lastCertificationYear);
+ const cfCells=(fn)=>cashflowYears.map(y=>`<td>${fn(y)}</td>`).join('');
+ const yearActualRevenueEx=y=>projectTxs.filter(x=>txYear(x)===y&&x.direction==='in').reduce((a,x)=>a+Number(x.amount_ex_tax||0),0);
+ const yearActualExpenseEx=y=>projectTxs.filter(x=>txYear(x)===y&&x.direction==='out').reduce((a,x)=>a+Number(x.amount_ex_tax||0),0);
+ const yearActualCashIn=y=>projectTxs.filter(x=>txYear(x)===y&&x.direction==='in').reduce((a,x)=>a+Number((x.amount_in_tax??x.amount_ex_tax)||0),0);
+ const yearActualCashOut=y=>projectTxs.filter(x=>txYear(x)===y&&x.direction==='out').reduce((a,x)=>a+Number((x.amount_in_tax??x.amount_ex_tax)||0),0);
+ const yearAnnual=y=>annualByYear.get(y)||{};
+ const cfRevenueCell=y=>{const v=yearActualRevenueEx(y);if(v)return yen(v);const a=yearAnnual(y);return Number(a.sales_ex_tax||0)?yen(a.sales_ex_tax):(y>todayYear?'未設定':'—')};
+ const cfExpenseCell=y=>{const v=yearActualExpenseEx(y);return v?yen(v):(y>todayYear?'未積算':'—')};
+ const cfCashInCell=y=>{const v=yearActualCashIn(y);return v?yen(v):(y>todayYear?'未設定':'—')};
+ const cfCashOutCell=y=>{const v=yearActualCashOut(y);return v?yen(v):(y>todayYear?'未積算':'—')};
+ const cfNetCell=y=>{const r=yearActualRevenueEx(y),e=yearActualExpenseEx(y);if(r||e)return yen(r-e);return y>todayYear?'未算定':'—'};
+ const cfCertCell=y=>{const c=certByYear.get(y);if(!c)return '—';if(Number(c.issued_quantity_t||0)>0)return `${num(c.issued_quantity_t)}t`;return '量未確定'};
+ const cfSalesQtyCell=y=>{const a=yearAnnual(y);const q=Number(a.sold_quantity_t||0);return q?`${num(q)}t`:(y>todayYear?'未設定':'—')};
+ const cfHeaders=cashflowYears.map(y=>`<th>${y}${y===lastCertificationYear&&y>creditingEndFy?'<br><span class="smallnote">最終精算</span>':''}</th>`).join('');
+ const cfTable=`<div class="tablewrap jc-cf-table"><table><thead><tr><th>項目</th>${cfHeaders}</tr></thead><tbody>
+  <tr><td><b>認証・発行量</b></td>${cfCells(cfCertCell)}</tr>
+  <tr><td><b>販売量</b></td>${cfCells(cfSalesQtyCell)}</tr>
+  <tr><td><b>Jクレ売上（税抜）</b></td>${cfCells(cfRevenueCell)}</tr>
+  <tr><td><b>事業費（税抜）</b></td>${cfCells(cfExpenseCell)}</tr>
+  <tr><td><b>事業収支差額*</b></td>${cfCells(cfNetCell)}</tr>
+  <tr class="jc-cf-cash"><td><b>実入金（税込）</b></td>${cfCells(cfCashInCell)}</tr>
+  <tr class="jc-cf-cash"><td><b>実出金（税込）</b></td>${cfCells(cfCashOutCell)}</tr>
+ </tbody></table></div>`;
+
+ const comparisonRoundCount=Math.max((certs||[]).length,4),comparisonIssuedPerRound=issuedTotal||1000;
+ const comparisonReserveRate=reservePolicy.target_rate_percent!=null?Number(reservePolicy.target_rate_percent)/100:(issuedTotal?reserveActual/issuedTotal:.10);
+ const comparisonSaleablePerRound=Math.max(0,comparisonIssuedPerRound*(1-comparisonReserveRate));
+ const comparisonPrice=currentSaleUnitPrice||6000;
+ const comparisonGrossPotential=comparisonSaleablePerRound*comparisonPrice*comparisonRoundCount;
+ const comparisonRoundRows=Array.from({length:comparisonRoundCount},(_,i)=>{
+  const round=i+1,c=(certs||[]).find(x=>Number(x.certification_round)===round)||{};
+  const isFirst=round===1,issued=isFirst&&issuedTotal?issuedTotal:comparisonIssuedPerRound,reserve=isFirst&&reserveActual?reserveActual:issued*comparisonReserveRate,saleable=Math.max(0,issued-reserve);
+  const actualSold=isFirst?soldActual:0,actualRevenue=isFirst?salesActual:0,potential=saleable*comparisonPrice;
+  const when=c.certification_year?`${c.certification_year}年`:`第${round}回`;
+  return `<tr><td>第${round}回<br><span class="smallnote">${esc(when)}</span></td><td>${num(issued)}t${isFirst?' <span class="jc-money-year-state actual">実績</span>':' <span class="jc-money-year-state plan">仮定</span>'}</td><td>${num(reserve)}t</td><td>${num(saleable)}t</td><td>${yen(comparisonPrice)}/t</td><td>${isFirst?`${yen(actualRevenue)} 実績<br><span class="smallnote">未販売在庫を同単価で売る場合の総ポテンシャル ${yen(potential)}</span>`:`${yen(potential)}<br><span class="smallnote">比較用仮定</span>`}</td></tr>`;
+ }).join('');
+ const comparisonModelHtml=`<details class="jc-money-ledger jc-cf-model" open><summary>8年間の事業キャッシュフロー／収支モデルを見る</summary><div class="map-summary-note"><b>認証対象期間：${creditingStartYear}年度〜${creditingEndFy}年度（8年間）。</b> 最終認証・販売の資金移動は${lastCertificationYear}年にずれるため、表には最終精算列を追加しています。正本実績と比較用仮定は混ぜません。</div>
+ <div class="jc-tax-rule-grid"><div class="detailitem"><div class="k">事業収支</div><div class="v">原則、税抜で比較</div><div class="smallnote">売上と費用を同じ税抜基準で比較。</div></div><div class="detailitem"><div class="k">資金繰り</div><div class="v">実入出金は税込</div><div class="smallnote">口座から実際に出入りする金額。</div></div><div class="detailitem"><div class="k">山主等への配賦</div><div class="v">配賦基準額＋個別税区分</div><div class="smallnote">受取人ごとの課税関係を一律に決めない。</div></div></div>
+ <h4>正本ベース｜年度別キャッシュフロー</h4>${cfTable}<div class="smallnote">*「事業収支差額」は登録済みの税抜売上－税抜費用だけの単純差額です。配賦・公費・将来費用等が揃っていない年度は最終利益とは扱いません。</div>
+ <h4 style="margin-top:14px">比較用ベースケース｜4回認証した場合の売上ポテンシャル</h4><div class="decision-warning">第2〜4回の認証量は未登録です。ここでは比較のためだけに「各回 ${num(comparisonIssuedPerRound)}t発行、リスク留保 ${num(comparisonReserveRate*100)}%、販売単価 ${yen(comparisonPrice)}/t」を仮置きします。将来費用は勝手に補完しないため、8年間の最終利益はまだ算定しません。</div><div class="tablewrap"><table><thead><tr><th>認証回</th><th>発行量</th><th>リスク留保</th><th>販売可能量</th><th>販売単価</th><th>売上</th></tr></thead><tbody>${comparisonRoundRows}<tr><td><b>4回合計</b></td><td><b>${num(comparisonIssuedPerRound*comparisonRoundCount)}t</b></td><td><b>${num(comparisonIssuedPerRound*comparisonReserveRate*comparisonRoundCount)}t</b></td><td><b>${num(comparisonSaleablePerRound*comparisonRoundCount)}t</b></td><td>—</td><td><b>${yen(comparisonGrossPotential)}</b><br><span class="smallnote">費用控除前・比較用</span></td></tr></tbody></table></div><div class="smallnote">この欄は、業者提案でよく見る「8年間の総発行・総売上」を比較するためのモデルです。費用、PM報酬、販売支援料、山主配賦、税務は別行で評価します。</div></details>`;
+
+ const moneyOverviewHtml=`<div class="pj-block jc-money-overview"><div class="jc-money-scope-head"><div><h3>お金｜PJ全体 → 2026年度 → 第1回販売</h3><div class="pj-note">「事業収支（税抜）」「資金繰り（税込）」「配賦」を分け、どの年度・認証回の金額かを明示します。全期間の総事業費・最終利益は将来費用が未積算のため現時点では確定しません。</div></div><div class="jc-money-asof">PJ計画 ${planStartYear}〜${planEndYear}年度</div></div>
+ <div class="jc-money-total-grid"><div class="jc-money-total"><div class="k">累計実績｜事業費（税抜）</div><div class="v">${yen(actualExpenseEx)}</div><div class="d">2026年度の登録済み支出。将来管理費等は含まない。</div></div><div class="jc-money-total"><div class="k">累計実績｜Jクレ売上（税抜）</div><div class="v">${yen(actualRevenueEx||salesActual)}</div><div class="d">現在は2026年度・第1回販売200tのみ。</div></div><div class="jc-money-total"><div class="k">累計実績｜資金移動（税込）</div><div class="v">入 ${yen(actualRevenueGross)} / 出 ${yen(actualExpenseGross)}</div><div class="d">実際の入出金。損益とは別。</div></div><div class="jc-money-total unknown"><div class="k">PJ全期間｜最終収支</div><div class="v">未算定</div><div class="d">${esc(allPeriodStatus)}。第2〜4回の費用・認証量・販売額等が未確定。</div></div></div>
+ <div class="jc-money-periods"><div class="jc-money-period"><div class="y">2024〜2025</div><div class="t">PJ開始・森林管理</div><div class="d">認証対象期間。金額の正本登録はなし。</div></div><div class="jc-money-period current"><div class="y">2026｜現在</div><div class="t">第1回認証・発行・販売</div><div class="d">費用・売上・在庫・配賦が実績として動いた年度。</div></div><div class="jc-money-period"><div class="y">2027</div><div class="t">森林管理・在庫運用</div><div class="d">将来費用は未積算。既存在庫の販売判断を継続。</div></div><div class="jc-money-period"><div class="y">2028・2030・2032</div><div class="t">第2〜4回認証予定</div><div class="d">認証量・発行量・売上・費用は未確定。</div></div><div class="jc-money-period"><div class="y">${postYears}</div><div class="t">認証終了後の森林管理</div><div class="d">管理継続期間。将来管理費は現在未積算。</div></div></div>
+ <div class="jc-money-subhead">2026年度｜第1回発行で実際に動いたお金</div>
+ <div class="jc-tax-rule-grid"><div class="jc-money-axis"><h4>事業収支｜税抜</h4><div class="axis-total">費用 ${yen(actualExpenseEx)}</div><div class="axis-note">売上・費用を同じ税抜基準で比較します。</div><div class="jc-money-breakdown"><div><span>森林整備業務費</span><b>${yen(actualForestEx)}</b></div><div><span>審査・認証費</span><b>${yen(actualReviewEx)}</b></div><div><span>Jクレ売上</span><b>${yen(actualRevenueEx||salesActual)}</b></div></div></div>
+ <div class="jc-money-axis"><h4>資金繰り｜税込</h4><div class="axis-total">入 ${yen(actualRevenueGross)} / 出 ${yen(actualExpenseGross)}</div><div class="axis-note">口座から実際に動いた金額。事業利益とは別です。</div><div class="jc-money-breakdown"><div><span>森林整備支払</span><b>${yen(actualForestGross)}</b></div><div><span>審査・認証支払</span><b>${yen(actualReviewGross)}</b></div><div><span>Jクレ販売入金</span><b>${yen(actualRevenueGross)}</b></div></div></div>
+ <div class="jc-money-axis"><h4>販売後の配賦｜税区分は個別判定</h4><div class="axis-total">配賦原資 ${yen(y26Finance.allocation_pool_jpy||allocationActual)}</div><div class="axis-note">税抜売上を基準に算定した配賦基準額。受取人ごとの消費税区分は契約・属性により別判定します。</div><div class="jc-money-breakdown"><div><span>森林組合運営分</span><b>${yen(y26Finance.forest_coop_operation_pool_jpy)}</b></div><div><span>基金・現金留保</span><b>${yen(y26Finance.fund_reserve_jpy)}</b></div><div><span>町・山主等への配賦原資</span><b>${yen(y26Finance.allocation_pool_jpy||allocationActual)}</b></div></div></div></div>
+ <div class="jc-money-subhead">2026年度｜第1回販売後の配賦</div><div class="tablewrap"><table><thead><tr><th>配賦先</th><th>配賦基準額</th><th>税区分</th><th>状態</th></tr></thead><tbody>${projectOwnerSettlements.map(x=>`<tr><td>${partyLink(x.owner_name)}</td><td>${yen(x.finalized_distribution_jpy)}</td><td>個別確認</td><td>${Number(x.actual_payment_jpy||0)>0?'支払済':'配賦確定・未支払'}</td></tr>`).join('')||'<tr><td colspan="4">配賦データなし</td></tr>'}</tbody></table></div><div class="smallnote">配賦額を一律に「税抜」「税込」と断定しません。受取人・契約ごとの税務区分を別管理する前提です。</div>
+ ${comparisonModelHtml}
+ <div class="jc-money-subhead">年度別｜どの年の数字か</div><div class="tablewrap"><table><thead><tr><th>年度</th><th>フェーズ</th><th>事業費（税抜）</th><th>認証・発行</th><th>Jクレ売上（税抜）</th><th>区分</th></tr></thead><tbody>${moneyYearRows}<tr><td><b>${postYears}</b></td><td>認証終了後・森林管理</td><td>未積算</td><td>新規認証なし</td><td>未設定</td><td><span class="jc-money-year-state unknown">管理継続</span></td></tr></tbody></table></div>
+ <div class="jc-money-subhead">クレジット在庫｜第1回発行1,000tの現在地</div><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">発行済</div><div class="v">${num(issuedTotal)} t</div><div class="d">2026年8月15日発行</div></div><div class="pj-kpi"><div class="k">売却済</div><div class="v">${num(soldActual)} t</div><div class="d">2026年度・第1回販売</div></div><div class="pj-kpi"><div class="k">販売可能在庫</div><div class="v">${num(availableActual)} t</div><div class="d">通常在庫。販売対象</div></div><div class="pj-kpi"><div class="k">リスク留保</div><div class="v">${num(reserveActual)} t</div><div class="d">${reservePolicy.target_rate_percent!=null?`方針 ${num(reservePolicy.target_rate_percent)}%`:'別管理'}。自動販売しない</div></div></div><div class="detailgrid" style="margin-top:10px"><div class="detailitem"><div class="k">クレジット留保方針</div><div class="v">${esc(reservePolicy.calculation_basis||'留保方針未登録')}</div>${reserveRisks?`<div class="smallnote">対象リスク：${esc(reserveRisks)}</div>`:''}</div><div class="detailitem"><div class="k">現金留保との違い</div><div class="v">現金の基金・留保 ${yen(y26Finance.fund_reserve_jpy)} と、クレジット留保 ${num(reserveActual)}t は別管理。</div></div></div>
+ <details class="jc-money-ledger"><summary>2026年度の取引明細を見る（${num(actualTxCount)}件）</summary><div class="smallnote">この取引台帳は実際の資金移動なので税込を表示します。上の事業収支は税抜で比較しています。</div><div class="tablewrap"><table><thead><tr><th>日付</th><th>内容</th><th>入出金</th><th>税抜</th><th>消費税</th><th>税込</th><th>相手先</th><th>状態</th></tr></thead><tbody>${projectTxs.map(x=>`<tr><td>${date(x.transaction_date)}</td><td>${esc(moneyTypeLabel(x.transaction_type))}<br><span class="smallnote">${esc(x.description||x.reference_no||'')}</span></td><td>${esc(txDirectionLabel(x.direction))}</td><td>${yen(x.amount_ex_tax)}</td><td>${yen(x.tax_amount)}</td><td>${yen(x.amount_in_tax)}</td><td>${esc(x.counterparty||'—')}</td><td>${esc(workflowStatusLabel(x.status||x.transaction_stage))}</td></tr>`).join('')||'<tr><td colspan="8">取引明細なし</td></tr>'}</tbody></table></div></details>
+ ${operatingPolicyHtml}</div>`;
  const stageStatusLabel=rows=>rows.some(x=>x.stage_status==='current')?'進行中':rows.length&&rows.every(x=>x.stage_status==='passed')?'完了':rows.some(x=>x.stage_status==='passed')?'一部完了':rows.some(x=>x.stage_status==='not_reached')?'未着手':rows.some(x=>x.stage_status==='excluded')?'対象外含む':'確認中';
  const candidateStateLabel=c=>{const current=c.rows.filter(x=>x.stage_status==='current').sort((a,b)=>Number(a.stage_order||0)-Number(b.stage_order||0));if(current.length)return current.map(x=>x.stage_label).join(' / ');const passed=c.rows.filter(x=>x.stage_status==='passed').sort((a,b)=>Number(b.stage_order||0)-Number(a.stage_order||0));return passed[0]?.stage_label||'確認中';};
  const addRoundHead=addRoundRows[0]||{};
@@ -3772,7 +3891,7 @@ async function aomineJcreditSummary(view='project'){
  cards([]);
  const html=`<section class="pj-sheet jc-summary"><div class="pj-sheet-head"><div><div class="eyebrow">青嶺町｜森林J-クレジット</div><h2>プロジェクト進行サマリー</h2><div class="desc">対象森林、追加候補、認証・発行、販売・分配の現在地を確認します。</div></div><div class="pj-sheet-status">${esc(demoStatusLabel(st.project_status||'active'))}</div></div>
  <div class="pj-block"><h3>現在地</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">現在対象</div><div class="v">${ha(activeArea)}</div><div class="d">${num(activeForests)}森林</div><div class="pj-near-actions"><button class="go" onclick="load('forest')">対象森林</button><button onclick="load('map')">地図</button></div></div><div class="pj-kpi"><div class="k">追加候補</div><div class="v">${candidateArea?`${ha(candidateArea)} <span class="tag">未追加</span>`:'現在値なし'}</div><div class="d"><b>現在対象145.6haには未算入</b>。権利・計画・適格性・収支を個別確認</div><div class="pj-near-actions"><button onclick="load('forest')">森林・権利</button></div></div><div class="pj-kpi"><div class="k">認証対象期間</div><div class="v">${esc(period)}</div><div class="d">${esc(cycle)}</div><div class="pj-near-actions"><button onclick="openJcreditDetail('DEMO-JC-001')">認証詳細</button></div></div><div class="pj-kpi"><div class="k">発行済</div><div class="v">${issuedTotal?`${num(issuedTotal)} t`:'未発行／未確定'}</div><div class="d">${nextCert?`次の認証：${esc(nextCert.certification_year)}年度`:'認証予定を確認'}</div></div></div></div>
- ${inventoryOperationHtml}
+ ${moneyOverviewHtml}
  <div class="pj-block"><div class="jc-title-row"><div><h3>森林追加｜候補からPJ対象化まで</h3><div class="pj-note">追加候補は既存対象と混ぜず、森林ごとに条件とお金を確認してから対象化します。追加しない判断でも、集約・森林管理側の履歴は残します。</div></div></div>
  ${registrationProgressHtml}
  <div class="project-flow"><div class="project-step"><div class="n">01 候補</div><div class="t">集約・森林管理から候補化</div><div class="v">${candidateArea?ha(candidateArea):'候補ごと'}</div></div><div class="project-step"><div class="n">02 条件</div><div class="t">権利・同意・計画・適格性</div><div class="v">個別確認</div></div><div class="project-step"><div class="n">03 お金</div><div class="t">費用・財源・負担・回収条件</div><div class="v">収支条件を確認</div></div><div class="project-step"><div class="n">04 追加</div><div class="t">契約・対象変更</div><div class="v">承認後</div></div><div class="project-step"><div class="n">05 運用</div><div class="t">モニタリング・認証へ</div><div class="v">履歴継続</div></div></div>
