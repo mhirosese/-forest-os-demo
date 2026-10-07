@@ -3786,14 +3786,72 @@ async function aomineJcreditSummary(view='project'){
  const comparisonRoundRows=Array.from({length:comparisonRoundCount},(_,i)=>{
   const round=i+1,c=(certs||[]).find(x=>Number(x.certification_round)===round)||{};
   const isFirst=round===1,issued=isFirst&&issuedTotal?issuedTotal:comparisonIssuedPerRound,reserve=isFirst&&reserveActual?reserveActual:issued*comparisonReserveRate,saleable=Math.max(0,issued-reserve);
-  const actualSold=isFirst?soldActual:0,actualRevenue=isFirst?salesActual:0,potential=saleable*comparisonPrice;
+  const actualRevenue=isFirst?salesActual:0,potential=saleable*comparisonPrice;
   const when=c.certification_year?`${c.certification_year}年`:`第${round}回`;
   return `<tr><td>第${round}回<br><span class="smallnote">${esc(when)}</span></td><td>${num(issued)}t${isFirst?' <span class="jc-money-year-state actual">実績</span>':' <span class="jc-money-year-state plan">仮定</span>'}</td><td>${num(reserve)}t</td><td>${num(saleable)}t</td><td>${yen(comparisonPrice)}/t</td><td>${isFirst?`${yen(actualRevenue)} 実績<br><span class="smallnote">未販売在庫を同単価で売る場合の総ポテンシャル ${yen(potential)}</span>`:`${yen(potential)}<br><span class="smallnote">比較用仮定</span>`}</td></tr>`;
  }).join('');
+
+ // 業者提案比較用の年度CF。正本ではなく、現在の第1回実績から置いた明示的な試算。
+ // 森林整備費・Topora/外部支援費は将来値を作らず、Jクレ固有CFと分離する。
+ const comparisonReviewCostPerRound=actualReviewEx||1363636;
+ const distributionBase2026=Number(y26Finance.distribution_base_ex_tax_jpy||salesActual||0);
+ const safeRate=(v,base,fallback)=>base>0?Number(v||0)/base:fallback;
+ const comparisonOperationRate=safeRate(y26Finance.forest_coop_operation_pool_jpy,distributionBase2026,.10);
+ const comparisonCashReserveRate=safeRate(y26Finance.fund_reserve_jpy,distributionBase2026,.20);
+ const comparisonMunicipalityRate=safeRate(y26Finance.municipality_return_jpy,distributionBase2026,.4923075);
+ const comparisonPrivateRate=safeRate(y26Finance.private_owner_return_jpy,distributionBase2026,.0884617);
+ const comparisonCommonRate=safeRate(y26Finance.common_right_return_jpy,distributionBase2026,.1192308);
+ const comparisonOwnerCommunityRate=comparisonPrivateRate+comparisonCommonRate;
+ const comparisonYears=[];for(let y=creditingStartYear;y<=lastCertificationYear;y++)comparisonYears.push(y);
+ const comparisonCertYears=new Set((certs||[]).map(x=>Number(x.certification_year)).filter(Boolean));
+ const firstActualCertificationYear=Number(((certs||[]).find(x=>Number(x.issued_quantity_t||0)>0)||{}).certification_year||todayYear);
+ const comparisonSalesByYear=new Map();
+ comparisonSalesByYear.set(firstActualCertificationYear,salesActual);
+ if(availableActual>0)comparisonSalesByYear.set(firstActualCertificationYear+1,availableActual*comparisonPrice);
+ (certs||[]).forEach(c=>{const y=Number(c.certification_year||0);if(y>todayYear)comparisonSalesByYear.set(y,(comparisonSalesByYear.get(y)||0)+comparisonSaleablePerRound*comparisonPrice)});
+ let comparisonCumMunicipalCF=0;
+ const comparisonRowsByYear=comparisonYears.map(y=>{
+  const cert=comparisonCertYears.has(y);
+  const first=y===firstActualCertificationYear;
+  const salesEx=Number(comparisonSalesByYear.get(y)||0);
+  const issued=first?issuedTotal:(cert&&y>todayYear?comparisonIssuedPerRound:0);
+  const soldQty=salesEx&&comparisonPrice?salesEx/comparisonPrice:0;
+  const reviewCost=cert?(first?actualReviewEx:comparisonReviewCostPerRound):0;
+  const municipalityReturn=first&&salesActual?Number(y26Finance.municipality_return_jpy||0):salesEx*comparisonMunicipalityRate;
+  const ownerCommunity=first&&salesActual?Number(y26Finance.private_owner_return_jpy||0)+Number(y26Finance.common_right_return_jpy||0):salesEx*comparisonOwnerCommunityRate;
+  const operationPool=first&&salesActual?Number(y26Finance.forest_coop_operation_pool_jpy||0):salesEx*comparisonOperationRate;
+  const cashReserve=first&&salesActual?Number(y26Finance.fund_reserve_jpy||0):salesEx*comparisonCashReserveRate;
+  const municipalCF=municipalityReturn-reviewCost;
+  comparisonCumMunicipalCF+=municipalCF;
+  const forestCost=y===firstActualCertificationYear?actualForestEx:null;
+  return {year:y,cert,first,salesEx,issued,soldQty,reviewCost,municipalityReturn,ownerCommunity,operationPool,cashReserve,municipalCF,cumulative:comparisonCumMunicipalCF,forestCost};
+ });
+ const sumScenario=k=>comparisonRowsByYear.reduce((a,x)=>a+Number(x[k]||0),0);
+ const scenarioTotalSales=sumScenario('salesEx'),scenarioTotalReview=sumScenario('reviewCost'),scenarioTotalMunicipalReturn=sumScenario('municipalityReturn'),scenarioTotalOwner=sumScenario('ownerCommunity'),scenarioTotalOperation=sumScenario('operationPool'),scenarioTotalCashReserve=sumScenario('cashReserve'),scenarioTotalMunicipalCF=sumScenario('municipalCF');
+ const scenarioCols=comparisonRowsByYear.map(x=>`<th>${x.year}${x.year===lastCertificationYear&&x.year>creditingEndFy?'<br><span class="smallnote">最終精算</span>':''}</th>`).join('');
+ const scenarioCells=fn=>comparisonRowsByYear.map(x=>`<td>${fn(x)}</td>`).join('');
+ const scenarioCashflowTableHtml=`<div class="tablewrap jc-cf-table"><table><thead><tr><th>項目</th>${scenarioCols}<th>全期間</th></tr></thead><tbody>
+  <tr><td><b>発行量</b></td>${scenarioCells(x=>x.issued?`${num(x.issued)}t${x.first?' 実績':' 仮定'}`:'—')}<td><b>${num(comparisonIssuedPerRound*comparisonRoundCount)}t</b></td></tr>
+  <tr><td><b>販売量</b></td>${scenarioCells(x=>x.soldQty?`${num(x.soldQty)}t`:'—')}<td><b>${num(scenarioTotalSales/comparisonPrice)}t</b></td></tr>
+  <tr><td><b>Jクレ売上（税抜）</b></td>${scenarioCells(x=>x.salesEx?yen(x.salesEx):'—')}<td><b>${yen(scenarioTotalSales)}</b></td></tr>
+  <tr><td><b>自治体Jクレ固有負担（税抜）</b><br><span class="smallnote">審査・認証費</span></td>${scenarioCells(x=>x.reviewCost?yen(x.reviewCost):'—')}<td><b>${yen(scenarioTotalReview)}</b></td></tr>
+  <tr><td><b>町への還元</b></td>${scenarioCells(x=>x.municipalityReturn?yen(Math.round(x.municipalityReturn)):'—')}<td><b>${yen(Math.round(scenarioTotalMunicipalReturn))}</b></td></tr>
+  <tr><td><b>山主・入会会等への配賦</b></td>${scenarioCells(x=>x.ownerCommunity?yen(Math.round(x.ownerCommunity)):'—')}<td><b>${yen(Math.round(scenarioTotalOwner))}</b></td></tr>
+  <tr><td><b>森林組合運営原資</b></td>${scenarioCells(x=>x.operationPool?yen(Math.round(x.operationPool)):'—')}<td><b>${yen(Math.round(scenarioTotalOperation))}</b></td></tr>
+  <tr><td><b>基金・現金留保</b></td>${scenarioCells(x=>x.cashReserve?yen(Math.round(x.cashReserve)):'—')}<td><b>${yen(Math.round(scenarioTotalCashReserve))}</b></td></tr>
+  <tr class="jc-cf-cash"><td><b>自治体JクレCF</b><br><span class="smallnote">町還元 − Jクレ固有費</span></td>${scenarioCells(x=>yen(Math.round(x.municipalCF)))}<td><b>${yen(Math.round(scenarioTotalMunicipalCF))}</b></td></tr>
+  <tr class="jc-cf-cash"><td><b>累積自治体JクレCF</b></td>${scenarioCells(x=>yen(Math.round(x.cumulative)))}<td><b>${yen(Math.round(comparisonCumMunicipalCF))}</b></td></tr>
+  <tr><td><b>森林整備公費（税抜・別軸）</b></td>${scenarioCells(x=>x.forestCost!=null?(x.forestCost?yen(x.forestCost):'—'):(x.year>firstActualCertificationYear?'未積算':'—'))}<td><b>${yen(actualForestEx)}＋将来未積算</b></td></tr>
+  <tr><td><b>Topora / 外部支援・販売費</b></td>${scenarioCells(x=>'未設定')}<td><b>未設定</b></td></tr>
+ </tbody></table></div>`;
+ const scenarioSummaryHtml=`<div class="jc-money-total-grid" style="margin-top:10px"><div class="jc-money-total"><div class="k">総売上ポテンシャル</div><div class="v">${yen(Math.round(scenarioTotalSales))}</div><div class="d">販売可能${num(scenarioTotalSales/comparisonPrice)}tを${yen(comparisonPrice)}/tで販売する比較仮定。</div></div><div class="jc-money-total"><div class="k">自治体Jクレ固有負担</div><div class="v">${yen(Math.round(scenarioTotalReview))}</div><div class="d">審査・認証費を第1回と同水準で4回と仮定。</div></div><div class="jc-money-total"><div class="k">山主・入会会等への配賦</div><div class="v">${yen(Math.round(scenarioTotalOwner))}</div><div class="d">2026年の配賦比率が続く場合。</div></div><div class="jc-money-total"><div class="k">自治体JクレCF</div><div class="v">${yen(Math.round(scenarioTotalMunicipalCF))}</div><div class="d">町への還元－自治体Jクレ固有負担。森林整備公費、Topora/外部支援費は含まない。</div></div></div>`;
+ const scenarioCashflowHtml=`<div class="decision-warning"><b>比較用試算。</b> 第2〜4回は、各回${num(comparisonIssuedPerRound)}t発行、留保${num(comparisonReserveRate*100)}%、販売単価${yen(comparisonPrice)}/t、審査・認証費は第1回と同水準、配賦比率は2026年と同じ、と仮定しています。第1回の700t在庫は翌年度に販売する置き方です。森林整備費・Topora/外部支援費は将来未積算のため自治体JクレCFには含めません。</div>${scenarioSummaryHtml}${scenarioCashflowTableHtml}<div class="smallnote">自治体JクレCFは「Jクレ事業だけを見た自治体側の比較指標」です。森林整備そのものの公費負担を含む最終自治体負担は、将来の森林整備費が積算されるまで確定しません。</div>`;
+
  const comparisonModelHtml=`<details class="jc-money-ledger jc-cf-model" open><summary>8年間の事業キャッシュフロー／収支モデルを見る</summary><div class="map-summary-note"><b>認証対象期間：${creditingStartYear}年度〜${creditingEndFy}年度（8年間）。</b> 最終認証・販売の資金移動は${lastCertificationYear}年にずれるため、表には最終精算列を追加しています。正本実績と比較用仮定は混ぜません。</div>
  <div class="jc-tax-rule-grid"><div class="detailitem"><div class="k">事業収支</div><div class="v">原則、税抜で比較</div><div class="smallnote">売上と費用を同じ税抜基準で比較。</div></div><div class="detailitem"><div class="k">資金繰り</div><div class="v">実入出金は税込</div><div class="smallnote">口座から実際に出入りする金額。</div></div><div class="detailitem"><div class="k">山主等への配賦</div><div class="v">配賦基準額＋個別税区分</div><div class="smallnote">受取人ごとの課税関係を一律に決めない。</div></div></div>
  <h4>正本ベース｜年度別キャッシュフロー</h4>${cfTable}<div class="smallnote">*「事業収支差額」は登録済みの税抜売上－税抜費用だけの単純差額です。配賦・公費・将来費用等が揃っていない年度は最終利益とは扱いません。</div>
- <h4 style="margin-top:14px">比較用ベースケース｜4回認証した場合の売上ポテンシャル</h4><div class="decision-warning">第2〜4回の認証量は未登録です。ここでは比較のためだけに「各回 ${num(comparisonIssuedPerRound)}t発行、リスク留保 ${num(comparisonReserveRate*100)}%、販売単価 ${yen(comparisonPrice)}/t」を仮置きします。将来費用は勝手に補完しないため、8年間の最終利益はまだ算定しません。</div><div class="tablewrap"><table><thead><tr><th>認証回</th><th>発行量</th><th>リスク留保</th><th>販売可能量</th><th>販売単価</th><th>売上</th></tr></thead><tbody>${comparisonRoundRows}<tr><td><b>4回合計</b></td><td><b>${num(comparisonIssuedPerRound*comparisonRoundCount)}t</b></td><td><b>${num(comparisonIssuedPerRound*comparisonReserveRate*comparisonRoundCount)}t</b></td><td><b>${num(comparisonSaleablePerRound*comparisonRoundCount)}t</b></td><td>—</td><td><b>${yen(comparisonGrossPotential)}</b><br><span class="smallnote">費用控除前・比較用</span></td></tr></tbody></table></div><div class="smallnote">この欄は、業者提案でよく見る「8年間の総発行・総売上」を比較するためのモデルです。費用、PM報酬、販売支援料、山主配賦、税務は別行で評価します。</div></details>`;
+ <h4 style="margin-top:14px">比較用｜年度CF・累積CF・自治体負担・山主配賦</h4>${scenarioCashflowHtml}
+ <h4 style="margin-top:14px">認証回別｜売上ポテンシャル</h4><div class="tablewrap"><table><thead><tr><th>認証回</th><th>発行量</th><th>リスク留保</th><th>販売可能量</th><th>販売単価</th><th>売上</th></tr></thead><tbody>${comparisonRoundRows}<tr><td><b>4回合計</b></td><td><b>${num(comparisonIssuedPerRound*comparisonRoundCount)}t</b></td><td><b>${num(comparisonIssuedPerRound*comparisonReserveRate*comparisonRoundCount)}t</b></td><td><b>${num(comparisonSaleablePerRound*comparisonRoundCount)}t</b></td><td>—</td><td><b>${yen(comparisonGrossPotential)}</b><br><span class="smallnote">費用控除前・比較用</span></td></tr></tbody></table></div></details>`;
 
  const moneyOverviewHtml=`<div class="pj-block jc-money-overview"><div class="jc-money-scope-head"><div><h3>お金｜PJ全体 → 2026年度 → 第1回販売</h3><div class="pj-note">「事業収支（税抜）」「資金繰り（税込）」「配賦」を分け、どの年度・認証回の金額かを明示します。全期間の総事業費・最終利益は将来費用が未積算のため現時点では確定しません。</div></div><div class="jc-money-asof">PJ計画 ${planStartYear}〜${planEndYear}年度</div></div>
  <div class="jc-money-total-grid"><div class="jc-money-total"><div class="k">累計実績｜事業費（税抜）</div><div class="v">${yen(actualExpenseEx)}</div><div class="d">2026年度の登録済み支出。将来管理費等は含まない。</div></div><div class="jc-money-total"><div class="k">累計実績｜Jクレ売上（税抜）</div><div class="v">${yen(actualRevenueEx||salesActual)}</div><div class="d">現在は2026年度・第1回販売200tのみ。</div></div><div class="jc-money-total"><div class="k">累計実績｜資金移動（税込）</div><div class="v">入 ${yen(actualRevenueGross)} / 出 ${yen(actualExpenseGross)}</div><div class="d">実際の入出金。損益とは別。</div></div><div class="jc-money-total unknown"><div class="k">PJ全期間｜最終収支</div><div class="v">未算定</div><div class="d">${esc(allPeriodStatus)}。第2〜4回の費用・認証量・販売額等が未確定。</div></div></div>
@@ -3862,7 +3920,7 @@ async function aomineJcreditSummary(view='project'){
  <div class="decision-waterfall"><div><b>売上</b><span>販売量 × 販売単価</span></div><div>− Jクレ固有費<span>算定・妥当性確認・検証・認証・モニタリング等</span></div><div>− 外部支援費<span><b>Topora導入・PM・事業運営支援費をここに計上</b></span></div><div>− 販売費<span>販売支援料・仲介手数料・高値販売成功報酬等</span></div><div>− 留保・基金等<span>契約・リスク方針に基づく</span></div><div><b>= 配賦可能額</b><span>山主・地域・森林再投資等へ</span></div></div></div>
 
  <div class="pj-block"><h3>3｜現在DBにある金銭記録と、事業収支に不足する項目</h3><div class="finance-snapshot"><div><div class="k">DB入金記録</div><div class="v">${yen(recordedInflow)}</div></div><div><div class="k">DB出金記録</div><div class="v">${yen(recordedOutflow)}</div></div><div><div class="k">森林整備業務</div><div class="v">${yen(recordedForestOps)}</div></div><div><div class="k">Jクレ審査・認証</div><div class="v">${yen(recordedJcreditSpecific)}</div></div></div><div class="finance-disclaimer"><b>単純差額を利益とは扱いません。</b> 森林整備費とJクレ固有費を分離し、補助・公費・木材収入・外部支援費・販売費・山主配賦等を揃えてから事業収支を判定します。</div>
- <div class="tablewrap"><table><thead><tr><th>収支項目</th><th>現在</th><th>事業判断に必要な状態</th></tr></thead><tbody><tr><td>森林整備費</td><td>${recordedForestOps?yen(recordedForestOps):'未登録'}</td><td>通常の森林整備費としてJクレ固有費と分離</td></tr><tr><td>Jクレ固有費</td><td>${recordedJcreditSpecific?yen(recordedJcreditSpecific)+'（審査・認証記録）':'未登録'}</td><td>算定、申請、審査、モニタリング、検証等を全期間で積算</td></tr><tr><td><b>外部支援者報酬</b></td><td><span class="decision-flag">条件未設定</span></td><td><b>Topora導入・PM・事業運営支援費を固定／年額／成果報酬に分けて計上</b></td></tr><tr><td>販売支援費</td><td><span class="decision-flag">条件未設定</span></td><td>基本販売支援料と高値販売成功報酬を分離</td></tr><tr><td>補助・公費</td><td>別台帳確認</td><td>費用と財源を混ぜず、年度別に充当</td></tr><tr><td>山主等への配賦</td><td>${allocationActual?yen(allocationActual):'デモ配賦記録を確認'}</td><td>分配ルール、控除、再投資、実支払を区分</td></tr></tbody></table></div></div>
+ <div class="tablewrap"><table><thead><tr><th>収支項目</th><th>現在</th><th>事業判断に必要な状態</th></tr></thead><tbody><tr><td>森林整備費</td><td>${recordedForestOps?yen(recordedForestOps):'未登録'}</td><td>通常の森林整備費としてJクレ固有費と分離</td></tr><tr><td>Jクレ固有費</td><td>${recordedJcreditSpecific?yen(recordedJcreditSpecific)+'（審査・認証記録）':'未登録'}</td><td>算定、申請、審査、モニタリング、検証等を全期間で積算</td></tr><tr><td><b>外部支援者報酬</b></td><td><span class="decision-flag">条件未設定</span></td><td><b>Topora導入・PM・事業運営支援費を固定／年額／成果報酬に分けて計上</b></td></tr><tr><td>販売支援費</td><td><span class="decision-flag">条件未設定</span></td><td>基本販売支援料と高値販売成功報酬を分離</td></tr><tr><td>補助・公費</td><td>別台帳確認</td><td>費用と財源を混ぜず、年度別に充当</td></tr><tr><td>山主等への配賦</td><td>${allocationActual?yen(allocationActual):'デモ配賦記録を確認'}</td><td>分配ルール、控除、再投資、実支払を区分</td></tr></tbody></table></div><h4 style="margin-top:16px">8年間の比較用キャッシュフロー</h4>${scenarioCashflowHtml}</div>
 
  <div class="pj-block"><h3>4｜外部支援スキーム比較｜同じ森林・同じ販売条件で比較</h3><div class="tablewrap"><table><thead><tr><th>モデル</th><th>外部支援範囲</th><th>自治体・森林組合側</th><th>報酬構造</th><th>主な利点</th><th>主な確認点</th></tr></thead><tbody>${supportModelRows}</tbody></table></div><div class="pj-note">価格は外部支援者ごとの見積を入力して比較する。費用だけでなく、責任範囲、データ帰属、販売権限、中止・変更時の条件を同じ表で確認する。</div></div>
 
