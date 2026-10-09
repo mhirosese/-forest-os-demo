@@ -3160,10 +3160,21 @@ function referencePlanModelHtml(plan,zones,candidateCases){
  const future=(zones||[]).filter(z=>z.zone_type==='future_target_class');
  const funcs=(zones||[]).filter(z=>z.zone_type==='forest_function_class');
  const candidates=(candidateCases||[]).filter(c=>c.candidate_source_code==='upper_plan');
- const zoneRows=future.map(z=>[
+ const zoneCandidateText=z=>{
+  const cs=Array.isArray(z.candidates)?z.candidates:[];
+  const names=cs.map(x=>x.forest_name).filter(Boolean);
+  return names.length?names.join('／'):'—';
+ };
+ const zoneCandidateCountText=z=>`${num(z.candidate_target_count||0)}件`;
+ const futureRows=future.map(z=>[
   `<strong>${esc(z.zone_name)}</strong>`,
   esc(z.policy_summary||'—'),
-  `${num(z.candidate_target_count||0)}件`
+  `${zoneCandidateCountText(z)}${zoneCandidateText(z)!=='—'?`<br><span class="smallnote">${esc(zoneCandidateText(z))}</span>`:''}`
+ ]);
+ const funcRows=funcs.map(z=>[
+  `<strong>${esc(z.zone_name)}</strong>`,
+  esc(z.policy_summary||'—'),
+  `${zoneCandidateCountText(z)}${zoneCandidateText(z)!=='—'?`<br><span class="smallnote">${esc(zoneCandidateText(z))}</span>`:''}`
  ]);
  const candRows=candidates.map(c=>{
   const criteria=Array.isArray(c.criteria)?c.criteria:[];
@@ -3176,7 +3187,15 @@ function referencePlanModelHtml(plan,zones,candidateCases){
   ];
  });
  const sourceLink=plan.source_page_url?`<a href="${esc(plan.source_page_url)}" target="_blank" rel="noopener">${esc(plan.source_title||plan.reference_plan_name||'参照元')}</a>`:esc(plan.source_title||plan.reference_plan_name||'—');
- return `<div class="pj-block"><h3>市町村森林整備計画・ゾーニング｜参照モデル</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">公開されている${esc(plan.reference_municipality||'実自治体')}の森林整備計画を参照し、青嶺町デモに計画構造とゾーン区分を入れています。<b>青嶺町の正式な行政計画・正式なゾーン指定ではありません。</b></div><div class="summary-kpis"><div class="summary-kpi"><div class="k">参照元</div><div class="v" style="font-size:17px">${esc(plan.reference_municipality||'—')}</div><div class="d">${sourceLink}</div></div><div class="summary-kpi"><div class="k">参照計画期間</div><div class="v" style="font-size:17px">${date(plan.starts_on)}〜${date(plan.ends_on)}</div><div class="d">デモ計画も同期間で参照</div></div><div class="summary-kpi"><div class="k">将来目標区分</div><div class="v">${num(plan.future_target_zone_count||future.length)}区分</div><div class="d">${future.map(x=>esc(x.zone_name)).join('／')}</div></div><div class="summary-kpi"><div class="k">森林機能区分</div><div class="v">${num(plan.function_zone_count||funcs.length)}区分</div><div class="d">複数機能を重ねて参照</div></div></div>${zoneRows.length?table('将来目標区分',['区分','参照する考え方','デモ照合候補'],zoneRows):''}${candRows.length?table('デモ森林との照合',['森林','面積','状態','追加確認'],candRows):''}<div class="pj-note">正式指定を作るのではなく、公開計画の区分と判定条件に対して、既存の森林情報を照合しています。東山101は木材生産林の照合候補、北谷103は環境保全林の照合候補として登録し、必要な追加確認を残しています。</div></div>`;
+ const futureCards=future.map(z=>`<div style="border:1px solid #cfd6dc;border-radius:10px;padding:10px 12px;background:#f8fbf8"><div style="font-weight:700;color:#204d2f">${esc(z.zone_name)}</div><div class="smallnote" style="margin-top:4px;line-height:1.6">${esc(z.policy_summary||'—')}</div><div class="smallnote" style="margin-top:6px">デモ照合候補：${esc(zoneCandidateText(z))}</div></div>`).join('');
+ const funcCards=funcs.map(z=>`<div style="border:1px solid #d9dee3;border-radius:10px;padding:9px 11px;background:#fff"><div style="font-weight:700">${esc(z.zone_name)}</div><div class="smallnote" style="margin-top:3px;line-height:1.55">${esc(z.policy_summary||'—')}</div></div>`).join('');
+ const candidateCards=candidates.map(c=>{
+  const criteria=Array.isArray(c.criteria)?c.criteria:[];
+  const pending=criteria.filter(x=>['needs_check','needs_resolution'].includes(String(x.result_code||''))).map(x=>x.criterion_label).filter(Boolean);
+  return `<div style="border:1px solid #d7dfe5;border-radius:10px;padding:10px 12px;background:#fff"><div style="font-weight:700">${esc(c.candidate_name)}</div><div class="smallnote" style="margin-top:4px">面積 ${ha(c.candidate_area_ha)} ／ 状態 ${esc(candidateReviewStatusLabel(c.review_status))}</div><div class="smallnote" style="margin-top:4px;line-height:1.6">追加確認：${esc(pending.length?pending.join('／'):'追加確認なし')}</div></div>`;
+ }).join('');
+ const conceptDiagram=`<div class="pj-block" style="background:#fbfcfd"><h3>参照構造図</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">今はゾーンの実ポリゴンを持っていないため、<b>地図ではなく構造図</b>で見せます。将来目標区分4つと森林機能区分7つを、青嶺町デモ森林の照合候補へつないでいます。実際の地図表示にするには、市町村森林整備計画のゾーン境界データやGISポリゴンが必要です。</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start"><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">参照元</div><div style="font-size:18px;font-weight:700;margin-top:4px">${esc(plan.reference_municipality||'—')}</div><div class="smallnote" style="margin-top:6px;line-height:1.6">${sourceLink}<br>計画期間：${date(plan.starts_on)}〜${date(plan.ends_on)}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">将来目標区分（4区分）</div><div style="display:grid;gap:8px;margin-top:8px">${futureCards}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">森林機能区分（7区分）</div><div style="display:grid;gap:8px;margin-top:8px">${funcCards}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">青嶺町デモでの照合</div><div style="display:grid;gap:8px;margin-top:8px">${candidateCards||'<div class="smallnote">照合候補なし</div>'}</div></div></div></div>`;
+ return `<div class="pj-block"><h3>市町村森林整備計画・ゾーニング｜参照モデル</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">公開されている${esc(plan.reference_municipality||'実自治体')}の森林整備計画を参照し、青嶺町デモに計画構造とゾーン区分を入れています。<b>青嶺町の正式な行政計画・正式なゾーン指定ではありません。</b></div><div class="summary-kpis"><div class="summary-kpi"><div class="k">参照元</div><div class="v" style="font-size:17px">${esc(plan.reference_municipality||'—')}</div><div class="d">${sourceLink}</div></div><div class="summary-kpi"><div class="k">参照計画期間</div><div class="v" style="font-size:17px">${date(plan.starts_on)}〜${date(plan.ends_on)}</div><div class="d">デモ計画も同期間で参照</div></div><div class="summary-kpi"><div class="k">将来目標区分</div><div class="v">${num(plan.future_target_zone_count||future.length)}区分</div><div class="d">${future.map(x=>esc(x.zone_name)).join('／')}</div></div><div class="summary-kpi"><div class="k">森林機能区分</div><div class="v">${num(plan.function_zone_count||funcs.length)}区分</div><div class="d">${funcs.map(x=>esc(x.zone_name)).join('／')}</div></div></div>${conceptDiagram}${futureRows.length?table('将来目標区分（4区分）',['区分','参照する考え方','デモ照合候補'],futureRows):''}${funcRows.length?table('森林機能区分（7区分）',['機能区分','参照する考え方','デモ照合候補'],funcRows):''}${candRows.length?table('デモ森林との照合',['森林','面積','状態','追加確認'],candRows):''}<div class="pj-note">正式指定を作るのではなく、公開計画の区分と判定条件に対して、既存の森林情報を照合しています。東山101は木材生産林の照合候補、北谷103は環境保全林の照合候補として登録し、必要な追加確認を残しています。将来、ゾーンのGISデータがあれば、構造図ではなく地図表示へ切り替えられます。</div></div>`;
 }
 function aggRenderIssues(rows){
  return `<section><h2>現在の対応内訳</h2><div class="agg-body"><div class="agg-issuegrid">${[...rows].sort((a,b)=>Number(a.sort_order)-Number(b.sort_order)).map(r=>`<div class="agg-issue"><div class="n">${ha(r.area_ha)}</div><div class="t">${esc(r.map_status_label)} ｜ ${num(r.parcel_count)}筆</div></div>`).join('')}</div><div class="smallnote" style="margin-top:9px">不参加、所有者未確認、相続・共有、境界確認中も削除せず、次年度へ引き継ぐ管理対象として残します。</div></div></section>`;
