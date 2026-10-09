@@ -3155,6 +3155,29 @@ function aggregationResultFrameworkHtml(rows,selectedYear){
  }).join('');
  return `<div class="pj-block"><h3>${selectedYear}年度｜投入・実施・実績・状態変化</h3><div class="summary-kpis">${boxes}</div><div class="pj-note">金額だけを成果とはせず、投入した資金、実施した業務、把握・事業候補化した面積、その結果できた事業単位候補を分けて表示しています。年度進行中の値は確定値と分けます。</div></div>`;
 }
+function referencePlanModelHtml(plan,zones,candidateCases){
+ if(!plan)return '';
+ const future=(zones||[]).filter(z=>z.zone_type==='future_target_class');
+ const funcs=(zones||[]).filter(z=>z.zone_type==='forest_function_class');
+ const candidates=(candidateCases||[]).filter(c=>c.candidate_source_code==='upper_plan');
+ const zoneRows=future.map(z=>[
+  `<strong>${esc(z.zone_name)}</strong>`,
+  esc(z.policy_summary||'—'),
+  `${num(z.candidate_target_count||0)}件`
+ ]);
+ const candRows=candidates.map(c=>{
+  const criteria=Array.isArray(c.criteria)?c.criteria:[];
+  const pending=criteria.filter(x=>['needs_check','needs_resolution'].includes(String(x.result_code||''))).map(x=>x.criterion_label).filter(Boolean);
+  return [
+   `<strong>${esc(c.candidate_name)}</strong>`,
+   ha(c.candidate_area_ha),
+   esc(candidateReviewStatusLabel(c.review_status)),
+   esc(pending.length?pending.join('／'):'追加確認なし')
+  ];
+ });
+ const sourceLink=plan.source_page_url?`<a href="${esc(plan.source_page_url)}" target="_blank" rel="noopener">${esc(plan.source_title||plan.reference_plan_name||'参照元')}</a>`:esc(plan.source_title||plan.reference_plan_name||'—');
+ return `<div class="pj-block"><h3>市町村森林整備計画・ゾーニング｜参照モデル</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">公開されている${esc(plan.reference_municipality||'実自治体')}の森林整備計画を参照し、青嶺町デモに計画構造とゾーン区分を入れています。<b>青嶺町の正式な行政計画・正式なゾーン指定ではありません。</b></div><div class="summary-kpis"><div class="summary-kpi"><div class="k">参照元</div><div class="v" style="font-size:17px">${esc(plan.reference_municipality||'—')}</div><div class="d">${sourceLink}</div></div><div class="summary-kpi"><div class="k">参照計画期間</div><div class="v" style="font-size:17px">${date(plan.starts_on)}〜${date(plan.ends_on)}</div><div class="d">デモ計画も同期間で参照</div></div><div class="summary-kpi"><div class="k">将来目標区分</div><div class="v">${num(plan.future_target_zone_count||future.length)}区分</div><div class="d">${future.map(x=>esc(x.zone_name)).join('／')}</div></div><div class="summary-kpi"><div class="k">森林機能区分</div><div class="v">${num(plan.function_zone_count||funcs.length)}区分</div><div class="d">複数機能を重ねて参照</div></div></div>${zoneRows.length?table('将来目標区分',['区分','参照する考え方','デモ照合候補'],zoneRows):''}${candRows.length?table('デモ森林との照合',['森林','面積','状態','追加確認'],candRows):''}<div class="pj-note">正式指定を作るのではなく、公開計画の区分と判定条件に対して、既存の森林情報を照合しています。東山101は木材生産林の照合候補、北谷103は環境保全林の照合候補として登録し、必要な追加確認を残しています。</div></div>`;
+}
 function aggRenderIssues(rows){
  return `<section><h2>現在の対応内訳</h2><div class="agg-body"><div class="agg-issuegrid">${[...rows].sort((a,b)=>Number(a.sort_order)-Number(b.sort_order)).map(r=>`<div class="agg-issue"><div class="n">${ha(r.area_ha)}</div><div class="t">${esc(r.map_status_label)} ｜ ${num(r.parcel_count)}筆</div></div>`).join('')}</div><div class="smallnote" style="margin-top:9px">不参加、所有者未確認、相続・共有、境界確認中も削除せず、次年度へ引き継ぐ管理対象として残します。</div></div></section>`;
 }
@@ -3174,7 +3197,7 @@ async function aggSelectParcel(id,el){
 async function aggregationProject(){
  const p=currentPersona();saveSelectedProjectCode('DEMO-PRIVATE-AGG-2022',p);
  const viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows,financeScopes,resultFramework,candidateCases]=await Promise.all([
+ const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows,financeScopes,resultFramework,candidateCases,referencePlans,referenceZones]=await Promise.all([
   q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${vq}&limit=1`),
   q('forest_os_ui_aggregation_persona_progress',`select=*&viewer_name=eq.${vq}&order=fiscal_year`),
   q('forest_os_ui_aggregation_persona_map_cells',`select=*&viewer_name=eq.${vq}&order=grid_y,grid_x`),
@@ -3185,7 +3208,9 @@ async function aggregationProject(){
   q('forest_os_demo_public_aggregation_year_map','select=*&order=fiscal_year,parcel_no'),
   q('forest_os_demo_public_aggregation_finance_scope','select=*&order=fiscal_year,scope_code'),
   q('forest_os_demo_public_aggregation_result_framework','select=*&order=fiscal_year,stage_order,metric_code'),
-  q('forest_os_demo_public_candidate_cases_current','select=*&initiative_code=eq.DEMO-PRIVATE-AGG-2022&order=candidate_area_ha.desc,candidate_name')
+  q('forest_os_demo_public_candidate_cases_current','select=*&initiative_code=eq.DEMO-PRIVATE-AGG-2022&order=candidate_area_ha.desc,candidate_name'),
+  q('forest_os_demo_public_reference_municipal_plan_current','select=*'),
+  q('forest_os_demo_public_reference_plan_zones_current','select=*&order=zone_type,zone_code')
  ]);
  const s=summaries[0];
  if(!s){cards([['集約プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者は私有林集約プロジェクトの対象ではありません。</div></section>';return;}
@@ -3236,6 +3261,7 @@ async function aggregationProject(){
    <div class="pj-block" style="margin-top:12px"><h3>このPJのお金｜${y.fiscal_year}年度</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">広域PJ全体予算</div><div class="v">${yen(y.budget_jpy)}</div></div><div class="pj-kpi"><div class="k">執行額</div><div class="v">${yen(y.executed_jpy)}</div></div><div class="pj-kpi"><div class="k">残額</div><div class="v">${yen(y.remaining_jpy)}</div></div></div><div class="pj-exec-rate">執行率 ${execRate}%</div><div class="pj-money-split pj-money-scope">${scopeHtml}</div><div class="pj-note">ここでは負担区分の大枠だけ表示。費目・財源・負担主体・按分根拠などの細目は「契約・お金」で管理します。費用は林野庁の意向調査・境界確認／測量・集積計画の参考歩掛を基礎にし、広域共通調整は奈良県の森林整備地域活動支援対策の共同計画等4,000円/haを目安にしたデモ積算です。${isCurrent?' 執行額は年度途中60%のデモ仮定です。':' 年度完了のデモ値です。'}</div></div>
    <div class="pj-block"><h3>${selectedYear}年度の計画・作業・現場記録</h3><div class="summary-kpis"><div class="summary-kpi"><div class="k">計画</div><div class="v">${num(aggOpsPlans.filter(x=>Number(String(x.starts_on||'').slice(0,4))===selectedYear).length)}件</div><div class="d">年度事業計画</div></div><div class="summary-kpi"><div class="k">作業案件</div><div class="v">${num(aggOpsWorks.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===selectedYear).length)}件</div><div class="d">所有者・境界・集約調整</div></div><div class="summary-kpi"><div class="k">現場・進捗記録</div><div class="v">${num(aggOpsWorks.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===selectedYear&&x.latest_event_date).length)}件</div><div class="d">最新記録を作業に保持</div></div></div><div class="pj-note">広域PMは地域横断、自治体・森林組合は自地域の計画・作業を表示します。ここでのhaは施業完了面積ではなく、所有者対応・境界確認・集約調整など各工程の年度対象面積です。現場記録の確定は担当主体に限定し、広域PMは調整権限として分離しています。</div></div>
    ${aggregationResultFrameworkHtml(resultFramework,selectedYear)}
+   ${referencePlanModelHtml(referencePlans[0],referenceZones,candidateCases)}
    <div class="pj-block"><h3>特記事項</h3><textarea id="aggProjectNotes" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;padding:10px 12px;border:1px solid #cfd6dc;border-radius:8px;font:inherit;line-height:1.55" placeholder="PJ全体で共有したい留意事項、今後の対応、説明時の補足などを入力">${esc(loadAggregationProjectNotes())}</textarea><div class="pj-detail-bar" style="margin-top:8px"><button type="button" class="go" onclick="saveAggregationProjectNotes()">特記事項を保存</button><span id="aggProjectNotesStatus" class="pj-note">この端末のデモ画面に保存します。DB正本にはまだ書き込みません。</span></div></div>
    <div class="pj-detail-bar"><span class="label">詳しく見る：</span><button class="go" onclick="document.getElementById('aggMapDetail').scrollIntoView({behavior:'smooth'})">対象森林・地図</button><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button></div>
   </section>`+
