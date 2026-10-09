@@ -1275,7 +1275,7 @@ async function pm(){
  document.getElementById('content').innerHTML=html;
 }
 
-let forestRows=[],forestContracts=[],forestEvidence=[],forestRightsMatrix=[],forestOwnerRows=[],forestOwnerPortfolio=[],forestJcreditEntitlements=[];
+let forestRows=[],forestContracts=[],forestEvidence=[],forestRightsMatrix=[],forestOwnerRows=[],forestOwnerPortfolio=[],forestJcreditEntitlements=[],forestHandoverRows=[],forestTimelineRows=[],forestFinanceTraceRows=[];
 function forestHubScroll(id){const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
 function forestProjectAction(x){
  const name=String(x.jcredit_project_name||'');
@@ -1325,6 +1325,62 @@ function forestRelatedOwnerRowsHtml(x){
  });
  return rows.length?table('同じ権利者の他森林（現在の表示範囲）',['権利者','森林','地域','権利','持分'],rows):'';
 }
+function forestTimelineKindLabel(v){return ({right:'権利',succession:'相続・承継',work:'作業',incident:'災害・異常',finance:'財源配賦'}[String(v||'')]||txt(v));}
+function forestHandoverHtml(x){
+ const h=forestHandoverRows.find(z=>String(z.forest_unit_id)===String(x.forest_unit_id));
+ if(!h)return '';
+ const decisionMeta=[h.decision_on?date(h.decision_on):null,h.decided_by_party_name?esc(h.decided_by_party_name):null].filter(Boolean).join('｜')||'日付・判断者は未登録';
+ const task=[h.next_task_title?esc(h.next_task_title):null,h.next_task_due_on?`期限 ${date(h.next_task_due_on)}`:null,h.next_task_assigned_party_name?`担当 ${esc(h.next_task_assigned_party_name)}`:null].filter(Boolean).join('｜')||'未登録';
+ const latest=[h.latest_history_date?date(h.latest_history_date):null,h.latest_history_title?esc(h.latest_history_title):null].filter(Boolean).join('｜')||'履歴なし';
+ const contact=h.last_contact_at?`${dateTimeJa(h.last_contact_at)}${h.last_contact_summary?`｜${esc(h.last_contact_summary)}`:''}`:'連絡記録未登録';
+ const funding=h.recorded_funding_jpy!=null?`${yen(h.recorded_funding_jpy)}${h.funding_sources?`｜${esc(h.funding_sources)}`:''}`:'記録なし';
+ const note=h.decision_source_kind==='migrated_demo_context'?`<div class="smallnote" style="margin-top:8px">既存のデモ判断メモを現行の判断記録へ移しました。日付・判断者など確認できない項目は補完していません。</div>`:'';
+ return detailSection('担当者引継ぎ',[
+  ['現在状態',`${workflowStatusLabel(h.forest_status)}｜権利未解決 ${num(h.unresolved_right_count||0)}件｜対応中災害 ${num(h.active_incident_count||0)}件`],
+  ['直近の判断',h.decision_status?`<span class="tag">${esc(h.decision_status)}</span>`:'未登録'],
+  ['判断理由',h.decision_reason?esc(h.decision_reason):'未登録'],
+  ['判断記録',decisionMeta],
+  ['未解決事項',h.unresolved_items?esc(h.unresolved_items):'なし／未登録'],
+  ['次の対応',h.decision_next_action?esc(h.decision_next_action):'未登録'],
+  ['次のタスク',task],
+  ['直近履歴',latest],
+  ['所有者等との最終連絡',contact],
+  ['財源配賦（デモ）',funding]
+ ])+note;
+}
+function forestTimelineHtml(x){
+ const base=forestTimelineRows.filter(z=>String(z.forest_unit_id)===String(x.forest_unit_id));
+ if(!base.length)return `<section><h2>業務履歴</h2><div class="empty">この森林に紐付く履歴はありません。</div></section>`;
+ const grouped=new Map();
+ base.forEach(z=>{
+  const key=`${z.timeline_kind}|${z.source_id||z.parcel_id||''}|${z.event_date||''}|${z.title||''}|${z.amount_jpy??''}`;
+  if(!grouped.has(key))grouped.set(key,{...z,parcels:new Set()});
+  if(z.parcel_code)grouped.get(key).parcels.add(z.parcel_code);
+ });
+ const rows=[...grouped.values()].sort((a,b)=>String(b.occurred_at||b.event_date||'').localeCompare(String(a.occurred_at||a.event_date||''))).slice(0,40);
+ return table('業務履歴｜権利・相続・作業・災害・財源',['日付','種類','筆','内容','関係者・財源','金額','状態'],rows.map(z=>[
+  date(z.event_date),esc(forestTimelineKindLabel(z.timeline_kind)),esc([...z.parcels].join(' / ')||'—'),esc(z.title||z.event_type||'—'),esc(z.party_name||((z.details||{}).funding_source_name)||'—'),z.amount_jpy==null?'—':yen(z.amount_jpy),esc(demoStatusLabel(z.status||'—'))
+ ]));
+}
+function forestFinanceTraceHtml(x){
+ const rows=forestFinanceTraceRows.filter(z=>String(z.forest_unit_id)===String(x.forest_unit_id));
+ if(!rows.length)return '';
+ const total=rows.reduce((a,z)=>a+Number(z.allocated_amount_jpy||0),0);
+ return `<section><h2>財源・作業・森林のつながり</h2><div class="map-summary-note"><b>記録済み財源配賦 ${yen(total)}</b>。財源から、対象筆・作業まで逆引きできるデモデータです。実際の支払主体が確認できない政策デモ配賦は、実取引とは分けて扱います。</div></section>`+
+ table('財源配賦の明細',['年度','財源','対象筆','作業','作業日','実施面積','配賦額'],rows.sort((a,b)=>String(b.event_date||b.transaction_date||'').localeCompare(String(a.event_date||a.transaction_date||''))).map(z=>[
+  esc(z.payment_fiscal_year||z.fiscal_year||'—'),esc(z.funding_source_name||'—'),esc(z.parcel_code||'—'),esc(z.work_title||z.work_type_name||'—'),date(z.event_date||z.transaction_date),z.actual_area_ha==null?'—':ha(z.actual_area_ha),yen(z.allocated_amount_jpy)
+ ]));
+}
+function fundingToForestTraceHtml(rows,fiscalYear){
+ const yr=(rows||[]).filter(z=>Number(z.payment_fiscal_year||z.fiscal_year)===Number(fiscalYear));
+ if(!yr.length)return '';
+ const total=yr.reduce((a,z)=>a+Number(z.allocated_amount_jpy||0),0);
+ const bySource=new Map();
+ yr.forEach(z=>{const k=z.funding_source_name||'財源未設定';if(!bySource.has(k))bySource.set(k,{amount:0,forests:new Set(),works:new Set()});const g=bySource.get(k);g.amount+=Number(z.allocated_amount_jpy||0);if(z.forest_name)g.forests.add(z.forest_name);if(z.work_title)g.works.add(z.work_title);});
+ return `<section><h2>財源から森林・作業を逆引き</h2><div class="map-summary-note"><b>${esc(fiscalYear)}年度の記録済み財源配賦 ${yen(total)}</b>。どの財源が、どの森林のどの作業に配賦されたかを確認します。政策デモ配賦であり、実際の支払取引とは分けて表示します。</div></section>`+
+ table('財源別｜対象森林と作業',['財源','配賦額','対象森林','作業'],[...bySource.entries()].map(([k,g])=>[esc(k),yen(g.amount),esc([...g.forests].join(' / ')||'—'),esc([...g.works].join(' / ')||'—')]))+
+ table('財源→森林→作業｜明細',['財源','森林','筆','作業','実施日','配賦額'],yr.sort((a,b)=>String(a.funding_source_name||'').localeCompare(String(b.funding_source_name||''),'ja')||String(a.forest_name||'').localeCompare(String(b.forest_name||''),'ja')).map(z=>[esc(z.funding_source_name||'—'),esc(z.forest_name||'—'),esc(z.parcel_code||'—'),esc(z.work_title||z.work_type_name||'—'),date(z.event_date||z.transaction_date),yen(z.allocated_amount_jpy)]));
+}
 function renderForestDetail(id){
  const x=forestRows.find(r=>r.forest_unit_id===id) || forestRows[0];
  if(!x)return;
@@ -1339,7 +1395,7 @@ function renderForestDetail(id){
    ['分配確定額',yen(x.planned_distribution_amount)]
  ]);
  const selector=`<select class="selector" onchange="renderForestDetail(this.value)">${forestRows.map(r=>`<option value="${r.forest_unit_id}" ${r.forest_unit_id===x.forest_unit_id?'selected':''}>${r.name}</option>`).join('')}</select>`;
- document.getElementById('content').innerHTML=personaNoteHtml()+selector+forestHubHtml(x,c,e)+
+ document.getElementById('content').innerHTML=personaNoteHtml()+selector+forestHubHtml(x,c,e)+forestHandoverHtml(x)+
  detailSection('森林基本・資源',[
    ['森林',x.name],['地域',txt(x.region_name)],['面積',ha(x.area_ha)],['状態',workflowStatusLabel(x.forest_status)],
    ['樹種',speciesLabel(x.species)],['森林区分',txt(x.forest_type)],['林齢 / 齢級',`${txt(x.stand_age_years)}年 / ${txt(x.age_class)}`],
@@ -1371,7 +1427,7 @@ function renderForestDetail(id){
  table('作業写真・報告書',['作業','日付','資料','表示'],e.map(z=>[
    z.work_title,date(z.event_date),z.title,mockLink(z.mock_ref,evidenceLabel(z.evidence_type))
  ]))+
- '<div id="forest-events"></div>'+detailSection('保険・災害',[
+ '<div id="forest-events"></div>'+forestTimelineHtml(x)+forestFinanceTraceHtml(x)+detailSection('保険・災害',[
    ['保険',txt(x.insurance_status)],['保険金額',yen(x.insured_amount)],
    ['対応中災害',`${num(x.active_incident_count||0)}件`],['災害内容',txt(x.incident_title)]
  ])+
@@ -1382,7 +1438,7 @@ function renderForestDetail(id){
  ]);
 }
 async function forestView(){
- const [allForests,allContracts,allEvidence,personaScopes,rightsMatrix,ownerRows,ownerPortfolio,jcreditEntitlements]=await Promise.all([
+ const [allForests,allContracts,allEvidence,personaScopes,rightsMatrix,ownerRows,ownerPortfolio,jcreditEntitlements,handoverRows,timelineRows,financeTraceRows]=await Promise.all([
    q('forest_os_demo_public_forest_detail_compat','select=*&order=name'),
    q('forest_os_demo_public_contract_relation_compat','select=*&order=contract_no'),
    q('forest_os_demo_public_work_evidence_compat','select=*'),
@@ -1390,7 +1446,10 @@ async function forestView(){
    q('forest_os_demo_public_forest_rights_matrix_compat','select=*&order=region_name,forest_name'),
    q('forest_os_demo_public_owner_forest_compat','select=*&order=name,owner_name'),
    q('forest_os_demo_public_party_rights_portfolio','select=*&target_type=eq.forest_unit&order=region_name,forest_name,party_name'),
-   q('forest_os_demo_public_jcredit_entitlement_current','select=*&order=forest_name,party_name')
+   q('forest_os_demo_public_jcredit_entitlement_current','select=*&order=forest_name,party_name'),
+   q('forest_os_demo_public_forest_handover_current','select=*&order=region_name,forest_name'),
+   q('forest_os_demo_public_forest_timeline_current','select=*&order=occurred_at.desc'),
+   q('forest_os_demo_public_forest_finance_trace_current','select=*&order=payment_fiscal_year.desc,forest_name,parcel_code')
  ]);
  const viewer=personaScopePartyName();
  const allowedIds=new Set(personaScopes.filter(x=>x.viewer_name===viewer).map(x=>String(x.forest_unit_id)));
@@ -1398,6 +1457,9 @@ async function forestView(){
  forestOwnerRows=ownerRows.filter(x=>allowedIds.has(String(x.forest_unit_id)));
  forestOwnerPortfolio=ownerPortfolio.filter(x=>allowedIds.has(String(x.forest_unit_id)));
  forestJcreditEntitlements=jcreditEntitlements.filter(x=>allowedIds.has(String(x.forest_unit_id)));
+ forestHandoverRows=handoverRows.filter(x=>allowedIds.has(String(x.forest_unit_id)));
+ forestTimelineRows=timelineRows.filter(x=>allowedIds.has(String(x.forest_unit_id)));
+ forestFinanceTraceRows=financeTraceRows.filter(x=>allowedIds.has(String(x.forest_unit_id)));
  const detailById=new Map(allForests.map(x=>[String(x.forest_unit_id),x]));
  const rightsById=new Map(forestRightsMatrix.map(x=>[String(x.forest_unit_id),x]));
  forestRows=[...allowedIds].map(id=>{
@@ -4340,9 +4402,10 @@ async function personaFinanceScreen(){
  }
  if(code==='DEMO-PRIVATE-AGG-2022'){
   const aggYear=Number(localStorage.getItem('forest_os_agg_selected_year_v1')||2026);
-  const [aggAllScopes,aggDetails]=await Promise.all([
+  const [aggAllScopes,aggDetails,fundTrace]=await Promise.all([
    q('forest_os_demo_public_aggregation_finance_scope','select=*&order=fiscal_year,scope_code'),
-   q('forest_os_demo_public_aggregation_finance_detail',`select=*&fiscal_year=eq.${aggYear}&order=scope_code,expense_code,funding_code`)
+   q('forest_os_demo_public_aggregation_finance_detail',`select=*&fiscal_year=eq.${aggYear}&order=scope_code,expense_code,funding_code`),
+   q('forest_os_demo_public_forest_finance_trace_current',`select=*&payment_fiscal_year=eq.${aggYear}&order=funding_source_name,forest_name,parcel_code`)
   ]);
   const aggScopes=aggAllScopes.filter(x=>Number(x.fiscal_year)===aggYear);
   const totalBudget=aggScopes.reduce((z,x)=>z+Number(x.budget_jpy||0),0),totalExecuted=aggScopes.reduce((z,x)=>z+Number(x.executed_jpy||0),0),totalRemaining=aggScopes.reduce((z,x)=>z+Number(x.remaining_jpy||0),0);
@@ -4360,6 +4423,7 @@ async function personaFinanceScreen(){
   html+=`<section><h2>${isCoop?'担当範囲':'地域別・広域共通'}｜予算・執行</h2><div class="pj-money-split pj-money-scope">${scopeCards}</div><div class="finance-disclaimer">${isWide?'PJ全体を地域別・広域共通に分けて表示しています。':isCoop?'森林組合は担当地域の執行範囲を表示します。':'自治体はPJ全体と自地域・広域共通の負担区分を確認します。'} 予算と財源は別軸で、費用明細＋財源明細を足して予算額を二重計上しません。</div></section>`;
   const visibleDetails=aggDetails.filter(x=>visibleCodes.includes(x.scope_code));
   if(visibleDetails.length)html+=table('私有林集約｜詳細収支',['負担区分','負担主体','費目','財源','予算','執行','按分根拠'],visibleDetails.map(x=>[esc(x.scope_label),esc(x.burden_party_label),esc(x.expense_label),esc(x.funding_label),yen(x.budget_jpy),yen(x.executed_jpy),esc(x.allocation_rule)]));
+  html+=fundingToForestTraceHtml(fundTrace,aggYear);
   document.getElementById('content').innerHTML=html;return;
  }
  let financeSnapshot=null;
