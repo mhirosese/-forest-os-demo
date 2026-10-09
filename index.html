@@ -460,6 +460,8 @@ section h2,.pj-block h3,.project-choice .pc-title,.screen-scope .scope-title,.ca
 .money-status-chip{display:inline-block;border:1px solid #d8dfda;border-radius:999px;padding:2px 6px;font-size:9px;white-space:nowrap;background:#fff}.money-status-chip.actual{background:#eef5f0}.money-status-chip.plan{background:#fbfaf5}.money-status-chip.pending{background:#f7f7f7;color:#68716b}
 @media(max-width:900px){.money-trace-flow{grid-template-columns:1fr 1fr}.money-detail-head{display:block}.money-detail-head .period{display:inline-block;margin-top:8px}.tablewrap table.table-cols-10{min-width:1400px}.tablewrap table.table-cols-11{min-width:1540px}.tablewrap table.table-cols-12{min-width:1680px}.tablewrap table.table-cols-13{min-width:1820px}.tablewrap table.table-cols-14{min-width:1960px}.tablewrap table.table-cols-15{min-width:2100px}}
 
+
+.policy-entry-switch{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 10px}.policy-entry-switch button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;cursor:pointer}.policy-entry-switch button.active{background:#425f4b;color:#fff;border-color:#425f4b;font-weight:700}.policy-action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:9px}.policy-action-card{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}.policy-action-card>summary{cursor:pointer;list-style:none;padding:12px 13px;font-weight:800;font-size:13px;line-height:1.45}.policy-action-card>summary::-webkit-details-marker{display:none}.policy-action-card>summary span{display:block;font-size:10px;font-weight:500;color:var(--muted);margin-top:4px}.policy-action-card[open]>summary{border-bottom:1px solid #e9edea;background:#f7faf8}.policy-action-body{padding:11px 13px;font-size:11px;line-height:1.65}.policy-action-body .k{font-size:10px;color:var(--muted);font-weight:800;margin-top:8px}.policy-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}.policy-tag{display:inline-block;border:1px solid #dbe3dd;background:#f7faf8;border-radius:999px;padding:3px 7px;font-size:10px}.policy-route-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.policy-route-list button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:11px}.policy-route-list button.primary{background:#eef5f0;border-color:#91aa98;font-weight:700}.policy-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}.policy-check{border:1px solid var(--line);border-radius:9px;background:#fafbfa;padding:10px}.policy-check b{display:block;font-size:12px;margin-bottom:4px}.policy-check span{font-size:10px;line-height:1.55;color:var(--muted)}.policy-location{font-size:11px;line-height:1.5}.policy-location b{display:block}.policy-location button{margin-top:5px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 7px;cursor:pointer;font-size:10px}.policy-umbrella{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}.policy-umbrella-card{border:1px solid var(--line);border-radius:10px;padding:10px 11px;background:#fff}.policy-umbrella-card .t{font-size:12px;font-weight:800}.policy-umbrella-card .d{font-size:10px;color:var(--muted);line-height:1.55;margin-top:4px}.policy-umbrella-card .where{font-size:10px;margin-top:7px}.policy-note{font-size:11px;line-height:1.65;border-left:3px solid #93a99a;background:#f7faf8;padding:8px 10px;margin-top:8px}@media(max-width:700px){.policy-action-grid,.policy-check-grid,.policy-umbrella{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -3456,7 +3458,62 @@ function procedureCategoryLabel(v){return ({
 }[String(v||'')]||txt(v));}
 function procedureOnlineLabel(v){return ({available:'オンライン可',partial:'一部オンライン',not_verified:'オンライン完結未確認',authority_specific:'提出先ごとに確認'}[String(v||'')]||'提出先ごとに確認');}
 function procedureAuthorityText(r){return r.authority_name||({municipality:'市町村',prefecture:'都道府県',national:'国'}[String(r.authority_level||'')]||r.authority_level||'—');}
-function planPolicyFlowHtml(){return `<section><h2>計画・制度のつながり</h2><div class="source-flow"><div class="source-box"><div class="k">上位計画</div><div class="v">市町村森林整備計画・ゾーニング</div><div class="d">地域全体の森林をどう整備・保全するかを整理。</div></div><div class="source-arrow">›</div><div class="source-box"><div class="k">対象森林・制度</div><div class="v">経営管理・所有者探索・保安林・林地開発等</div><div class="d">森林の状態と予定する行為から、必要な制度・手続を確認。</div></div><div class="source-arrow">›</div><div class="source-box"><div class="k">具体計画</div><div class="v">森林経営計画・個別施業計画</div><div class="d">対象森林、期間、伐採・造林・保育・路網等を具体化。</div></div><div class="source-arrow">›</div><div class="source-box"><div class="k">実行</div><div class="v">発注・契約・施業・検収・支払</div><div class="d">制度判断と計画を実際の仕事・証拠・お金へつなぐ。</div></div></div></section>`;}
+let policyLookupMode=localStorage.getItem('forest_os_policy_lookup_mode_v81')||'task';
+async function switchPolicyLookup(mode){policyLookupMode=mode;localStorage.setItem('forest_os_policy_lookup_mode_v81',mode);await forestPlanPolicyScreen();}
+async function policyNavigate(route){
+ if(route==='map'){forestLandMode='map';localStorage.setItem('forest_os_forest_land_mode_v80','map');await forestLandHub();return;}
+ if(route==='policy'){forestLandMode='policy';localStorage.setItem('forest_os_forest_land_mode_v80','policy');await forestLandHub();return;}
+ if(route==='aggregation'){await openProjectByCode('DEMO-PRIVATE-AGG-2022');return;}
+ if(route==='agency'){const p=currentPersona();saveSelectedProjectCode('DEMO-PRIVATE-AGG-2022',p);projectHubType='aggregation';localStorage.setItem('forest_os_project_hub_v79','aggregation');await load('agency');return;}
+ if(route==='jcredit'){await openProjectByCode('DEMO-JC-001');return;}
+ await load(route);
+}
+function policyRouteButton(route,label,primary=false){return `<button type="button" class="${primary?'primary':''}" onclick="policyNavigate('${esc(route)}')">${esc(label)}</button>`;}
+function procedurePurposeText(r){const c=String(r.procedure_code||''),cat=String(r.procedure_category||'');const byCode={
+ forest_management_plan_certification:'森林単位・まとまり単位の施業計画を認定につなぐ',
+ felling_reforestation_notification:'伐採前の届出と、伐採・造林完了後の報告を管理する',
+ forest_land_development_permission:'森林を開発する行為について許可要否と申請進行を管理する',
+ protected_forest_operations:'保安林の指定施業要件と伐採・形質変更の許可・届出を確認する',
+ forest_land_owner_notification:'相続・売買等で森林土地所有者が変わった時の届出を管理する',
+ unidentified_coowner_forest:'共有者の一部が分からない共有林の伐採・造林手続を管理する',
+ fmm_management_right_aggregation_plan:'市町村が経営管理権を受けるための計画を管理する',
+ fmm_implementation_right_allocation_plan:'林業経営者へ再委託するための配分計画を管理する',
+ fmm_aggregation_concept_2026:'面的な集約方針と対象森林形成を管理する',
+ fmm_integrated_rights_allocation_plan_2026:'集約化構想に基づき権利設定を一括して進める',
+ fmm_owner_unknown_2026:'所有者が分からない森林の特例手続を管理する',
+ fmm_shared_owner_unknown_2026:'共有者の一部が分からない森林経営管理法上の特例を管理する',
+ fmm_known_owner_nonconsent:'確知所有者の不同意がある場合の特例手続を管理する',
+ fmm_thinning_management_right_2026:'必要な間伐等に限定した経営管理権設定を管理する',
+ fmm_support_entity_designation_2026:'森林経営管理制度を支える支援法人の指定を管理する'
+};if(byCode[c])return byCode[c];return ({forest_aggregation:'森林を面的に集約する',forest_management_special:'所有者・共有者等の特殊事情に対応する',forest_management_plan:'森林経営管理制度の権利設定・再委託を進める',support_entity:'制度運用を支援する主体を管理する'}[cat]||'制度・手続の適用と進行を管理する');}
+function procedureCautionText(r){const c=String(r.procedure_code||''),cat=String(r.procedure_category||'');if(c==='forest_land_development_permission')return '保安林か、対象民有林か、開発目的・規模を先に確認。正式提出は都道府県の現行手続。';if(c==='protected_forest_operations')return '保安林だから一律不可ではない。保安林種別・指定施業要件・予定行為を確認。';if(c==='felling_reforestation_notification')return '森林経営計画や林地開発許可等との関係で届出要否が変わるため先に制度関係を確認。';if(c==='forest_land_owner_notification')return '所有権取得日と対象筆を確認し、権利履歴と届出期限を分けて管理。';if(c==='unidentified_coowner_forest')return '森林経営管理法の「共有者不明森林特例」とは別制度。混同しない。';if(c==='forest_management_plan_certification')return '対象森林の範囲で認定権者が変わる。計画版・認定状態・変更履歴を残す。';if(cat==='forest_management_special')return '所有者探索・同意・公告・裁定等の根拠を上書きせず残す。';if(cat==='forest_aggregation'||cat==='forest_management_plan')return '候補森林・正式対象・権利設定・再委託を同じ状態として扱わない。';return '対象森林、根拠資料、期限、決定者を確認する。';}
+function procedureRouteInfo(r){const c=String(r.procedure_code||''),cat=String(r.procedure_category||'');if(c==='forest_management_plan_certification')return {where:'業務 ＞ 計画',sub:'計画・制度',route:'planning',button:'計画を見る'};if(c==='forest_land_development_permission')return {where:'計画・制度',sub:'業務',route:'business',button:'業務を見る'};if(c==='protected_forest_operations')return {where:'計画・制度',sub:'森林・地図',route:'map',button:'森林を見る'};if(c==='felling_reforestation_notification')return {where:'計画・制度',sub:'業務 ＞ 作業・現場記録',route:'work',button:'作業を見る'};if(c==='forest_land_owner_notification'||c==='unidentified_coowner_forest')return {where:'計画・制度',sub:'森林・地図',route:'map',button:'森林を見る'};if(cat==='forest_aggregation'||cat==='forest_management_plan'||cat==='forest_management_special'||cat==='support_entity')return {where:'私有林集約PJ ＞ 制度対応',sub:'計画・制度',route:'agency',button:'制度案件を見る'};return {where:'計画・制度',sub:'—',route:'policy',button:'このページ'};}
+function policyEntrySwitchHtml(){return `<div class="policy-entry-switch"><button class="${policyLookupMode==='task'?'active':''}" onclick="switchPolicyLookup('task')">何をしたい？から探す</button><button class="${policyLookupMode==='system'?'active':''}" onclick="switchPolicyLookup('system')">制度名から探す</button></div>`;}
+function policyFirstCheckHtml(){const xs=[['1. 森林・場所','対象森林、林班・小班・筆、面積、境界状態。'],['2. 所有・権利','所有者、共有・相続、意向・同意、管理権限。'],['3. 上位計画','市町村森林整備計画、ゾーン、森林経営計画の有無。'],['4. 規制・制度','保安林、災害・砂防等、伐採造林届、林地開発等。'],['5. 現在の仕事','制度案件、計画、タスク、期限、前任者の判断理由。'],['6. お金・証拠','予算・財源、契約・支払、提出控え・写真・根拠資料。']];return `<section><h2>森林を選んだら最初に確認</h2><div class="policy-check-grid">${xs.map(x=>`<div class="policy-check"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('')}</div><div class="policy-note">制度名を知らなくても、この順番で確認すると「何を確認し忘れているか」を把握できます。制度の正式適用や許認可は、根拠資料と行政機関の現行手続で確認します。</div></section>`;}
+function policyActionDefinitions(){return [
+ {t:'地域全体の森林方針を確認したい',d:'市町村森林整備計画とゾーニングから対象森林を見る。',checks:'上位計画の版、ゾーン、対象区域、森林との対応',codes:[],tags:['市町村森林整備計画','ゾーニング'],routes:[['policy','計画・制度',true],['map','地図で見る',false]]},
+ {t:'間伐・主伐・造林をしたい',d:'計画と規制を確認してから施業・届出へ進む。',checks:'森林経営計画、保安林、伐採造林届、対象区域・施業履歴',codes:['forest_management_plan_certification','protected_forest_operations','felling_reforestation_notification'],tags:[],routes:[['planning','計画を見る',true],['work','作業を見る',false],['map','森林を見る',false]]},
+ {t:'管理されていない私有林を整理したい',d:'所有者意向から集積・集約・再委託まで確認する。',checks:'所有・意向、境界、林業経営適否、候補と正式対象の区別',codes:['fmm_management_right_aggregation_plan','fmm_implementation_right_allocation_plan','fmm_aggregation_concept_2026','fmm_integrated_rights_allocation_plan_2026','fmm_thinning_management_right_2026'],tags:['森林経営管理制度'],routes:[['agency','制度案件を見る',true],['aggregation','私有林集約PJを見る',false]]},
+ {t:'所有者・共有者が分からない／同意が取れない',d:'探索状況と該当する特例を分けて確認する。',checks:'登記・戸籍等の探索履歴、共有関係、同意、公告・裁定の根拠',codes:['fmm_owner_unknown_2026','fmm_shared_owner_unknown_2026','fmm_known_owner_nonconsent','unidentified_coowner_forest'],tags:[],routes:[['agency','制度案件を見る',true],['map','森林・権利を見る',false]]},
+ {t:'森林を開発したい',d:'保安林等と開発規模を確認して、必要なら都道府県手続へ。',checks:'対象森林、保安林等、開発目的・面積、事前協議、正式提出先',codes:['forest_land_development_permission','protected_forest_operations','felling_reforestation_notification'],tags:[],routes:[['policy','制度を確認',true],['business','業務を見る',false],['map','森林を見る',false]]},
+ {t:'森林の所有者が変わった',d:'権利履歴を更新し、所有者届出の要否と期限を確認する。',checks:'取得日、取得原因、新旧所有者、対象筆、届出期限',codes:['forest_land_owner_notification'],tags:[],routes:[['map','森林・権利を見る',true],['business','業務を見る',false]]},
+ {t:'災害が起きた・復旧したい',d:'被害区域から復旧作業、財源、証拠まで追う。',checks:'被害区域、所有・管理者、規制、応急対応、復旧事業、補助・保険',codes:[],tags:['災害報告・復旧制度'],routes:[['map','森林を見る',true],['work','復旧作業を見る',false],['finance','お金を見る',false]]},
+ {t:'森林J-クレジットを検討したい',d:'森林経営計画・施業・権利を確認してJクレPJへつなぐ。',checks:'森林経営計画、施業履歴、対象区域、権利者、方法論要件',codes:[],tags:['森林J-クレジット'],routes:[['jcredit','JクレPJを見る',true],['map','森林を見る',false],['planning','計画を見る',false]]}
+ ];}
+function policyTaskSearchHtml(catalog){const byCode=new Map((catalog||[]).map(x=>[String(x.procedure_code),x]));return `<section><h2>何をしたい？から探す</h2><div class="policy-action-grid">${policyActionDefinitions().map(a=>{const ps=a.codes.map(c=>byCode.get(c)).filter(Boolean);const names=[...a.tags,...ps.map(x=>x.procedure_name)];return `<details class="policy-action-card"><summary>${esc(a.t)}<span>${esc(a.d)}</span></summary><div class="policy-action-body"><div class="k">最初に確認</div><div>${esc(a.checks)}</div><div class="k">関係する計画・制度</div><div class="policy-tags">${names.map(n=>`<span class="policy-tag">${esc(n)}</span>`).join('')||'<span class="policy-tag">個別確認</span>'}</div><div class="k">見るページ</div><div class="policy-route-list">${a.routes.map(x=>policyRouteButton(x[0],x[1],x[2])).join('')}</div></div></details>`;}).join('')}</div></section>`;}
+function policyUmbrellaHtml(){const xs=[
+ ['市町村森林整備計画・ゾーニング','地域全体の整備・保全方針。個別PJより上位。','計画・制度／森林・地図','policy','このページ'],
+ ['森林経営管理制度','未管理私有林の意向確認、権利設定、集約・再委託等。','私有林集約PJ ＞ 制度対応','agency','制度案件'],
+ ['森林経営計画','対象森林の複数年の施業計画と認定・変更。','業務 ＞ 計画','planning','計画'],
+ ['森林J-クレジット','森林・施業・権利を基礎に登録、認証、発行、販売へ。','森林J-クレジットPJ','jcredit','JクレPJ'],
+ ['補助制度・財源','補助、森林環境譲与税、一般財源等を費用と分けて管理。','お金','finance','お金'],
+ ['災害報告・復旧','被害区域、応急対応、復旧作業、補助・保険、証拠を追跡。','森林・地図／業務／お金','map','森林']
+ ];return `<section><h2>Forest OSで扱う上位・横断制度</h2><div class="policy-umbrella">${xs.map(x=>`<div class="policy-umbrella-card"><div class="t">${esc(x[0])}</div><div class="d">${esc(x[1])}</div><div class="where"><b>主に見る：</b>${esc(x[2])}</div><div class="policy-route-list">${policyRouteButton(x[3],x[4],true)}</div></div>`).join('')}</div></section>`;}
+function policySystemSearchHtml(catalog,currentCaseCodes){const groups=[
+ ['森林経営・集約',['forest_plan_certification','forest_management_plan','forest_aggregation','forest_management_special','support_entity']],
+ ['施業・規制・所有',['forest_operation_notification','forest_land_development','protected_forest','forest_shared_ownership','forest_land_ownership']]
+ ];let html=policyUmbrellaHtml();for(const [title,cats] of groups){const rows=(catalog||[]).filter(r=>cats.includes(String(r.procedure_category||''))).map(r=>{const loc=procedureRouteInfo(r);return [`<strong>${esc(r.procedure_name)}</strong>${currentCaseCodes.has(String(r.procedure_code))?'<br><span class="badge">進行案件あり</span>':''}`,esc(procedurePurposeText(r)),`<div class="policy-location"><b>${esc(loc.where)}</b>${loc.sub&&loc.sub!=='—'?`<span>関連：${esc(loc.sub)}</span>`:''}<br>${policyRouteButton(loc.route,loc.button,true)}</div>`,esc(procedureAuthorityText(r)),esc(procedureCautionText(r)),r.official_url?`<a href="${esc(r.official_url)}" target="_blank" rel="noopener">公式情報</a>`:'—'];});if(rows.length)html+=table(title,['制度・手続','何に使う','見るページ','提出・認定先','注意','確認'],rows);}html+=`<section><div class="policy-note"><b>ここに載せているのは、Forest OSで現在管理対象としている主要な計画・制度・手続です。</b> 個別森林では砂防、自然公園、文化財、盛土規制等の他法令が関係する場合があるため、対象森林の規制情報と行政機関の現行手続を別途確認します。</div></section>`;return html;}
+function planPolicyFlowHtml(){return `<section><h2>計画・制度の位置づけ</h2><div class="source-flow"><div class="source-box"><div class="k">地域全体</div><div class="v">市町村森林整備計画・ゾーニング</div><div class="d">森林をどう整備・保全するかの上位方針。</div></div><div class="source-arrow">›</div><div class="source-box"><div class="k">森林ごとに確認</div><div class="v">所有・権利・境界・森林状態・規制</div><div class="d">同じ制度でも森林の状態と予定行為で必要な対応が変わる。</div></div><div class="source-arrow">›</div><div class="source-box"><div class="k">計画・制度</div><div class="v">森林経営計画・経営管理・届出・許可</div><div class="d">必要な計画と手続を選び、期限・根拠・判断を残す。</div></div></div><div class="source-flow" style="grid-template-columns:1fr auto 1fr auto 1fr"><div class="source-box"><div class="k">実行</div><div class="v">発注・契約・施業</div><div class="d">制度判断と計画を実作業へ。</div></div><div class="source-arrow">›</div><div class="source-box"><div class="k">確認</div><div class="v">検収・報告・証拠</div><div class="d">届出、写真、実績、判断理由を記録。</div></div><div class="source-arrow">›</div><div class="source-box"><div class="k">お金・次の管理</div><div class="v">支払・財源・Jクレ・次回施業</div><div class="d">森林の状態変化と次の仕事へつなぐ。</div></div></div></section>`;}
 async function forestPlanPolicyScreen(){
  const [referencePlans,referenceZones,candidateCases,catalog,reg,flows,devSteps]=await Promise.all([
   q('forest_os_demo_public_reference_municipal_plan_current','select=*'),
@@ -3469,30 +3526,17 @@ async function forestPlanPolicyScreen(){
  ]);
  const plan=referencePlans[0];
  const currentCaseCodes=new Set((reg||[]).map(x=>String(x.procedure_code||'')));
- const management=(catalog||[]).filter(x=>['forest_management_plan','forest_aggregation','forest_management_special','support_entity','forest_plan_certification'].includes(String(x.procedure_category||'')));
- const operations=(catalog||[]).filter(x=>['forest_operation_notification','forest_land_development','protected_forest','forest_shared_ownership','forest_land_ownership'].includes(String(x.procedure_category||'')));
- const catalogRows=rows=>rows.map(r=>[
-  `<strong>${esc(r.procedure_name)}</strong>${currentCaseCodes.has(String(r.procedure_code))?'<br><span class="badge">進行案件あり</span>':''}`,
-  esc(procedureCategoryLabel(r.procedure_category)),
-  esc(r.legal_basis||'—'),
-  esc(procedureAuthorityText(r)),
-  esc(procedureOnlineLabel(r.online_support_status)),
-  r.official_url?`<a href="${esc(r.official_url)}" target="_blank" rel="noopener">公式情報</a>`:'—'
- ]);
- const activeRows=(reg||[]).map(r=>{
-  const w=(flows||[]).find(x=>String(x.target_id)===String(r.regulatory_case_id));
-  return [esc(r.procedure_name),workflowStatusLabel(r.regulatory_case_status),esc(w?.step_name||'—'),esc(r.responsible_party_name||w?.assigned_party_name||'—'),date(r.due_on)];
- });
+ const activeRows=(reg||[]).map(r=>{const w=(flows||[]).find(x=>String(x.target_id)===String(r.regulatory_case_id));const cat=(catalog||[]).find(x=>String(x.procedure_code)===String(r.procedure_code));const loc=cat?procedureRouteInfo(cat):{route:'agency',button:'制度案件を見る'};return [esc(r.procedure_name),workflowStatusLabel(r.regulatory_case_status),esc(w?.step_name||'—'),esc(r.responsible_party_name||w?.assigned_party_name||'—'),date(r.due_on),policyRouteButton(loc.route,loc.button,true)];});
  const dev=(catalog||[]).find(x=>x.procedure_code==='forest_land_development_permission');
  const devFlow=(devSteps||[]).map(x=>`<div class="agency-workflow-step"><b>${num(x.sequence_no)}. ${esc(x.step_name)}</b><small>${x.step_code==='official_submission'?'正式提出は行政機関側':'Forest OSで準備・記録'}</small></div>`).join('');
- cards([['上位計画','市町村森林整備計画'],['制度・手続',`${(catalog||[]).length}種類`],['進行中制度案件',`${(reg||[]).length}件`],['正式申請','行政機関の手続']]);
- let html=personaNoteHtml()+`<section><h2>計画・制度</h2><p>個別の私有林集約PJだけに属する画面ではありません。地域の森林全体に対して、上位計画、制度・手続、森林経営計画、施業をつなぐ共通ページです。</p></section>`;
+ cards([['上位計画','市町村森林整備計画'],['制度・手続',`${(catalog||[]).length}種類`],['進行中制度案件',`${(reg||[]).length}件`],['入口','仕事／制度の双方向']]);
+ let html=personaNoteHtml()+`<section><h2>計画・制度</h2><p>新任担当者は「何をしたいか」から、制度に詳しい担当者は「制度名」から探せます。どちらから入っても、対象森林・案件・業務へ戻れる共通ページです。</p>${policyEntrySwitchHtml()}</section>`;
  html+=planPolicyFlowHtml();
- if(plan)html+=referencePlanModelHtml(plan,referenceZones,candidateCases);
- if(activeRows.length)html+=table('現在動いている制度案件',['制度・手続','状態','現在工程','担当','期限'],activeRows);
- if(management.length)html+=table('森林経営・集約に関する制度',['制度・手続','区分','根拠','主な提出・認定先','オンライン','公式'],catalogRows(management));
- if(operations.length)html+=table('施業・開発・権利に関する手続',['制度・手続','区分','根拠','主な提出・認定先','オンライン','公式'],catalogRows(operations));
- if(dev)html+=`<section><h2>林地開発許可｜Forest OSでの扱い</h2><div class="map-summary-note"><b>Forest OSの中だけで申請を完結させません。</b> 対象判定、事前協議の準備、必要書類、提出日・受付番号、補正、許可条件までを管理し、正式提出は都道府県の現行手続に従います。奈良県想定では、現行手引き上は知事への申請と事前協議が定められていますが、林地開発許可がオンラインだけで完結する公式ルートは現時点で確認できていません。</div><div class="agency-workflow">${devFlow}</div><div class="detailgrid" style="margin-top:12px"><div class="detailitem"><div class="k">対象森林</div><div class="v">地域森林計画対象民有林のうち、保安林等を除く森林。開発目的・面積等で許可要否を判定。</div></div><div class="detailitem"><div class="k">正式提出</div><div class="v">${esc(dev.authority_name||'都道府県林務部局')}。Forest OSは提出先そのものにはならない。</div></div><div class="detailitem"><div class="k">オンライン</div><div class="v">${esc(procedureOnlineLabel(dev.online_support_status))}。提出方法は都道府県ごとに更新確認。</div></div><div class="detailitem"><div class="k">将来連携</div><div class="v">公式電子申請やAPIが用意された場合だけ、外部システム連携として追加する。</div></div></div></section>`;
+ html+=policyFirstCheckHtml();
+ html+=policyLookupMode==='system'?policySystemSearchHtml(catalog,currentCaseCodes):policyTaskSearchHtml(catalog);
+ if(activeRows.length)html+=table('現在動いている制度案件',['制度・手続','状態','現在工程','担当','期限','見る'],activeRows);
+ if(plan)html+=`<section><h2>上位計画とゾーニング</h2><div class="map-summary-note">個別制度・PJの前提になる青嶺町の市町村森林整備計画・ゾーニングです。制度一覧とは別に、地域全体の方針と対象森林の関係をここで確認します。</div></section>`+referencePlanModelHtml(plan,referenceZones,candidateCases);
+ if(dev&&policyLookupMode==='system')html+=`<section><h2>林地開発許可｜Forest OSでの扱い</h2><div class="map-summary-note"><b>Forest OSの中だけで申請を完結させません。</b> 対象判定、事前協議の準備、必要書類、提出日・受付番号、補正、許可条件までを管理し、正式提出は都道府県の現行手続に従います。</div><div class="agency-workflow">${devFlow}</div><div class="detailgrid" style="margin-top:12px"><div class="detailitem"><div class="k">対象判定</div><div class="v">対象民有林、保安林等、開発目的・規模を先に確認。</div></div><div class="detailitem"><div class="k">正式提出</div><div class="v">${esc(dev.authority_name||'都道府県林務部局')}。Forest OSは提出先そのものにはならない。</div></div><div class="detailitem"><div class="k">オンライン</div><div class="v">${esc(procedureOnlineLabel(dev.online_support_status))}。提出方法は都道府県ごとに更新確認。</div></div><div class="detailitem"><div class="k">Forest OSに残すもの</div><div class="v">対象判定、事前協議、提出控え、受付番号、補正、処分結果、許可条件、工事後管理。</div></div></div></section>`;
  document.getElementById('content').innerHTML=html;
 }
 function businessSwitchHtml(){const labels={attention:'要対応・承認',planning:'計画',work:'作業・現場記録'};return `<div class="hub-switch">${Object.entries(labels).map(([k,v])=>`<button class="${businessMode===k?'active':''}" onclick="switchBusiness('${k}')">${v}</button>`).join('')}</div><div class="ia-note"><b>業務は実際に処理する仕事の入口です。</b> 入力フォームを独立した世界にせず、森林・PJ・作業の対象から登録するか、ここから自分が処理可能な案件を選びます。</div>`;}
