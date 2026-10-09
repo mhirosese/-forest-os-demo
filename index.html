@@ -137,6 +137,7 @@ th{color:var(--muted);font-weight:600;background:#fafbfa}
 
 /* v20 visibility-first map tuning */
 #leafletTownMap{filter:saturate(.92) contrast(1.03)}
+.aomine-zone-label{background:rgba(255,255,255,.88);border:1px solid rgba(70,80,72,.30);box-shadow:none;border-radius:5px;color:#243128;font-weight:800;font-size:10px;padding:2px 5px}.aomine-zone-label:before{display:none}.aomine-function-label{background:rgba(255,255,255,.90);border:1px solid rgba(70,80,72,.24);box-shadow:none;border-radius:4px;color:#33423a;font-size:9px;padding:1px 4px}.aomine-function-label:before{display:none}
 .activelegend{background:rgba(255,255,255,.96);font-size:10.5px}
 @media(max-width:600px){
  #leafletTownMap{height:640px}
@@ -1482,11 +1483,11 @@ async function forestView(){
 
 
 
-let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[],townMapPersonaScopes=[],townAggregationScopeRows=[],townRightsMatrix=[],townParcelCells=[],townParcelDisplays=[],townForestDisplays=[],townCanonicalMapLayers=[];
+let townBlocks=[],townDetails=[],townIssues=[],townIssueShapes=[],townWater=[],townMapFeatures=[],townDetailFeatures=[],townMapRelations=[],townWorkScopes=[],townCoverage=[],townMapFilterMeta=[],townMapPersonaScopes=[],townAggregationScopeRows=[],townRightsMatrix=[],townParcelCells=[],townParcelDisplays=[],townForestDisplays=[],townCanonicalMapLayers=[],townPlanSummary=[],townPlanZones=[];
 let townMapAllowedForestIds=new Set();
 let leafletTownMap=null,leafletFeatureLayers={};
 let townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
-let townMapLayers={reference:true,details:false,parcel_boundary:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true};
+let townMapLayers={reference:true,details:false,parcel_boundary:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:true,credit:true,candidate:true,program:false,operations:false,disaster:false,water:true,plan_zoning:true,plan_functions:false};
 const parseParts=v=>Array.isArray(v)?v:(()=>{try{return JSON.parse(v||'[]')}catch(_){return[]}})();
 
 /* ---------------- v60 地図の利用者スコープ連動 ---------------- */
@@ -1719,8 +1720,52 @@ function managedMatchesFeature(f,mode){
  if(mode==='disaster')return p.disaster_status==='対応中';
  return false;
 }
-function layerColor(mode){return ({reference:'#8da28a',details:'#42594a',parcel_boundary:'#6f6256',issues:'#9a8068',owner_unknown:'#8d705a',boundary_unknown:'#7a6555',municipal:'#1f6f78',credit:'#287a43',candidate:'#df8a24',program:'#7058a3',operations:'#3f7d78',disaster:'#c14f47',water:'#3d8db3'})[mode]||'#65736b'}
+function layerColor(mode){return ({reference:'#8da28a',details:'#42594a',parcel_boundary:'#6f6256',issues:'#9a8068',owner_unknown:'#8d705a',boundary_unknown:'#7a6555',municipal:'#1f6f78',credit:'#287a43',candidate:'#df8a24',program:'#7058a3',operations:'#3f7d78',disaster:'#c14f47',water:'#3d8db3',plan_zoning:'#6f775f',plan_functions:'#5d6b61'})[mode]||'#65736b'}
 
+const AOMINE_ZONE_COLORS={FT_TIMBER:'#8b6144',FT_ENV:'#4f8060',FT_TOURISM:'#7567a2',FT_LIVING:'#b18f45'};
+const AOMINE_ZONE_FUNCTIONS={
+ FT_TIMBER:['木材等生産','水源涵養'],
+ FT_ENV:['水源涵養','山地災害防止・土壌保全','生物多様性保全'],
+ FT_TOURISM:['保健・レクリエーション','文化','生物多様性保全'],
+ FT_LIVING:['快適環境形成','山地災害防止・土壌保全']
+};
+function aomineNormCoord(nx,ny){
+ const b=townBoundaryBBox(),px=(b.maxLon-b.minLon)*.035,py=(b.maxLat-b.minLat)*.035;
+ return [b.minLon+px+nx*((b.maxLon-b.minLon)-px*2),b.minLat+py+ny*((b.maxLat-b.minLat)-py*2)];
+}
+function aomineZoneFeatures(){
+ const defs=[
+  ['FT_ENV','環境保全林',[[.05,.78],[.22,.93],[.43,.86],[.48,.65],[.37,.49],[.18,.44],[.07,.57]]],
+  ['FT_TIMBER','木材生産林',[[.47,.67],[.63,.90],[.88,.86],[.94,.67],[.84,.47],[.64,.43],[.52,.52]]],
+  ['FT_TOURISM','観光景観林',[[.27,.43],[.40,.56],[.57,.54],[.68,.41],[.61,.27],[.43,.22],[.30,.29]]],
+  ['FT_LIVING','生活保全林',[[.38,.24],[.57,.31],[.78,.27],[.86,.13],[.70,.06],[.48,.08],[.39,.15]]]
+ ];
+ return defs.map(([code,name,pts])=>{const z=townPlanZones.find(x=>x.zone_code===code)||{};const ring=pts.map(([x,y])=>aomineNormCoord(x,y));ring.push([...ring[0]]);return {code,name,policy:z.policy_summary||'',geom:{type:'Polygon',coordinates:[ring]},functions:AOMINE_ZONE_FUNCTIONS[code]||[]};});
+}
+function renderAomineZoneDetail(z){
+ const source=townPlanSummary[0]||{};
+ document.getElementById('mapDetail').innerHTML=`<h2>${esc(z.name)}</h2><div class="map-summary-note">青嶺町デモの市町村森林整備計画ゾーンです。国内で公開されている市町村計画の区分・考え方を参考に、青嶺町の地形上へ表示しています。</div><div class="detailgrid"><div class="detailitem"><div class="k">将来目標区分</div><div class="v">${esc(z.name)}</div></div><div class="detailitem"><div class="k">重視する森林機能</div><div class="v">${z.functions.map(esc).join('／')||'—'}</div></div><div class="detailitem"><div class="k">考え方</div><div class="v">${esc(z.policy||'—')}</div></div><div class="detailitem"><div class="k">表示精度</div><div class="v">デモ用ゾーニング表示</div></div><div class="detailitem"><div class="k">設計参考</div><div class="v">${esc(source.reference_municipality||'国内公開資料')}</div></div></div>`;
+}
+function addAominePlanZoning(){
+ if(!leafletTownMap)return;
+ const g=L.layerGroup();
+ aomineZoneFeatures().forEach(z=>{
+  const color=AOMINE_ZONE_COLORS[z.code]||'#66766a';
+  const lyr=L.geoJSON(z.geom,{style:()=>({color,weight:1.6,opacity:.88,fillColor:color,fillOpacity:.22,dashArray:'5 3'}),onEachFeature:(feature,layer)=>{layer.on('click',()=>renderAomineZoneDetail(z));layer.bindTooltip(z.name,{permanent:true,direction:'center',className:'aomine-zone-label',interactive:false});}});
+  lyr.addTo(g);
+ });
+ g.addTo(leafletTownMap);leafletFeatureLayers.plan_zoning=g;
+}
+function addAomineFunctionMarkers(){
+ if(!leafletTownMap)return;
+ const defs=[
+  ['水源涵養',.20,.73],['山地災害防止・土壌保全',.73,.72],['快適環境形成',.67,.15],
+  ['保健・レクリエーション',.48,.37],['文化',.54,.27],['生物多様性保全',.28,.62],['木材等生産',.74,.57]
+ ];
+ const g=L.layerGroup();
+ defs.forEach(([name,x,y])=>{const [lon,lat]=aomineNormCoord(x,y);const m=L.circleMarker([lat,lon],{radius:4.2,color:'#fff',weight:1.2,fillColor:'#45584b',fillOpacity:.92});m.bindTooltip(name,{permanent:true,direction:'right',offset:[5,0],className:'aomine-function-label'});m.on('click',()=>{document.getElementById('mapDetail').innerHTML=`<h2>${esc(name)}</h2><div class="map-summary-note">青嶺町デモで重ねて確認する森林機能です。将来目標区分とは別の軸として扱い、複数機能が同じ森林に重なることを前提にしています。</div>`;});m.addTo(g);});
+ g.addTo(leafletTownMap);leafletFeatureLayers.plan_functions=g;
+}
 function clearLeafletFeatureLayers(){
  const town=leafletFeatureLayers.town;
  Object.entries(leafletFeatureLayers).forEach(([k,x])=>{if(k==='town')return;try{leafletTownMap?.removeLayer(x)}catch(_){}});
@@ -2139,6 +2184,8 @@ function activeLayerLegend(){
  const items=[];
  const add=(key,label,kind='box')=>{if(townMapLayers[key]&&mapLayerAllowedForPersona(key))items.push([label,layerColor(key),kind]);};
  add('details','閲覧対象森林');add('parcel_boundary','筆境界','dash');add('municipal','町有林（関係時のみ）','dash');add('credit','PJ実施地');add('candidate','追加候補');add('program','別PJ/認証前');add('issues','未整理森林群');add('owner_unknown','所有・相続等未整理');add('boundary_unknown','境界未確定等','dash');add('operations','施業');add('disaster','災害');add('water','水系','line');
+ if(townMapLayers.plan_zoning){items.push(['木材生産林',AOMINE_ZONE_COLORS.FT_TIMBER,'box'],['環境保全林',AOMINE_ZONE_COLORS.FT_ENV,'box'],['観光景観林',AOMINE_ZONE_COLORS.FT_TOURISM,'box'],['生活保全林',AOMINE_ZONE_COLORS.FT_LIVING,'box']);}
+ if(townMapLayers.plan_functions)items.push(['森林機能（7区分）','#45584b','box']);
  const el=document.getElementById('activeLegend');if(!el)return;
  el.innerHTML=`<strong>表示中</strong>${items.map(([label,color,kind])=>`<div class="legendrow"><span class="swatch ${kind}" style="${kind==='dash'?`color:${color}`:`background:${color}`}" ></span>${esc(label)}</div>`).join('')}`;
 }
@@ -2201,6 +2248,8 @@ function refreshLeafletLayers(){
  if(townMapLayers.operations)addCanonicalGroup('operations','work','operations');
  // 水系は森林面より前、災害記号より後ろ。森林との関係を読みやすくする。
  if(townMapLayers.water)addGroup('water',townMapFeatures.filter(f=>f.layer_code==='water_system'),'water');
+ if(townMapLayers.plan_zoning)addAominePlanZoning();
+ if(townMapLayers.plan_functions)addAomineFunctionMarkers();
  if(townMapLayers.disaster&&mapLayerAllowedForPersona('disaster')){
   addCanonicalGroup('disaster-events','incident','disaster');
  }
@@ -2351,7 +2400,7 @@ function initLeafletTownMap(){
 }
 async function townMap(){
  const viewerName=personaScopePartyName();
- const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes,aggregationScope,rightsMatrix,parcelCells,parcelDisplays,forestDisplays,canonicalMapLayers]=await Promise.all([
+ const [profile,blocks,details,issues,issueShapes,water,mapFeatures,projectMap,mapRelations,datasets,workScopes,refDisplay,coverage,filterMeta,personaScopes,aggregationScope,rightsMatrix,parcelCells,parcelDisplays,forestDisplays,canonicalMapLayers,planSummary,planZones]=await Promise.all([
   q('forest_os_ui_town_profile','select=*'),
   q('forest_os_ui_town_forest_block','select=*&order=sort_order'),
   q('forest_os_ui_forest_decision_context','select=*'),
@@ -2372,7 +2421,9 @@ async function townMap(){
   q('forest_os_demo_public_parcel_cell','select=*&order=forest_code,parcel_no,cell_no'),
   q('forest_os_demo_public_parcel_display_compat','select=*&order=forest_code,parcel_code'),
   q('forest_os_demo_public_forest_display','select=*&order=region_name,forest_name'),
-  q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name')
+  q('forest_os_demo_public_map_layers_current','select=*&order=layer_code,display_name'),
+  q('forest_os_demo_public_reference_municipal_plan_current','select=*'),
+  q('forest_os_demo_public_reference_plan_zones_current','select=*&order=zone_type,zone_code')
  ]);
  townBlocks=blocks;townDetails=details;townIssues=issues;townIssueShapes=issueShapes;townWater=water;
  townDetailFeatures=mapFeatures.filter(f=>f.layer_code==='managed_forest');
@@ -2404,10 +2455,11 @@ async function townMap(){
  townParcelDisplays=parcelDisplays;
  townForestDisplays=forestDisplays;
  townCanonicalMapLayers=canonicalMapLayers;
+ townPlanSummary=planSummary||[];townPlanZones=planZones||[];
  const personaScopeRows=currentPersonaScopeRows();
  townMapAllowedForestIds=new Set([...personaScopeRows.map(x=>String(x.forest_unit_id)),...townAggregationScopeRows.map(x=>String(x.forest_unit_id))]);
  townMapFilterState={region:'*',forest:'*',owner:'*',manager:'*',operator:'*',projects:new Set()};
- townMapLayers={reference:false,details:true,parcel_boundary:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:mapLayerAllowedForPersona('municipal'),credit:true,candidate:true,program:true,operations:false,disaster:false,water:true};
+ townMapLayers={reference:false,details:true,parcel_boundary:false,issues:false,owner_unknown:false,boundary_unknown:false,municipal:mapLayerAllowedForPersona('municipal'),credit:true,candidate:true,program:true,operations:false,disaster:false,water:true,plan_zoning:true,plan_functions:false};
  const p=profile[0]||{};
  const issueArea=issues.reduce((s,x)=>s+Number(x.area_ha||0),0);
  const ownerUnresolved=issues.filter(i=>['所有者不明','相続未登記','共有者の一部不明','連絡先不明・所在確認中'].includes(i.owner_status));
@@ -2440,12 +2492,13 @@ async function townMap(){
  ]);
  document.getElementById('content').innerHTML=`<div class="maplayout"><div class="mapsection"><div class="maphead"><strong id="townMapTitle">${esc(currentPersona().roleLabel)}｜閲覧対象森林マップ</strong><span class="mapmodebadge">v62 固定森林＋2年認証＋収益配賦 / 軽量Read層</span></div>${mapPersonaScopeHtml()}${mapFilterHtml()}<div id="mapRegionNotice" class="map-region-notice"></div><div class="layergroups">
  ${mapLayerGroup('森林',mk('details','閲覧対象森林','',true)+mk('parcel_boundary','筆境界')+mk('municipal','町有林（関係時のみ）','',true))}
+ ${mapLayerGroup('計画',mk('plan_zoning','森林計画ゾーニング','',true)+mk('plan_functions','森林機能（7区分）'))}
  ${mapLayerGroup('Jクレ',mk('credit','PJ実施地','',true)+mk('candidate','追加候補','',true)+mk('program','別PJ/認証前','',true))}
  ${mapLayerGroup('課題',mk('issues','未整理森林群')+mk('owner_unknown','所有・相続等未整理')+mk('boundary_unknown','境界未確定等'))}
  ${mapLayerGroup('現場',mk('operations','施業')+mk('disaster','災害'))}
  ${mapLayerGroup('参照',mk('water','水系（ダム・水源）','water-toggle',true))}</div>
  <div class="mapcanvas"><div id="leafletTownMap"></div><div id="activeLegend" class="activelegend"></div></div>
- <details class="map-note"><summary>地図データについて</summary>森林管理ポリゴンを優先し、無い場合のみDBの筆表示形状を利用します。デモの仮想筆・概略位置は非正本です。筆境界は必要なときだけ表示できます。</details></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林を土台に、所有・PJ・候補・水系などの状態を重ねて確認できます。クリックすると概要を表示し、必要なら元の業務画面へ移動できます。</div></div></div>`+
+ <details class="map-note"><summary>地図データについて</summary>森林管理ポリゴンを優先し、無い場合のみDBの筆表示形状を利用します。デモの仮想筆・概略位置は非正本です。筆境界は必要なときだけ表示できます。</details></div><div id="mapDetail" class="mapdetail"><h2>地図から選択</h2><div class="empty">閲覧専用です。森林を土台に、市町村森林整備計画のゾーニング、森林機能、所有・PJ・候補・水系などを重ねて確認できます。ゾーンや森林をクリックすると概要を表示します。</div></div></div>`+
  table('データ濃度',['森林','総合','位置','森林簿','所有','境界','施業','Jクレ','災害'],covRows)+
  `<section><h2>データ濃度がバラバラでも受けられる最小入力</h2><div class="tablewrap"><table><thead><tr><th>項目</th><th>必須</th><th>意味</th></tr></thead><tbody>
  <tr><td>source_name</td><td>必須</td><td>どの台帳・Excel・GIS・調査から来たか</td></tr>
@@ -3194,8 +3247,8 @@ function referencePlanModelHtml(plan,zones,candidateCases){
   const pending=criteria.filter(x=>['needs_check','needs_resolution'].includes(String(x.result_code||''))).map(x=>x.criterion_label).filter(Boolean);
   return `<div style="border:1px solid #d7dfe5;border-radius:10px;padding:10px 12px;background:#fff"><div style="font-weight:700">${esc(c.candidate_name)}</div><div class="smallnote" style="margin-top:4px">面積 ${ha(c.candidate_area_ha)} ／ 状態 ${esc(candidateReviewStatusLabel(c.review_status))}</div><div class="smallnote" style="margin-top:4px;line-height:1.6">追加確認：${esc(pending.length?pending.join('／'):'追加確認なし')}</div></div>`;
  }).join('');
- const conceptDiagram=`<div class="pj-block" style="background:#fbfcfd"><h3>参照構造図</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">今はゾーンの実ポリゴンを持っていないため、<b>地図ではなく構造図</b>で見せます。将来目標区分4つと森林機能区分7つを、青嶺町デモ森林の照合候補へつないでいます。実際の地図表示にするには、市町村森林整備計画のゾーン境界データやGISポリゴンが必要です。</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start"><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">参照元</div><div style="font-size:18px;font-weight:700;margin-top:4px">${esc(plan.reference_municipality||'—')}</div><div class="smallnote" style="margin-top:6px;line-height:1.6">${sourceLink}<br>計画期間：${date(plan.starts_on)}〜${date(plan.ends_on)}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">将来目標区分（4区分）</div><div style="display:grid;gap:8px;margin-top:8px">${futureCards}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">森林機能区分（7区分）</div><div style="display:grid;gap:8px;margin-top:8px">${funcCards}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">青嶺町デモでの照合</div><div style="display:grid;gap:8px;margin-top:8px">${candidateCards||'<div class="smallnote">照合候補なし</div>'}</div></div></div></div>`;
- return `<div class="pj-block"><h3>市町村森林整備計画・ゾーニング｜参照モデル</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">公開されている${esc(plan.reference_municipality||'実自治体')}の森林整備計画を参照し、青嶺町デモに計画構造とゾーン区分を入れています。<b>青嶺町の正式な行政計画・正式なゾーン指定ではありません。</b></div><div class="summary-kpis"><div class="summary-kpi"><div class="k">参照元</div><div class="v" style="font-size:17px">${esc(plan.reference_municipality||'—')}</div><div class="d">${sourceLink}</div></div><div class="summary-kpi"><div class="k">参照計画期間</div><div class="v" style="font-size:17px">${date(plan.starts_on)}〜${date(plan.ends_on)}</div><div class="d">デモ計画も同期間で参照</div></div><div class="summary-kpi"><div class="k">将来目標区分</div><div class="v">${num(plan.future_target_zone_count||future.length)}区分</div><div class="d">${future.map(x=>esc(x.zone_name)).join('／')}</div></div><div class="summary-kpi"><div class="k">森林機能区分</div><div class="v">${num(plan.function_zone_count||funcs.length)}区分</div><div class="d">${funcs.map(x=>esc(x.zone_name)).join('／')}</div></div></div>${conceptDiagram}${futureRows.length?table('将来目標区分（4区分）',['区分','参照する考え方','デモ照合候補'],futureRows):''}${funcRows.length?table('森林機能区分（7区分）',['機能区分','参照する考え方','デモ照合候補'],funcRows):''}${candRows.length?table('デモ森林との照合',['森林','面積','状態','追加確認'],candRows):''}<div class="pj-note">正式指定を作るのではなく、公開計画の区分と判定条件に対して、既存の森林情報を照合しています。東山101は木材生産林の照合候補、北谷103は環境保全林の照合候補として登録し、必要な追加確認を残しています。将来、ゾーンのGISデータがあれば、構造図ではなく地図表示へ切り替えられます。</div></div>`;
+ const conceptDiagram=`<div class="pj-block" style="background:#fbfcfd"><h3>計画区分</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">将来目標区分4つと森林機能区分7つを、青嶺町の森林管理に重ねる計画構造です。地図画面では、青嶺町の地形上に4区分のデモゾーンを表示し、7機能は別レイヤーで重ねられます。</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;align-items:start"><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">設計参考</div><div style="font-size:18px;font-weight:700;margin-top:4px">${esc(plan.reference_municipality||'—')}</div><div class="smallnote" style="margin-top:6px;line-height:1.6">${sourceLink}<br>計画期間：${date(plan.starts_on)}〜${date(plan.ends_on)}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">将来目標区分（4区分）</div><div style="display:grid;gap:8px;margin-top:8px">${futureCards}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">森林機能区分（7区分）</div><div style="display:grid;gap:8px;margin-top:8px">${funcCards}</div></div><div style="border:1px solid #d7dfe5;border-radius:12px;padding:12px;background:#fff"><div style="font-size:12px;color:#5b6876">青嶺町デモでの照合</div><div style="display:grid;gap:8px;margin-top:8px">${candidateCards||'<div class="smallnote">照合候補なし</div>'}</div></div></div></div>`;
+ return `<div class="pj-block"><h3>青嶺町 市町村森林整備計画｜ゾーニング</h3><div class="smallnote" style="line-height:1.7;margin-bottom:12px">青嶺町の森林管理を、将来目標区分4区分と森林機能7区分で整理しています。区分・考え方は国内で公開されている市町村森林整備計画等を参考にしたデモ計画です。</div><div class="summary-links" style="margin:0 0 12px"><button class="go" onclick="openAominePlanMap()">地図でゾーニングを見る</button></div><div class="summary-kpis"><div class="summary-kpi"><div class="k">設計参考</div><div class="v" style="font-size:17px">${esc(plan.reference_municipality||'—')}</div><div class="d">${sourceLink}</div></div><div class="summary-kpi"><div class="k">参照計画期間</div><div class="v" style="font-size:17px">${date(plan.starts_on)}〜${date(plan.ends_on)}</div><div class="d">デモ計画も同期間で参照</div></div><div class="summary-kpi"><div class="k">将来目標区分</div><div class="v">${num(plan.future_target_zone_count||future.length)}区分</div><div class="d">${future.map(x=>esc(x.zone_name)).join('／')}</div></div><div class="summary-kpi"><div class="k">森林機能区分</div><div class="v">${num(plan.function_zone_count||funcs.length)}区分</div><div class="d">${funcs.map(x=>esc(x.zone_name)).join('／')}</div></div></div>${conceptDiagram}${futureRows.length?table('将来目標区分（4区分）',['区分','参照する考え方','デモ照合候補'],futureRows):''}${funcRows.length?table('森林機能区分（7区分）',['機能区分','参照する考え方','デモ照合候補'],funcRows):''}${candRows.length?table('デモ森林との照合',['森林','面積','状態','追加確認'],candRows):''}<div class="pj-note">東山101は木材生産林の照合候補、北谷103は環境保全林の照合候補として登録しています。現在のゾーン面はデモ表示で、将来は実自治体のGISゾーン境界を同じレイヤーへ差し替えられます。</div></div>`;
 }
 function aggRenderIssues(rows){
  return `<section><h2>現在の対応内訳</h2><div class="agg-body"><div class="agg-issuegrid">${[...rows].sort((a,b)=>Number(a.sort_order)-Number(b.sort_order)).map(r=>`<div class="agg-issue"><div class="n">${ha(r.area_ha)}</div><div class="t">${esc(r.map_status_label)} ｜ ${num(r.parcel_count)}筆</div></div>`).join('')}</div><div class="smallnote" style="margin-top:9px">不参加、所有者未確認、相続・共有、境界確認中も削除せず、次年度へ引き継ぐ管理対象として残します。</div></div></section>`;
@@ -3212,6 +3265,10 @@ async function aggSelectParcel(id,el){
  if(!d){target.innerHTML='<div class="empty">現在の利用者にはこの筆の詳細を表示できません。</div>';return;}
  const rights=(Array.isArray(d.rights_and_holders)?d.rights_and_holders:[]).map(x=>aggPill(`${x.holder_role||'権利者'}：${x.holder_code||x.holder_name||'確認中'}／${x.verification_status||'未確認'}`,x.verification_status==='verified',x.verification_status==='pending')).join('');
  target.innerHTML=`<div class="agg-detailhead">${esc(d.forest_name)}</div><div class="smallnote">${esc(d.region_name)} ｜ ${ha(d.area_ha)}</div><div style="margin-top:7px">${aggPill(d.map_status_label,true)}${d.is_detached_owner?aggPill(`飛地所有 ${num(d.owner_parcel_count)}筆`,false,true):''}${d.is_cross_region_owner?aggPill('町村またぎ',false,true):''}${d.block_name?aggPill(d.block_name,true):''}</div><div class="agg-kv"><div><div class="k">所有者</div><div class="v">${esc(d.owner_code||d.owner_display_name||'確認中')}</div></div><div><div class="k">参加意向</div><div class="v">${esc(aggStatusLabel(d.owner_intent_status,'intent'))}</div></div><div><div class="k">権利整理</div><div class="v">${esc(aggStatusLabel(d.rights_clearance_status,'rights'))}</div></div><div><div class="k">境界・現地条件</div><div class="v">${esc(aggStatusLabel(d.boundary_status,'boundary'))}</div></div><div><div class="k">施業準備</div><div class="v">${esc(aggStatusLabel(d.work_readiness_status,'readiness'))}</div></div><div><div class="k">森林経営計画</div><div class="v">${esc(aggStatusLabel(d.management_plan_status,'plan'))}</div></div><div class="agg-full"><div class="k">権利者・確認状況</div><div class="v">${rights||'—'}</div></div><div class="agg-full"><div class="k">次に必要な対応</div><div class="v"><strong>${esc(d.next_action)}</strong></div></div></div>`;
+}
+async function openAominePlanMap(){
+ await load('map');
+ setTimeout(()=>{townMapLayers.plan_zoning=true;townMapLayers.plan_functions=false;refreshLeafletLayers();fitTownMapRegion('【デモ】青嶺町');const el=document.querySelector('input[onchange*="plan_zoning"]');if(el)el.checked=true;},160);
 }
 async function aggregationProject(){
  const p=currentPersona();saveSelectedProjectCode('DEMO-PRIVATE-AGG-2022',p);
