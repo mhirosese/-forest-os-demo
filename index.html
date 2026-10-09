@@ -3131,11 +3131,29 @@ function aggRenderProgress(rows){
  const max=Math.max(1,...rows.map(x=>Number(x.target_area_ha||0)));
  return rows.map(r=>{const kp=100*Number(r.known_area_ha||0)/max,rp=100*Number(r.ready_area_ha||0)/max;return `<div class="agg-progressrow"><div class="agg-yr">${esc(r.fiscal_year)}</div><div class="agg-bar"><div class="agg-knownbar" style="width:${kp}%"></div><div class="agg-readybar" style="width:${rp}%"></div></div><div class="agg-pv">把握 ${ha(r.known_area_ha)}</div><div class="agg-pv">候補 ${ha(r.ready_area_ha)}</div></div>`;}).join('')+`<div class="smallnote" style="margin-top:8px">薄緑＝状況把握、濃緑＝施業候補。所有者等が分かっただけでは施業候補にはしません。</div>`;
 }
-function aggRenderBlocks(rows){
+function candidateReviewStatusLabel(v){return ({candidate:'候補',reviewing:'確認中',accepted:'採択',rejected:'対象外',on_hold:'保留'}[String(v||'')]||txt(v));}
+function aggRenderBlocks(rows,candidateCases=[]){
  if(!rows.length)return `<section><h2>事業単位候補</h2><div class="empty">現在の表示範囲には事業単位候補がありません。</div></section>`;
- return table('事業単位候補',['候補','地域','面積','筆数','抽出ルール'],[...rows].sort((a,b)=>Number(b.area_ha)-Number(a.area_ha)).map((r,i)=>[
-  `<strong>${i+1}. ${esc(r.block_name)}</strong>`,esc(r.region_name),ha(r.area_ha),`${num(r.parcel_count)}筆`,esc(r.selection_rule||'同一自治体内で隣接する施業候補をまとまりとして抽出')
- ]));
+ const cases=new Map((candidateCases||[]).map(x=>[String(x.target_id),x]));
+ const body=[...rows].sort((a,b)=>Number(b.area_ha)-Number(a.area_ha)).map((r,i)=>{
+  const c=cases.get(String(r.block_id));
+  return [
+   `<strong>${i+1}. ${esc(r.block_name)}</strong>`,esc(r.region_name),ha(r.area_ha),`${num(r.parcel_count)}筆`,esc(c?.candidate_source_label||'現行集約ルール'),esc(candidateReviewStatusLabel(c?.review_status||'candidate')),esc(c?.candidate_reason||r.selection_rule||'同一自治体内で隣接する施業候補をまとまりとして抽出')
+  ];
+ });
+ return table('事業単位候補',['候補','地域','面積','筆数','候補の入口','現在状態','根拠'],body)+`<section><div class="smallnote">現在のデモ候補は、既存の集約ルールで抽出した4件です。候補台帳は、上位計画・ゾーニング、林業事業体等からの提案、自治体・森林組合等による選定、災害・防災等による抽出も同じ形式で登録できるようにしています。データが未登録の入口は表示しません。候補と正式な対象決定は分けて管理します。</div></section>`;
+}
+function resultMetricFormat(r){const v=Number(r.numeric_value||0);if(r.unit==='JPY')return yen(v);if(r.unit==='ha')return ha(v);if(r.unit==='case')return `${num(v)}件`;if(r.unit==='event')return `${num(v)}件`;return `${num(v)}${r.unit?` ${esc(r.unit)}`:''}`;}
+function aggregationResultFrameworkHtml(rows,selectedYear){
+ const yr=(rows||[]).filter(x=>Number(x.fiscal_year)===Number(selectedYear));
+ if(!yr.length)return '';
+ const defs=[['input','投入'],['activity','実施'],['output','実績'],['outcome','状態変化']];
+ const boxes=defs.map(([code,label])=>{
+  const ms=yr.filter(x=>x.result_stage===code);
+  if(!ms.length)return '';
+  return `<div class="summary-kpi"><div class="k">${label}</div><div class="v" style="font-size:18px;line-height:1.45">${ms.map(x=>`${esc(x.metric_label)} ${resultMetricFormat(x)}`).join('<br>')}</div><div class="d">${ms.map(x=>x.qualitative_value?esc(x.qualitative_value):'').filter(Boolean).join(' / ')||'DBの年度値・作業記録から集計'}</div></div>`;
+ }).join('');
+ return `<div class="pj-block"><h3>${selectedYear}年度｜投入・実施・実績・状態変化</h3><div class="summary-kpis">${boxes}</div><div class="pj-note">金額だけを成果とはせず、投入した資金、実施した業務、把握・事業候補化した面積、その結果できた事業単位候補を分けて表示しています。年度進行中の値は確定値と分けます。</div></div>`;
 }
 function aggRenderIssues(rows){
  return `<section><h2>現在の対応内訳</h2><div class="agg-body"><div class="agg-issuegrid">${[...rows].sort((a,b)=>Number(a.sort_order)-Number(b.sort_order)).map(r=>`<div class="agg-issue"><div class="n">${ha(r.area_ha)}</div><div class="t">${esc(r.map_status_label)} ｜ ${num(r.parcel_count)}筆</div></div>`).join('')}</div><div class="smallnote" style="margin-top:9px">不参加、所有者未確認、相続・共有、境界確認中も削除せず、次年度へ引き継ぐ管理対象として残します。</div></div></section>`;
@@ -3156,7 +3174,7 @@ async function aggSelectParcel(id,el){
 async function aggregationProject(){
  const p=currentPersona();saveSelectedProjectCode('DEMO-PRIVATE-AGG-2022',p);
  const viewer=personaScopePartyName(p),vq=encodeURIComponent(viewer);
- const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows,financeScopes]=await Promise.all([
+ const [summaries,progress,mapRows,blocks,issues,yearRows,budgetBreakdown,yearMapRows,financeScopes,resultFramework,candidateCases]=await Promise.all([
   q('forest_os_ui_aggregation_persona_summary',`select=*&viewer_name=eq.${vq}&limit=1`),
   q('forest_os_ui_aggregation_persona_progress',`select=*&viewer_name=eq.${vq}&order=fiscal_year`),
   q('forest_os_ui_aggregation_persona_map_cells',`select=*&viewer_name=eq.${vq}&order=grid_y,grid_x`),
@@ -3165,7 +3183,9 @@ async function aggregationProject(){
   q('forest_os_demo_public_aggregation_year_summary','select=*&order=fiscal_year'),
   q('forest_os_demo_public_aggregation_budget_breakdown','select=*&order=fiscal_year,sort_order'),
   q('forest_os_demo_public_aggregation_year_map','select=*&order=fiscal_year,parcel_no'),
-  q('forest_os_demo_public_aggregation_finance_scope','select=*&order=fiscal_year,scope_code')
+  q('forest_os_demo_public_aggregation_finance_scope','select=*&order=fiscal_year,scope_code'),
+  q('forest_os_demo_public_aggregation_result_framework','select=*&order=fiscal_year,stage_order,metric_code'),
+  q('forest_os_demo_public_candidate_cases_current','select=*&initiative_code=eq.DEMO-PRIVATE-AGG-2022&order=candidate_area_ha.desc,candidate_name')
  ]);
  const s=summaries[0];
  if(!s){cards([['集約プロジェクト','対象外']]);document.getElementById('content').innerHTML=personaNoteHtml()+'<section><div class="empty">現在の利用者は私有林集約プロジェクトの対象ではありません。</div></section>';return;}
@@ -3215,13 +3235,14 @@ async function aggregationProject(){
    <div class="pj-block"><h3>${isCurrent?'現在地点':'年度末の確定状況'}</h3>${pipeline}${compactDelta}<div class="pj-note">${y.fiscal_year}年度：対象 ${ha(y.target_area_ha)} → 状況把握 ${ha(y.known_area_ha)} → 事業候補 ${ha(y.ready_area_ha)} → まとまり形成 ${formationValue}。${isCurrent?'現在値で、年度末締めまでは未確定です。':'年度末締め後の確定スナップショットです。'}</div></div>
    <div class="pj-block" style="margin-top:12px"><h3>このPJのお金｜${y.fiscal_year}年度</h3><div class="pj-kpi-row"><div class="pj-kpi"><div class="k">広域PJ全体予算</div><div class="v">${yen(y.budget_jpy)}</div></div><div class="pj-kpi"><div class="k">執行額</div><div class="v">${yen(y.executed_jpy)}</div></div><div class="pj-kpi"><div class="k">残額</div><div class="v">${yen(y.remaining_jpy)}</div></div></div><div class="pj-exec-rate">執行率 ${execRate}%</div><div class="pj-money-split pj-money-scope">${scopeHtml}</div><div class="pj-note">ここでは負担区分の大枠だけ表示。費目・財源・負担主体・按分根拠などの細目は「契約・お金」で管理します。費用は林野庁の意向調査・境界確認／測量・集積計画の参考歩掛を基礎にし、広域共通調整は奈良県の森林整備地域活動支援対策の共同計画等4,000円/haを目安にしたデモ積算です。${isCurrent?' 執行額は年度途中60%のデモ仮定です。':' 年度完了のデモ値です。'}</div></div>
    <div class="pj-block"><h3>${selectedYear}年度の計画・作業・現場記録</h3><div class="summary-kpis"><div class="summary-kpi"><div class="k">計画</div><div class="v">${num(aggOpsPlans.filter(x=>Number(String(x.starts_on||'').slice(0,4))===selectedYear).length)}件</div><div class="d">年度事業計画</div></div><div class="summary-kpi"><div class="k">作業案件</div><div class="v">${num(aggOpsWorks.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===selectedYear).length)}件</div><div class="d">所有者・境界・集約調整</div></div><div class="summary-kpi"><div class="k">現場・進捗記録</div><div class="v">${num(aggOpsWorks.filter(x=>Number(String(x.planned_start_on||'').slice(0,4))===selectedYear&&x.latest_event_date).length)}件</div><div class="d">最新記録を作業に保持</div></div></div><div class="pj-note">広域PMは地域横断、自治体・森林組合は自地域の計画・作業を表示します。ここでのhaは施業完了面積ではなく、所有者対応・境界確認・集約調整など各工程の年度対象面積です。現場記録の確定は担当主体に限定し、広域PMは調整権限として分離しています。</div></div>
+   ${aggregationResultFrameworkHtml(resultFramework,selectedYear)}
    <div class="pj-block"><h3>特記事項</h3><textarea id="aggProjectNotes" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;padding:10px 12px;border:1px solid #cfd6dc;border-radius:8px;font:inherit;line-height:1.55" placeholder="PJ全体で共有したい留意事項、今後の対応、説明時の補足などを入力">${esc(loadAggregationProjectNotes())}</textarea><div class="pj-detail-bar" style="margin-top:8px"><button type="button" class="go" onclick="saveAggregationProjectNotes()">特記事項を保存</button><span id="aggProjectNotesStatus" class="pj-note">この端末のデモ画面に保存します。DB正本にはまだ書き込みません。</span></div></div>
    <div class="pj-detail-bar"><span class="label">詳しく見る：</span><button class="go" onclick="document.getElementById('aggMapDetail').scrollIntoView({behavior:'smooth'})">対象森林・地図</button><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button></div>
   </section>`+
  `<div id="aggMapDetail" class="detail-divider"><div class="eyebrow">ここから実務詳細</div></div>`+
  `<div class="agg-layout"><section><h2>${mapTitle}</h2><div class="agg-body"><div class="map-summary-note">${mapNote}</div>${aggRenderMap(mapDisplayRows,isCurrent?blocks:[])}</div></section><section><h2>選択した筆</h2><div class="agg-body" id="aggDetail"><div class="smallnote" style="line-height:1.65">Map上の筆を選ぶと、所有者状況、参加意向、権利・境界、事業単位候補、次の対応を確認できます。</div></div></section></div>`+
  `<section><h2>年度別の集約進捗</h2><div class="agg-body">${aggRenderProgress(progress)}</div></section>`+
- aggRenderBlocks(blocks)+aggRenderIssues(issues)+
+ aggRenderBlocks(blocks,(candidateCases||[]).filter(c=>blocks.some(b=>String(b.block_id)===String(c.target_id))))+aggRenderIssues(issues)+
  `<section><h2>このPJの詳細画面</h2><div class="pj-detail-bar"><button onclick="load('agency')">制度・手続</button><button onclick="load('planning')">計画</button><button onclick="load('work')">作業・実績</button><button onclick="load('finance')">契約・お金</button><button onclick="load('forest')">森林・権利</button></div><div class="smallnote" style="margin-top:10px">詳細はこのPJの実務確認用です。上段のPJ概要と同じ情報を別画面で繰り返すためのものではありません。</div></section>`;
  document.getElementById('content').innerHTML=html;
 }
